@@ -8,8 +8,8 @@
 window.SITE_CONFIG = {
   // --- Identity -------------------------------------------------------------
   name: "Muhammad Ali Raza",
-  brand: "ALIRA",                 // short logo/wordmark text
-  initials: "AR",                 // shown in the logo mark
+  brand: "Muhammad Ali Raza",     // logo/wordmark text (shown in header & footer)
+  initials: "MAR",                // shown in the small logo mark
   role: "Full-Stack Dev · Automation Engineer · UI/UX & Packaging Designer",
   tagline: "I design, build, and automate the products that grow your business.",
   bio:

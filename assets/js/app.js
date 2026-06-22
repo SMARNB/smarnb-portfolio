@@ -13,6 +13,7 @@
   function on(el, ev, fn) { if (el) el.addEventListener(ev, fn); }
   function esc(s) { var d = document.createElement("div"); d.textContent = (s == null ? "" : String(s)); return d.innerHTML; }
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var mobileMenuClose = null; // set by initMobileMenu; used by the fit-based nav
 
   /* ---- icon set (inline SVG, currentColor) ------------------------------- */
   var P = {
@@ -637,9 +638,30 @@
       btn.innerHTML = icon(open ? "close" : "menu");
       document.body.style.overflow = open ? "hidden" : "";
     }
+    mobileMenuClose = function () { toggle(false); };
     on(btn, "click", function () { toggle(); });
     qsa("a", menu).forEach(function (a) { on(a, "click", function () { toggle(false); }); });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") toggle(false); });
+  }
+
+  /* ---- fit-based nav: show the inline links only while they actually fit --- */
+  function initResponsiveNav() {
+    var header = qs("#header"), nav = header && qs(".nav", header);
+    if (!header || !nav) return;
+    var ticking = false;
+    function update() {
+      ticking = false;
+      header.classList.add("nav-expanded");            // assume the links fit…
+      if (nav.scrollWidth > nav.clientWidth + 1) {
+        header.classList.remove("nav-expanded");        // …they don't → hamburger
+      } else {
+        var mm = qs("#mobileMenu");                      // …they do → close stray mobile menu
+        if (mobileMenuClose && mm && mm.classList.contains("open")) mobileMenuClose();
+      }
+    }
+    function onResize() { if (!ticking) { ticking = true; requestAnimationFrame(update); } }
+    window.addEventListener("resize", onResize, { passive: true });
+    update();
   }
 
   /* ---- theme ------------------------------------------------------------- */
@@ -757,7 +779,7 @@
     var ti = qs("#trackInput");
     if (ti) on(ti, "keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); doTrack(); } });
 
-    initHeader(); initMobileMenu(); initTheme(); initAnchors(); initObservers();
+    initHeader(); initMobileMenu(); initResponsiveNav(); initTheme(); initAnchors(); initObservers();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

@@ -13,8 +13,8 @@
   <circle cx="1050" cy="90" r="320" fill="#7c5cff" opacity="0.18"/>
   <circle cx="120" cy="560" r="260" fill="#22d3ee" opacity="0.14"/>
   <rect x="80" y="84" width="84" height="84" rx="22" fill="url(#ac)"/>
-  <text x="122" y="140" text-anchor="middle" font-family="-apple-system, Segoe UI, Roboto, sans-serif" font-size="40" font-weight="800" fill="#0a0d14">AR</text>
-  <text x="190" y="142" font-family="-apple-system, Segoe UI, Roboto, sans-serif" font-size="38" font-weight="800" fill="#eef2f9">ALIRA</text>
+  <text x="122" y="140" text-anchor="middle" font-family="-apple-system, Segoe UI, Roboto, sans-serif" font-size="30" font-weight="800" fill="#0a0d14">MAR</text>
+  <text x="190" y="142" font-family="-apple-system, Segoe UI, Roboto, sans-serif" font-size="36" font-weight="800" fill="#eef2f9">Muhammad Ali Raza</text>
   <text x="80" y="320" font-family="-apple-system, Segoe UI, Roboto, sans-serif" font-size="74" font-weight="800" fill="#eef2f9">Build · Automate · Design</text>
   <text x="80" y="408" font-family="-apple-system, Segoe UI, Roboto, sans-serif" font-size="34" font-weight="500" fill="#9aa6bd">Python SaaS dashboards · Selenium &amp; OCR bots</text>
   <text x="80" y="452" font-family="-apple-system, Segoe UI, Roboto, sans-serif" font-size="34" font-weight="500" fill="#9aa6bd">Figma UI/UX · Premium product packaging</text>
