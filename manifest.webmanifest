@@ -1,0 +1,12 @@
+{
+  "name": "ALIRA — Freelance Studio",
+  "short_name": "ALIRA",
+  "description": "Full-stack development, automation, UI/UX and packaging design.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0d14",
+  "theme_color": "#0a0d14",
+  "icons": [
+    { "src": "assets/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

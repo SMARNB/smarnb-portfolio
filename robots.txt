@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# ✏️ Update with your real domain
+Sitemap: https://example.com/sitemap.xml
