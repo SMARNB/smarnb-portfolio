@@ -42,10 +42,32 @@ window.SITE_CONFIG = {
   // 1) Sign up at https://formspree.io  2) Create a form  3) Paste the ID here.
   // The ID is the part after /f/ in your endpoint, e.g. "xpzgkqab".
   // Leave as "" to skip email delivery (orders still save locally + WhatsApp works).
-  formspreeId: "",                // TODO: e.g. "xpzgkqab"
+  formspreeId: "xwvdkyve",        // Formspree form (orders & messages also email you)
 
   currency: "$",
   currencyCode: "USD",
+
+  // --- App backend (FastAPI) ------------------------------------------------
+  // "" = same origin (the backend serves this site at the same domain).
+  // For a split deploy (static site on Netlify, API on Render) set this to your
+  // API URL, e.g. "https://your-app.onrender.com" (and add it to the CSP).
+  apiBase: "",
+
+  // --- Payment methods ------------------------------------------------------
+  // Shown in the Payments section + selectable at checkout. The choice is saved
+  // with the order; you then send a payment link/instructions to confirm.
+  // To go LIVE with a gateway (Stripe etc.), see backend/PAYMENTS.md.
+  payments: [
+    { id: "jazzcash",      label: "JazzCash",                         group: "Local · Pakistan" },
+    { id: "easypaisa",     label: "Easypaisa",                        group: "Local · Pakistan" },
+    { id: "bank_pk",       label: "Bank transfer",                    group: "Local · Pakistan" },
+    { id: "jazzcash_bnpl", label: "JazzCash — Pay Later (Yeylo)",     group: "Buy now, pay later" },
+    { id: "baadmay",       label: "BaadMay — Pay Later",              group: "Buy now, pay later" },
+    { id: "stripe",        label: "Credit / Debit card (Stripe)",     group: "International" },
+    { id: "paypal",        label: "PayPal",                           group: "International" },
+    { id: "wise",          label: "Wise",                             group: "International" },
+    { id: "crypto",        label: "Crypto (USDT / BTC)",              group: "International" },
+  ],
 
   // --- Trust stats (shown in hero) ------------------------------------------
   // ✏️ HONEST numbers only. These default to facts that are true for you today

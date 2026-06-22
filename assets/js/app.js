@@ -42,6 +42,9 @@
     trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
     spark: '<path d="M12 2l2.4 6.5L21 11l-6.6 2.5L12 20l-2.4-6.5L3 11l6.6-2.5z"/>',
     eye: '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>',
+    server: '<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><line x1="7" y1="7.5" x2="7.01" y2="7.5"/><line x1="7" y1="16.5" x2="7.01" y2="16.5"/>',
+    layout: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>',
+    card: '<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>',
     top: '<line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>',
     user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
     cartBig: '<circle cx="9" cy="21" r="1.5"/><circle cx="19" cy="21" r="1.5"/><path d="M2.5 3H5l2.7 13.4a1.5 1.5 0 0 0 1.5 1.2h9.7a1.5 1.5 0 0 0 1.5-1.2L22 7H6"/>',
@@ -269,6 +272,18 @@
     });
   }
 
+  function renderPayments() {
+    var el = qs("#paymentsGrid"); if (!el) return;
+    var groups = {};
+    (C.payments || []).forEach(function (p) { (groups[p.group] = groups[p.group] || []).push(p); });
+    el.className = "pay-groups";
+    el.innerHTML = Object.keys(groups).map(function (g) {
+      return '<div class="pay-group"><h4>' + esc(g) + "</h4>" +
+        groups[g].map(function (p) { return '<div class="pay-chip">' + icon("card") + "<span>" + esc(p.label) + "</span></div>"; }).join("") +
+        "</div>";
+    }).join("");
+  }
+
   function fillServiceSelect() {
     var sel = qs("#cf-service"); if (!sel) return;
     sel.innerHTML = '<option value="">Select a service…</option>' +
@@ -360,6 +375,18 @@
   /* =========================================================================
      5. CHECKOUT
   ========================================================================= */
+  function paymentOptions() {
+    var groups = {};
+    (C.payments || []).forEach(function (p) { (groups[p.group] = groups[p.group] || []).push(p); });
+    var html = '<option value="">Select how you\'d like to pay…</option>';
+    Object.keys(groups).forEach(function (g) {
+      html += '<optgroup label="' + esc(g) + '">';
+      groups[g].forEach(function (p) { html += '<option value="' + esc(p.label) + '">' + esc(p.label) + "</option>"; });
+      html += "</optgroup>";
+    });
+    return html;
+  }
+
   function openCheckout() {
     if (!S.getCart().length) { toast(icon("cart"), "Your cart is empty"); return; }
     var body = qs("#checkoutBody");
@@ -374,7 +401,8 @@
         '<div class="field"><label for="co-email">Email <span class="req">*</span></label><input class="input" id="co-email" name="email" type="email" required autocomplete="email"></div></div>' +
         '<div class="field"><label for="co-wa">WhatsApp <span style="color:var(--muted);font-weight:400">(optional)</span></label><input class="input" id="co-wa" name="whatsapp" autocomplete="tel"></div>' +
         '<div class="field"><label for="co-notes">Project details</label><textarea class="textarea" id="co-notes" name="notes" placeholder="Anything I should know — links, references, deadlines…"></textarea></div>' +
-        '<input class="hp" tabindex="-1" autocomplete="off" name="company" aria-hidden="true">' +
+        '<div class="field"><label for="co-pay">Preferred payment method</label><select class="select" id="co-pay" name="payment">' + paymentOptions() + "</select></div>" +
+        '<input class="hp" tabindex="-1" autocomplete="off" name="_gotcha" aria-hidden="true">' +
         '<div class="form-status" id="co-status" role="alert"></div>' +
         '<button class="btn btn-primary btn-block" type="submit">' + icon("check") + " Place order</button>" +
         '<p class="form-note">By placing this order you\'re sending me a request — I\'ll confirm the details and payment with you before starting. No payment is taken on this site.</p>' +
@@ -387,12 +415,22 @@
   function submitCheckout(e) {
     e.preventDefault();
     var f = e.target, status = qs("#co-status");
-    if (f.company.value) return; // honeypot tripped
+    if (f._gotcha.value) return; // honeypot tripped (bot)
     // NB: a control named "name" is shadowed by HTMLFormElement.name — use .elements
     var name = f.elements["name"].value.trim(), email = f.email.value.trim();
     if (!name || !validEmail(email)) { showStatus(status, "err", "Please add your name and a valid email."); return; }
-    var order = S.placeOrder({ name: name, email: email, whatsapp: f.whatsapp.value.trim(), notes: f.notes.value.trim() });
-    showOrderSuccess(order);
+    var customer = {
+      name: name, email: email, whatsapp: f.whatsapp.value.trim(),
+      notes: f.notes.value.trim(), payment_method: f.payment.value,
+    };
+    var btn = qs('button[type="submit"]', f);
+    if (btn) btn.disabled = true;
+    showStatus(status, "ok", "Placing your order…");
+    // Try the backend first (so it lands in your dashboard); fall back to local + Formspree.
+    S.placeOrderViaApi(customer)
+      .then(function (order) { showOrderSuccess(order); })
+      .catch(function () { showOrderSuccess(S.placeOrder(customer)); })
+      .then(function () { if (btn) btn.disabled = false; });
   }
 
   function showOrderSuccess(order) {
@@ -408,6 +446,7 @@
         "<h3>Thank you!</h3>" +
         '<p class="lead" style="margin:.5rem auto 0">Your order request is in. ' + esc(emailNote) + "</p>" +
         '<div class="order-id-box"><small>Your order ID — save it to track</small><div class="id">' + esc(order.id) + "</div></div>" +
+        (order.payment_method ? '<p class="form-note" style="margin:.2rem auto 0">Payment via <b>' + esc(order.payment_method) + "</b> — I'll send you the details to complete it.</p>" : "") +
       "</div>" +
       '<a class="btn btn-primary btn-block" href="' + esc(waLink) + '" target="_blank" rel="noopener">' + icon("whatsapp") + " Confirm on WhatsApp</a>" +
       '<button class="btn btn-ghost btn-block mt-2" id="goTrack">' + icon("doc") + " Track this order</button>" +
@@ -453,23 +492,77 @@
     var box = qs("#trackResult");
     var id = qs("#trackInput").value.trim();
     if (!id) { renderRecentOrders(); return; }
-    var order = S.getOrder(id);
-    if (!order) {
-      box.innerHTML = '<div class="form-status err show">No order found for “' + esc(id) + '”. Check the ID, or it may have been placed on a different device/browser.</div>';
-      return;
-    }
-    var currentIdx = STAGES.findIndex(function (s) { return s.key === order.status; });
+    id = id.toUpperCase();
+    box.innerHTML = '<p class="form-note">Looking up ' + esc(id) + "…</p>";
+    fetch((C.apiBase || "") + "/api/orders/" + encodeURIComponent(id), { headers: { Accept: "application/json" } })
+      .then(function (r) { if (!r.ok) throw new Error("nf"); return r.json(); })
+      .then(function (server) { renderTrackResult(normalizeServerOrder(server)); })
+      .catch(function () {
+        var order = S.getOrder(id);
+        if (order) renderTrackResult(order);
+        else box.innerHTML = '<div class="form-status err show">No order found for “' + esc(id) + '”. Check the ID, or it may have been placed on a different device.</div>';
+      });
+  }
+
+  function normalizeServerOrder(s) {
+    return {
+      id: s.public_id,
+      items: (s.items || []).map(function (i) { return { service: i.service, tier: i.tier, price: i.price, qty: i.qty }; }),
+      total: s.total,
+      status: s.status_label || s.status,
+      progress: s.progress,
+      payment_method: s.payment_method,
+      timeline: (s.updates || []).map(function (u) { return { status: u.status, note: u.message, at: u.created_at }; }),
+    };
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return "";
+    try { return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }); }
+    catch (e) { return iso; }
+  }
+
+  function renderTrackResult(order) {
+    var box = qs("#trackResult");
+    var statusStr = String(order.status || "Received");
+    var cancelled = statusStr.toLowerCase() === "cancelled";
+    var currentIdx = STAGES.findIndex(function (s) { return s.key.toLowerCase() === statusStr.toLowerCase(); });
     if (currentIdx < 0) currentIdx = 0;
-    var items = order.items.map(function (i) { return esc(i.service) + " (" + esc(i.tier) + ")"; }).join(", ");
-    box.innerHTML =
-      '<div class="order-id-box" style="text-align:left"><small>Order</small><div class="id" style="font-size:1.2rem">' + esc(order.id) + "</div>" +
-      '<p class="form-note" style="margin-top:.3rem">' + items + " · " + money(order.total) + "</p></div>" +
-      '<div class="timeline">' + STAGES.map(function (s, i) {
+    var prog = (typeof order.progress === "number") ? order.progress
+      : Math.round(currentIdx / (STAGES.length - 1) * 100);
+    var items = (order.items || []).map(function (i) { return esc(i.service) + " (" + esc(i.tier) + ")"; }).join(", ");
+
+    var html = '<div class="order-id-box" style="text-align:left"><small>Order</small>' +
+      '<div class="id" style="font-size:1.2rem">' + esc(order.id) + "</div>" +
+      '<p class="form-note" style="margin-top:.3rem">' + items + " · " + money(order.total) + "</p></div>";
+
+    if (cancelled) {
+      html += '<div class="form-status err show">This order was cancelled.</div>';
+    } else {
+      html += '<div style="margin:1rem 0 1.2rem"><div style="display:flex;justify-content:space-between;font-size:.82rem;color:var(--muted);margin-bottom:.4rem">' +
+        '<span>Progress</span><span style="color:var(--text);font-weight:800">' + prog + '%</span></div>' +
+        '<div style="height:10px;border-radius:999px;background:var(--surface-2);overflow:hidden;border:1px solid var(--border)">' +
+        '<span style="display:block;height:100%;width:' + prog + '%;background:var(--grad);border-radius:999px"></span></div></div>';
+      html += '<div class="timeline">' + STAGES.map(function (s, i) {
         var cls = i < currentIdx ? "done" : (i === currentIdx ? "current done" : "");
-        return '<div class="tl-step ' + cls + '"><span class="tl-dot">' + (i <= currentIdx ? icon("check") : "") + '</span><div class="tl-body"><b>' + esc(s.key) + "</b><small>" + esc(s.note) + "</small></div></div>";
-      }).join("") + "</div>" +
-      '<p class="form-note">Status updates are confirmed with you directly by email/WhatsApp. Questions about this order? ' +
-      '<a href="' + esc(S.whatsappLink("Hi! About my order " + order.id + "…")) + '" target="_blank" rel="noopener" style="color:var(--accent-2);font-weight:600">Message me</a>.</p>';
+        return '<div class="tl-step ' + cls + '"><span class="tl-dot">' + (i <= currentIdx ? icon("check") : "") +
+          '</span><div class="tl-body"><b>' + esc(s.key) + "</b><small>" + esc(s.note) + "</small></div></div>";
+      }).join("") + "</div>";
+    }
+
+    if (order.timeline && order.timeline.length) {
+      html += '<div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)"><b style="font-size:.9rem">Latest updates</b>';
+      order.timeline.slice().reverse().slice(0, 6).forEach(function (u) {
+        html += '<div style="margin-top:.6rem;font-size:.88rem"><span>' + esc(u.note || "") + "</span>" +
+          '<small style="display:block;color:var(--muted-2);font-size:.74rem;margin-top:.1rem">' + esc(fmtDate(u.at)) + "</small></div>";
+      });
+      html += "</div>";
+    }
+
+    html += '<p class="form-note" style="margin-top:1rem">Questions about this order? ' +
+      '<a href="' + esc(S.whatsappLink("Hi! About my order " + order.id + "…")) +
+      '" target="_blank" rel="noopener" style="color:var(--accent-2);font-weight:600">Message me</a>.</p>';
+    box.innerHTML = html;
   }
 
   /* =========================================================================
@@ -507,7 +600,7 @@
     on(form, "submit", function (e) {
       e.preventDefault();
       var status = qs("#cf-status");
-      if (form.company.value) return; // honeypot
+      if (form._gotcha.value) return; // honeypot tripped (bot)
       var name = form.elements["name"].value.trim(), email = form.email.value.trim(), message = form.message.value.trim();
       if (!name || !validEmail(email) || !message) { showStatus(status, "err", "Please fill in your name, a valid email, and your message."); return; }
       var payload = {
@@ -515,6 +608,7 @@
         name: name, email: email, whatsapp: form.whatsapp.value.trim(),
         service: form.service.value, budget: form.budget.value, timeline: form.timeline.value,
         message: message,
+        _gotcha: form._gotcha.value, // Formspree server-side honeypot
       };
       var btn = qs('button[type="submit"]', form);
       if (C.formspreeId) {
@@ -771,7 +865,7 @@
     renderFilters(); renderPortfolio("All");
     renderProcess(); renderPerks(); renderSkills();
     renderTestimonials(); renderFAQ(); renderMarquee(); renderFooterServices();
-    renderPersonalProjects(); renderExperience();
+    renderPersonalProjects(); renderExperience(); renderPayments();
     fillServiceSelect();
 
     initContactForm();

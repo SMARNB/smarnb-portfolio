@@ -100,6 +100,7 @@
         whatsapp: String(customer.whatsapp || "").slice(0, 40),
         notes: String(customer.notes || "").slice(0, 2000),
       },
+      payment_method: String(customer.payment_method || "").slice(0, 60),
       status: "Received",
       createdAt: new Date().toISOString(),
       timeline: [
@@ -124,6 +125,7 @@
         " (" + c.currency + (i.price * i.qty) + ")");
     });
     lines.push("", "Total: " + c.currency + order.total);
+    if (order.payment_method) lines.push("Payment: " + order.payment_method);
     lines.push("From: " + order.customer.name + " <" + order.customer.email + ">");
     if (order.customer.whatsapp) lines.push("WhatsApp: " + order.customer.whatsapp);
     if (order.customer.notes) lines.push("Notes: " + order.customer.notes);
@@ -149,8 +151,10 @@
           email: order.customer.email,
           whatsapp: order.customer.whatsapp,
           notes: order.customer.notes,
+          payment: order.payment_method || "",
           summary: orderSummaryText(order),
           total: window.SITE_CONFIG.currency + order.total,
+          _gotcha: "",
         }),
       }).catch(function () {}); // fire-and-forget; WhatsApp is the reliable fallback
     } catch (e) {}
@@ -170,12 +174,54 @@
     });
   }
 
+  /* ---- place order via the backend API (falls back to local if offline) --- */
+  function placeOrderViaApi(customer) {
+    var base = (window.SITE_CONFIG && window.SITE_CONFIG.apiBase) || "";
+    var snapshot = getCart();
+    var items = snapshot.map(function (i) {
+      return { service: i.service, tier: i.tier, price: i.price, qty: i.qty };
+    });
+    return fetch(base + "/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        customer_name: customer.name, customer_email: customer.email,
+        customer_whatsapp: customer.whatsapp || "", notes: customer.notes || "",
+        payment_method: customer.payment_method || "", items: items,
+      }),
+    }).then(function (r) {
+      if (!r.ok) throw new Error("api " + r.status);
+      return r.json();
+    }).then(function (server) {
+      var order = {
+        id: server.public_id, items: snapshot, total: server.total,
+        customer: {
+          name: customer.name, email: customer.email,
+          whatsapp: customer.whatsapp || "", notes: customer.notes || "",
+        },
+        payment_method: customer.payment_method || "",
+        status: server.status, createdAt: server.created_at,
+        timeline: (server.updates || []).map(function (u) {
+          return { status: u.status || server.status, at: u.created_at, note: u.message };
+        }),
+      };
+      var orders = getOrders();
+      orders.unshift(order);
+      write(ORDERS_KEY, orders.slice(0, 50));
+      clearCart();
+      emit();
+      notify(order); // also email via Formspree as a backup
+      return order;
+    });
+  }
+
   function onChange(fn) { listeners.push(fn); }
 
   window.Store = {
     getCart: getCart, addItem: addItem, removeItem: removeItem, setQty: setQty,
     clearCart: clearCart, cartCount: cartCount, cartTotal: cartTotal,
     getOrders: getOrders, getOrder: getOrder, placeOrder: placeOrder,
+    placeOrderViaApi: placeOrderViaApi,
     sendMessage: sendMessage, whatsappLink: whatsappLink,
     orderSummaryText: orderSummaryText, onChange: onChange,
   };

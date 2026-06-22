@@ -44,7 +44,7 @@ ul, ol { list-style: none; padding: 0; }
   --glow: 0 0 0 1px rgba(var(--accent-rgb),.4), 0 8px 30px -8px rgba(var(--accent-rgb),.5);
 
   --r-sm: 10px; --r: 16px; --r-lg: 22px; --r-pill: 999px;
-  --container: 1180px;
+  --container: 1400px;
   --header-h: 70px;
   --ease: cubic-bezier(.22,1,.36,1);
 
@@ -526,6 +526,16 @@ h2.section-title { font-size: clamp(1.8rem, 4.4vw, 2.8rem); }
 .xp-org { color: var(--accent-2); font-weight: 650; font-size: .92rem; }
 .xp-period { font-size: .8rem; color: var(--muted); font-weight: 700; background: var(--surface); border: 1px solid var(--border); padding: .22rem .65rem; border-radius: var(--r-pill); white-space: nowrap; }
 .xp-desc { color: var(--muted); font-size: .93rem; margin: .5rem 0 .7rem; }
+
+/* ---- Payments band ------------------------------------------------------- */
+.pay-band { display: grid; gap: 1.6rem; align-items: center; }
+@media (min-width: 880px) { .pay-band { grid-template-columns: .85fr 1.15fr; } }
+.pay-head h3 { font-size: clamp(1.3rem, 3vw, 1.7rem); margin: .2rem 0 .5rem; }
+.pay-groups { display: grid; gap: 1.1rem; grid-template-columns: 1fr; }
+@media (min-width: 560px) { .pay-groups { grid-template-columns: repeat(3, 1fr); } }
+.pay-group h4 { font-size: .74rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted-2); margin-bottom: .6rem; }
+.pay-chip { display: flex; align-items: center; gap: .5rem; padding: .55rem .7rem; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface-2); font-size: .84rem; font-weight: 600; margin-bottom: .5rem; }
+.pay-chip svg { width: 18px; height: 18px; color: var(--accent-2); flex: none; }
 
 /* ---- Reveal animations --------------------------------------------------- */
 .reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s var(--ease), transform .7s var(--ease); transition-delay: var(--d, 0ms); }

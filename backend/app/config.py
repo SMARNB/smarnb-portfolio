@@ -1,0 +1,41 @@
+"""App configuration. Reads from environment (or a local backend/.env file)."""
+import os
+
+_APP_DIR = os.path.dirname(os.path.abspath(__file__))      # backend/app
+BACKEND_DIR = os.path.dirname(_APP_DIR)                     # backend/
+SITE_DIR = os.path.dirname(BACKEND_DIR)                     # portfolio/  (the static site root)
+
+
+def _load_dotenv(path):
+    """Minimal .env loader so we don't need an extra dependency."""
+    if not os.path.exists(path):
+        return
+    with open(path, "r", encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, val = line.split("=", 1)
+            os.environ.setdefault(key.strip(), val.strip().strip('"').strip("'"))
+
+
+_load_dotenv(os.path.join(BACKEND_DIR, ".env"))
+
+# --- Security -----------------------------------------------------------------
+SECRET_KEY = os.environ.get("SECRET_KEY", "dev-only-insecure-secret-change-me")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 7)))  # 7 days
+
+# --- Database -----------------------------------------------------------------
+# Default: SQLite file next to the backend. For production set DATABASE_URL to a
+# persistent Postgres (e.g. a free Neon database): postgresql+pg8000://user:pass@host/db
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///" + os.path.join(BACKEND_DIR, "portfolio.db"))
+
+# --- Seeded admin (the developer) --------------------------------------------
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "shahjee975@gmail.com")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin12345")   # ⚠️ change via env in production
+ADMIN_NAME = os.environ.get("ADMIN_NAME", "Muhammad Ali Raza")
+
+# --- Misc ---------------------------------------------------------------------
+CURRENCY = os.environ.get("CURRENCY", "$")
+# Comma-separated allowed origins for the browser API (use your domains in prod).
+CORS_ORIGINS = [o.strip() for o in os.environ.get("CORS_ORIGINS", "*").split(",") if o.strip()] or ["*"]

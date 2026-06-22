@@ -71,6 +71,9 @@
       </nav>
 
       <div class="nav-actions">
+        <a class="icon-btn" href="app.html" aria-label="Client login / my projects" title="My projects">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+        </a>
         <button class="icon-btn" id="themeToggle" aria-label="Toggle light/dark theme"></button>
         <button class="icon-btn" data-open-track aria-label="Track your order" title="Track order">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
@@ -97,6 +100,7 @@
     <a href="#experience">Experience</a>
     <a href="#faq">FAQ</a>
     <a href="#contact">Contact</a>
+    <a href="app.html">My Projects (Client login)</a>
     <a class="btn btn-primary" href="#contact">Start a project</a>
   </nav>
 
@@ -181,6 +185,20 @@
             <p>Tell me what you need and I'll send a tailored quote and timeline — no obligation.</p>
           </div>
           <a class="btn btn-primary" href="#contact">Get a custom quote</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================ PAYMENTS ============================ -->
+    <section id="payments" style="padding-top:0">
+      <div class="container">
+        <div class="card pay-band reveal">
+          <div class="pay-head">
+            <span class="eyebrow" style="margin-bottom:.6rem">Payments</span>
+            <h3>Pay your way — local &amp; global</h3>
+            <p class="lead">Local Pakistani methods, buy-now-pay-later, or international cards &amp; transfers. Pick a method at checkout; I'll send secure payment details to confirm.</p>
+          </div>
+          <div id="paymentsGrid"></div>
         </div>
       </div>
     </section>
@@ -350,7 +368,8 @@
               </div>
             </div>
             <div class="field"><label for="cf-message">Project details <span class="req">*</span></label><textarea class="textarea" id="cf-message" name="message" required placeholder="What are you building? Share goals, links, references, deadlines…"></textarea></div>
-            <input class="hp" tabindex="-1" autocomplete="off" name="company" aria-hidden="true" placeholder="Leave this empty">
+            <!-- Honeypot: humans never see/fill this; bots do. Formspree also treats _gotcha as spam server-side. -->
+            <input class="hp" tabindex="-1" autocomplete="off" name="_gotcha" aria-hidden="true" placeholder="Leave this empty">
             <div class="form-status" id="cf-status" role="alert"></div>
             <button class="btn btn-primary btn-block" type="submit">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -388,6 +407,7 @@
             <li><a href="#work">Work</a></li>
             <li><a href="#experience">Experience</a></li>
             <li><a href="#about">About</a></li>
+            <li><a href="app.html">Client login</a></li>
             <li><a href="#" data-open-track>Track an order</a></li>
           </ul>
         </div>

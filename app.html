@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#0a0d14">
+  <meta name="robots" content="noindex">
+  <title>My Projects — Muhammad Ali Raza</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <script defer src="assets/js/config.js"></script>
+  <script defer src="assets/js/api.js"></script>
+  <script defer src="assets/js/client-dash.js"></script>
+</head>
+<body class="dash-body">
+  <header class="dash-topbar">
+    <div class="container">
+      <a class="brand" href="index.html"><span class="mark" data-initials>MAR</span><span class="brand-text">Client area</span></a>
+      <span class="dash-title"><span class="pill">Projects</span></span>
+      <div class="spacer"></div>
+      <span class="who" id="who" hidden></span>
+      <button class="icon-btn" id="themeToggle" aria-label="Toggle theme"></button>
+      <button class="btn btn-ghost btn-sm" id="logoutBtn" hidden>Log out</button>
+    </div>
+  </header>
+  <main class="dash-main">
+    <div class="container" id="view"></div>
+  </main>
+</body>
+</html>

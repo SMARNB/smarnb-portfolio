@@ -1,8 +1,15 @@
-# ALIRA — Portfolio & Sales Center
+# Muhammad Ali Raza — Portfolio, Sales Center & Client Dashboard
 
-A fast, accessible, secure freelance portfolio with a built-in **sales center**:
-service packages, a cart, direct ordering, **order tracking**, and custom-quote
-requests — all in a single static site with **zero dependencies** and **no build step**.
+A fast, accessible, secure freelance portfolio with a built-in **sales center**
+(packages, cart, ordering, tracking, custom quotes) **plus an optional full-stack
+backend** that adds client accounts, a **project tracker with progress bars**, and
+a **developer dashboard**.
+
+- **Static mode** — just the marketing site + sales center. Zero dependencies, no
+  build step, deploy anywhere. Orders reach you by email (Formspree) + WhatsApp.
+- **Full-stack mode** — run the FastAPI backend (`backend/`) and you also get
+  client login, live project progress, and an admin dashboard to manage everything.
+  See **[backend/README.md](backend/README.md)**.
 
 - ⚡ **Instant load** — no frameworks, no web fonts, no third-party scripts. Just HTML/CSS/JS.
 - 📱 **Fully responsive** — phones, tablets, laptops, desktops, every size.
@@ -88,23 +95,45 @@ After deploying, update the domain in: `index.html` (`canonical`, `og:*`),
 
 ```
 portfolio/
-├── index.html              # the whole site (sections + modals/drawer shells)
+├── index.html              # marketing site + sales center
+├── app.html                # client dashboard (login + my projects)
+├── admin.html              # developer dashboard
 ├── 404.html                # on-brand not-found page
 ├── manifest.webmanifest    # installable PWA metadata
 ├── robots.txt / sitemap.xml# SEO
-├── _headers / netlify.toml # security + cache headers
+├── _headers / netlify.toml / vercel.json   # security + cache headers (static hosts)
+├── FORMSPREE_SECURITY.md   # spam/scam hardening guide
 ├── README.md
-└── assets/
-    ├── css/styles.css      # design system, responsive, animations
-    ├── js/
-    │   ├── config.js       # ✏️ your details  (edit first)
-    │   ├── data.js         # ✏️ services, prices, portfolio, reviews
-    │   ├── store.js        # cart / orders / tracking (localStorage) + notify
-    │   └── app.js          # rendering, interactions, a11y, sales flow
-    ├── img/                # your images go here
-    ├── favicon.svg
-    └── og-image.svg        # social share image (export to PNG for best support)
+├── assets/
+│   ├── css/
+│   │   ├── styles.css      # design system, responsive, animations
+│   │   └── dashboard.css   # dashboard styles
+│   ├── js/
+│   │   ├── config.js       # ✏️ your details, payments, apiBase  (edit first)
+│   │   ├── data.js         # ✏️ services, prices, portfolio, projects, reviews
+│   │   ├── store.js        # cart / orders / tracking + API + Formspree
+│   │   ├── app.js          # rendering, interactions, a11y, sales flow
+│   │   ├── api.js          # dashboard API client
+│   │   ├── client-dash.js  # client dashboard logic
+│   │   └── admin-dash.js   # developer dashboard logic
+│   ├── img/profile.jpg, favicon.svg, og-image.svg
+└── backend/                # FastAPI app (API + dashboards) — see backend/README.md
+    ├── app/                # config, models, schemas, security, crud, routers
+    ├── requirements.txt, .env.example
+    ├── PAYMENTS.md         # how to go live with Stripe / JazzCash / BNPL
+    └── smoke_test.py / seed_demo.py
 ```
+
+### Full-stack mode (client accounts + dashboards)
+Run the backend and the same server hosts the site, the API, and both dashboards:
+```bash
+cd backend && python -m venv .venv
+.venv\Scripts\python -m pip install -r requirements.txt
+.venv\Scripts\python -m uvicorn app.main:app --reload --port 8100
+```
+→ `/` site · `/app` client dashboard · `/admin` developer dashboard
+(admin: `shahjee975@gmail.com` / `admin12345` — **change it** via `.env`).
+Full details + free deploy (Render + Neon): **[backend/README.md](backend/README.md)**.
 
 ---
 
