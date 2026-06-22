@@ -202,12 +202,12 @@ window.SITE_DATA = {
      TESTIMONIALS  (replace with your real Fiverr reviews)
   -------------------------------------------------------------------------- */
   testimonials: [
-    { name: "Daniel M.",   role: "Startup Founder",     rating: 5, text: "Delivered a full SaaS dashboard ahead of schedule. Clean code, great communication. Already hired again." },
-    { name: "Sofia R.",    role: "Product Manager",     rating: 5, text: "The Figma UI was exactly what we needed — pixel perfect and easy for our devs to build from." },
-    { name: "Ahmed K.",    role: "E-commerce Owner",    rating: 5, text: "The scraping bot saved us hours every day. Reliable, well documented, and just works." },
-    { name: "Laura P.",    role: "Brand Director",      rating: 5, text: "Our packaging looks premium on the shelf. The 3D mockups helped us pitch to retailers." },
-    { name: "Marcus T.",   role: "SaaS CTO",            rating: 5, text: "Took a vague idea and turned it into a working product. Professional from start to finish." },
-    { name: "Priya S.",    role: "Marketing Lead",      rating: 5, text: "Automation pipeline runs flawlessly on schedule. Highly recommend for any data work." },
+    { name: "Omar Al-Rashid", role: "SaaS Founder",      loc: "Dubai, UAE 🇦🇪",        rating: 5, text: "Delivered a full dashboard ahead of schedule. Clean code, clear communication. Already hired again." },
+    { name: "Mei Ling Tan",   role: "Product Manager",   loc: "Singapore 🇸🇬",          rating: 5, text: "The Figma UI was exactly what we needed — pixel perfect and easy for our devs to build from." },
+    { name: "Lukas Berger",   role: "E-commerce Owner",  loc: "Berlin, Germany 🇩🇪",    rating: 5, text: "The scraping bot saves us hours every day. Reliable, well documented, and it just works." },
+    { name: "Ayesha Khan",    role: "Brand Manager",     loc: "Karachi, Pakistan 🇵🇰",  rating: 5, text: "Our packaging looks premium on the shelf. The 3D mockups helped us pitch to retailers." },
+    { name: "David Cohen",    role: "Startup CTO",       loc: "Austin, USA 🇺🇸",        rating: 5, text: "Took a vague idea and turned it into a working product. Professional from start to finish." },
+    { name: "Sofia Romano",   role: "Marketing Lead",    loc: "Milan, Italy 🇮🇹",       rating: 5, text: "Automation pipeline runs flawlessly on schedule. Highly recommend for any data work." },
   ],
 
   /* --------------------------------------------------------------------------

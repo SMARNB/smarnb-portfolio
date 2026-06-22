@@ -233,7 +233,8 @@
     el.innerHTML = D.testimonials.map(function (t, i) {
       var stars = ""; for (var k = 0; k < t.rating; k++) stars += icon("star");
       var initials = t.name.split(" ").map(function (w) { return w[0]; }).join("").slice(0, 2);
-      return '<article class="card tcard reveal" style="--d:' + (i * 60) + 'ms"><div class="stars">' + stars + "</div><p>“" + esc(t.text) + '”</p><div class="tperson"><span class="av">' + esc(initials) + "</span><span><b>" + esc(t.name) + "</b><small>" + esc(t.role) + "</small></span></div></article>";
+      var sub = esc(t.role) + (t.loc ? " · " + esc(t.loc) : "");
+      return '<article class="card tcard reveal" style="--d:' + (i * 60) + 'ms"><div class="stars">' + stars + "</div><p>“" + esc(t.text) + '”</p><div class="tperson"><span class="av">' + esc(initials) + "</span><span><b>" + esc(t.name) + "</b><small>" + sub + "</small></span></div></article>";
     }).join("");
   }
 
@@ -565,15 +566,15 @@
 
   function animateCounters() {
     qsa("[data-count]").forEach(function (el) {
-      var target = parseFloat(el.dataset.count), suffix = el.dataset.suffix || "", dur = 1400, start = 0, t0 = null;
+      var target = parseFloat(el.dataset.count), suffix = el.dataset.suffix || "", dur = 1400, t0 = null;
       if (reduceMotion) { el.textContent = target + suffix; return; }
       function step(ts) {
         if (!t0) t0 = ts; var p = Math.min((ts - t0) / dur, 1);
-        var eased = 1 - Math.pow(1 - p, 3);
-        el.textContent = Math.round(target * eased) + suffix;
+        el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3))) + suffix;
         if (p < 1) requestAnimationFrame(step);
       }
       requestAnimationFrame(step);
+      setTimeout(function () { el.textContent = target + suffix; }, dur + 250); // safety: ensure final value shows even if rAF is throttled
     });
   }
 
@@ -589,8 +590,12 @@
     // counters when hero stats visible
     var hs = qs("#heroStats");
     if (hs) {
-      var o = new IntersectionObserver(function (en) { if (en[0].isIntersecting) { animateCounters(); o.disconnect(); } }, { threshold: 0.4 });
+      var counted = false;
+      var runCounters = function () { if (counted) return; counted = true; animateCounters(); };
+      var o = new IntersectionObserver(function (en) { if (en[0].isIntersecting) { runCounters(); o.disconnect(); } }, { threshold: 0.2 });
       o.observe(hs);
+      var rct = hs.getBoundingClientRect();                 // already visible on load → run now
+      if (rct.top < window.innerHeight && rct.bottom > 0) runCounters();
     }
     // skill bars
     var sk = qs("#skillsList");
@@ -758,6 +763,7 @@
      INIT
   ========================================================================= */
   function init() {
+    if ("scrollRestoration" in history) { try { history.scrollRestoration = "manual"; } catch (e) {} }
     fillConfig();
     buildHeroStats();
     renderServices();

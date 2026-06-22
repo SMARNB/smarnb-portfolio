@@ -25,7 +25,7 @@ window.SITE_CONFIG = {
   email: "shahjee975@gmail.com",
   // WhatsApp number in FULL international format, digits only (no +, spaces, or dashes).
   // Example for US +1 (415) 555-0123  ->  "14155550123"
-  whatsapp: "0000000000",         // TODO: replace with your WhatsApp number
+  whatsapp: "923414527256",       // WhatsApp (international format, digits only)
   fiverr: "#",                    // TODO: your Fiverr profile URL
 
   // --- Social links (leave "" to hide a link) -------------------------------
@@ -47,12 +47,15 @@ window.SITE_CONFIG = {
   currency: "$",
   currencyCode: "USD",
 
-  // --- Trust stats (shown in hero / about) ----------------------------------
+  // --- Trust stats (shown in hero) ------------------------------------------
+  // ✏️ HONEST numbers only. These default to facts that are true for you today
+  // (4 services, source always included, 0% cancellations, fast replies).
+  // As you complete real orders, bump these up — don't inflate them.
   stats: [
-    { value: 120, suffix: "+", label: "Projects delivered" },
-    { value: 95,  suffix: "+", label: "Happy clients" },
-    { value: 99,  suffix: "%", label: "On-time delivery" },
-    { value: 5,   suffix: "★", label: "Average rating", decimals: 0 },
+    { value: 4,   suffix: "",  label: "Services offered" },
+    { value: 100, suffix: "%", label: "Source & rights to you" },
+    { value: 0,   suffix: "%", label: "Cancellation rate" },
+    { value: 24,  suffix: "h", label: "Avg. response time" },
   ],
 
   // --- SEO ------------------------------------------------------------------
