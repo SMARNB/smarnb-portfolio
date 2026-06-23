@@ -5,7 +5,8 @@ PyJWT>=2.8
 pydantic[email]>=2.7
 cryptography>=42.0
 python-multipart>=0.0.9
-# For production Postgres (e.g. free Neon DB), also install a pure-python driver:
-# pg8000>=1.31
+# Pure-python Postgres driver (used automatically when DATABASE_URL is Postgres,
+# e.g. a free Neon DB). Harmless for SQLite-only local dev.
+pg8000>=1.31
 # Optional — uncomment to turn on Stripe card payments (then set STRIPE_SECRET_KEY):
 # stripe>=9.0

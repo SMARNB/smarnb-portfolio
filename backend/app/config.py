@@ -37,6 +37,12 @@ LOGIN_WINDOW_SECONDS = int(os.environ.get("LOGIN_WINDOW_SECONDS", str(15 * 60)))
 # Default: SQLite file next to the backend. For production set DATABASE_URL to a
 # persistent Postgres (e.g. a free Neon database): postgresql+pg8000://user:pass@host/db
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///" + os.path.join(BACKEND_DIR, "portfolio.db"))
+# Accept a plain Neon/Postgres URL as-is and route it through the bundled
+# pure-python driver (pg8000) so no compiler/libpq is needed on the host.
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = "postgresql+pg8000://" + DATABASE_URL[len("postgres://"):]
+elif DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = "postgresql+pg8000://" + DATABASE_URL[len("postgresql://"):]
 
 # --- Seeded admin (the developer) --------------------------------------------
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "shahjee975@gmail.com")

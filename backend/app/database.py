@@ -4,8 +4,19 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 
 from . import config
 
-connect_args = {"check_same_thread": False} if config.DATABASE_URL.startswith("sqlite") else {}
-engine = create_engine(config.DATABASE_URL, connect_args=connect_args, future=True, pool_pre_ping=True)
+_url = config.DATABASE_URL
+connect_args = {}
+if _url.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
+elif "+pg8000" in _url:
+    # Managed Postgres (Neon, etc.) requires TLS. pg8000 takes an ssl_context and
+    # doesn't understand libpq query params (sslmode/channel_binding) — strip them.
+    import ssl
+    if "?" in _url:
+        _url = _url.split("?", 1)[0]
+    connect_args = {"ssl_context": ssl.create_default_context()}
+
+engine = create_engine(_url, connect_args=connect_args, future=True, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 Base = declarative_base()
 
