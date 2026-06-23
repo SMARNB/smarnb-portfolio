@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import config, crud
 from .database import Base, SessionLocal, engine
-from .routers import admin, auth, orders
+from .routers import admin, auth, orders, services
 
 
 @asynccontextmanager
@@ -70,11 +70,20 @@ async def security_headers(request, call_next):
         h.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()")
         h.setdefault("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
         h.setdefault("Content-Security-Policy", _CSP)
+        # Caching: revalidate code/markup (no build hashing), cache images a while.
+        last = p.rsplit("/", 1)[-1].lower()
+        if p.startswith("/api/"):
+            h.setdefault("Cache-Control", "no-store")
+        elif last.endswith((".jpg", ".jpeg", ".png", ".webp", ".svg", ".ico", ".woff", ".woff2")):
+            h.setdefault("Cache-Control", "public, max-age=604800")
+        else:
+            h.setdefault("Cache-Control", "no-cache")
     return resp
 
 app.include_router(auth.router)
 app.include_router(orders.router)
 app.include_router(admin.router)
+app.include_router(services.router)
 
 
 @app.get("/api/health")

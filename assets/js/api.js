@@ -45,6 +45,7 @@ window.API = (function () {
     get: function (p) { return req("GET", p); },
     post: function (p, b) { return req("POST", p, b === undefined ? {} : b); },
     patch: function (p, b) { return req("PATCH", p, b === undefined ? {} : b); },
+    del: function (p) { return req("DELETE", p); },
     register: function (d) { return req("POST", "/api/auth/register", d).then(saveAuth); },
     login: function (d) { return req("POST", "/api/auth/login", d).then(saveAuth); },
     me: function () { return req("GET", "/api/auth/me"); },

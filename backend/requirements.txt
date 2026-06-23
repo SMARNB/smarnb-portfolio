@@ -3,5 +3,6 @@ uvicorn[standard]>=0.30
 SQLAlchemy>=2.0
 PyJWT>=2.8
 pydantic[email]>=2.7
+cryptography>=42.0
 # For production Postgres (e.g. free Neon DB), also install a pure-python driver:
 # pg8000>=1.31

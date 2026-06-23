@@ -115,6 +115,19 @@
     qsa("[data-cancel]", box).forEach(function (b) { b.addEventListener("click", function () { cancelOrder(b.dataset.cancel); }); });
   }
 
+  function deliverablesHtml(dels) {
+    if (!dels || !dels.length) return "";
+    return '<div class="deliverables"><h4 class="dlv-h">Your files</h4>' + dels.map(function (d) {
+      return '<div class="dlv"><div class="dlv-main"><b>' + esc(d.title || "Deliverable") + "</b>" +
+        (d.note ? "<small>" + esc(d.note) + "</small>" : "") + '</div><div class="dlv-actions">' +
+        (d.preview_url ? '<a class="btn btn-outline btn-sm" href="' + esc(d.preview_url) + '" target="_blank" rel="noopener">Preview</a>' : "") +
+        (d.locked
+          ? '<span class="dlv-lock">🔒 Unlocks after payment</span>'
+          : (d.final_url ? '<a class="btn btn-primary btn-sm" href="' + esc(d.final_url) + '" target="_blank" rel="noopener">Download</a>' : "")) +
+        "</div></div>";
+    }).join("") + "</div>";
+  }
+
   function projectCard(o) {
     var idx = stageIndex(o.status);
     var prog = (typeof o.progress === "number") ? o.progress : Math.round(idx / (STAGES.length - 1) * 100);
@@ -133,6 +146,7 @@
       "</div>" +
       (updates.length ? ('<button class="timeline-toggle" data-toggle="' + esc(o.public_id) + '">' + SVG.check + " View updates (" + updates.length + ")</button>" +
         '<div class="mini-timeline hidden" id="tl-' + esc(o.public_id) + '">' + updates.map(function (u) { return '<div class="mt-item"><span class="mt-dot"></span><div><p>' + esc(u.message) + "</p><small>" + esc(fmtDate(u.created_at)) + "</small></div></div>"; }).join("") + "</div>") : "") +
+      deliverablesHtml(o.deliverables) +
       (cancellable ? '<div style="margin-top:1rem"><button class="btn btn-outline btn-sm" data-cancel="' + esc(o.public_id) + '">Cancel order</button></div>' : "") +
       "</article>";
   }

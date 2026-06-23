@@ -63,6 +63,23 @@ class UpdateOut(BaseModel):
         from_attributes = True
 
 
+class DeliverableIn(BaseModel):
+    title: str = Field(default="", max_length=200)
+    preview_url: str = Field(default="", max_length=2000)
+    final_url: str = Field(default="", max_length=2000)
+    note: str = Field(default="", max_length=1000)
+
+
+class DeliverableOut(BaseModel):
+    id: int
+    title: str = ""
+    preview_url: str = ""
+    final_url: Optional[str] = None   # only present once the order is paid
+    locked: bool = True
+    note: str = ""
+    created_at: dt.datetime
+
+
 class OrderOut(BaseModel):
     public_id: str
     customer_name: str
@@ -80,6 +97,7 @@ class OrderOut(BaseModel):
     created_at: dt.datetime
     updated_at: dt.datetime
     updates: List[UpdateOut] = []
+    deliverables: List[DeliverableOut] = []
 
     class Config:
         from_attributes = True
@@ -107,3 +125,42 @@ class Stats(BaseModel):
     revenue: float
     clients: int
     by_status: dict
+
+
+# --- Services (admin-managed) -------------------------------------------------
+class ServicePackage(BaseModel):
+    tier: str = ""
+    price: float = 0
+    delivery: str = ""
+    revisions: int = 0
+    summary: str = ""
+    features: List[str] = []
+    popular: bool = False
+
+
+class ServiceIn(BaseModel):
+    title: str = Field(min_length=1, max_length=160)
+    category: str = Field(default="Development", max_length=60)
+    icon: str = Field(default="spark", max_length=30)
+    short: str = Field(default="", max_length=600)
+    tags: List[str] = []
+    packages: List[ServicePackage] = []
+    active: bool = True
+    sort_order: int = 0
+    slug: Optional[str] = None
+
+
+class ServiceOut(BaseModel):
+    id: int
+    slug: str
+    title: str
+    category: str
+    icon: str
+    short: str
+    tags: List[str] = []
+    packages: List[Any] = []
+    active: bool
+    sort_order: int
+
+    class Config:
+        from_attributes = True

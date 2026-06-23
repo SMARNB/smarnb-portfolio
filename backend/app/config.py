@@ -25,6 +25,14 @@ _load_dotenv(os.path.join(BACKEND_DIR, ".env"))
 SECRET_KEY = os.environ.get("SECRET_KEY", "dev-only-insecure-secret-change-me")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 7)))  # 7 days
 
+# Encryption-at-rest key for PII. If empty, derived from SECRET_KEY.
+# Generate a dedicated one with: python -c "from cryptography.fernet import Fernet;print(Fernet.generate_key().decode())"
+ENCRYPTION_KEY = os.environ.get("ENCRYPTION_KEY", "")
+
+# Login brute-force throttle (per IP)
+LOGIN_MAX_ATTEMPTS = int(os.environ.get("LOGIN_MAX_ATTEMPTS", "8"))
+LOGIN_WINDOW_SECONDS = int(os.environ.get("LOGIN_WINDOW_SECONDS", str(15 * 60)))
+
 # --- Database -----------------------------------------------------------------
 # Default: SQLite file next to the backend. For production set DATABASE_URL to a
 # persistent Postgres (e.g. a free Neon database): postgresql+pg8000://user:pass@host/db

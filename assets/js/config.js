@@ -74,7 +74,7 @@ window.SITE_CONFIG = {
   // (4 services, source always included, 0% cancellations, fast replies).
   // As you complete real orders, bump these up — don't inflate them.
   stats: [
-    { value: 4,   suffix: "",  label: "Services offered" },
+    { value: 4,   suffix: "",  label: "Services offered", auto: "services" },
     { value: 100, suffix: "%", label: "Source & rights to you" },
     { value: 0,   suffix: "%", label: "Cancellation rate" },
     { value: 24,  suffix: "h", label: "Avg. response time" },

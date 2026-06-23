@@ -284,6 +284,38 @@
     }).join("");
   }
 
+  function applyServices() {
+    renderServices();
+    renderPriceTabs();
+    var active = qs('.price-tab[aria-selected="true"]');
+    renderPricing(active ? active.dataset.service : D.services[0].id);
+    fillServiceSelect();
+    buildHeroStats();
+    animateCounters(); // re-run so "Services offered" reflects the new total
+  }
+
+  // Merge services added from the developer dashboard with the built-in catalog.
+  function fetchAndMergeServices() {
+    fetch((C.apiBase || "") + "/api/services", { headers: { Accept: "application/json" } })
+      .then(function (r) { if (!r.ok) throw new Error("no api"); return r.json(); })
+      .then(function (list) {
+        if (!Array.isArray(list) || !list.length) return;
+        var have = {}; D.services.forEach(function (s) { have[s.id] = true; });
+        var added = 0;
+        list.forEach(function (s) {
+          if (have[s.slug]) return;
+          D.services.push({
+            id: s.slug, icon: s.icon || "spark", category: s.category || "Development",
+            title: s.title, short: s.short || "", tags: s.tags || [],
+            deliverables: [], packages: s.packages || [],
+          });
+          added++;
+        });
+        if (added) applyServices();
+      })
+      .catch(function () { /* offline / static-only → keep data.js services */ });
+  }
+
   function fillServiceSelect() {
     var sel = qs("#cf-service"); if (!sel) return;
     sel.innerHTML = '<option value="">Select a service…</option>' +
@@ -675,7 +707,8 @@
   function buildHeroStats() {
     var wrap = qs("#heroStats"); if (!wrap) return;
     wrap.innerHTML = C.stats.map(function (s) {
-      return '<div class="stat"><div class="stat-num"><span data-count="' + s.value + '" data-suffix="' + (s.suffix || "") + '">0</span></div><div class="stat-label">' + esc(s.label) + "</div></div>";
+      var val = (s.auto === "services" && D.services) ? D.services.length : s.value;
+      return '<div class="stat"><div class="stat-num"><span data-count="' + val + '" data-suffix="' + (s.suffix || "") + '">0</span></div><div class="stat-label">' + esc(s.label) + "</div></div>";
     }).join("");
   }
 
@@ -867,6 +900,7 @@
     renderTestimonials(); renderFAQ(); renderMarquee(); renderFooterServices();
     renderPersonalProjects(); renderExperience(); renderPayments();
     fillServiceSelect();
+    fetchAndMergeServices(); // pull any services added from the dashboard
 
     initContactForm();
     renderCart();

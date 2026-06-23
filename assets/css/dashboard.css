@@ -115,3 +115,25 @@ main.dash-main { flex: 1; padding: clamp(1.5rem, 4vw, 2.5rem) 0 4rem; }
 .dash-status.err { background: rgba(244,114,182,.12); color: var(--accent-3); border: 1px solid rgba(244,114,182,.3); }
 .empty-card { text-align: center; padding: 3rem 1.5rem; color: var(--muted); }
 .empty-card svg { width: 54px; height: 54px; opacity: .4; margin: 0 auto 1rem; }
+
+/* ---- Deliverables -------------------------------------------------------- */
+.deliverables { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.dlv-h { font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted-2); margin-bottom: .6rem; }
+.dlv { display: flex; flex-wrap: wrap; gap: .6rem 1rem; align-items: center; justify-content: space-between; padding: .7rem .85rem; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface-2); margin-bottom: .5rem; }
+.dlv-main b { font-size: .92rem; display: block; }
+.dlv-main small { color: var(--muted); font-size: .8rem; }
+.dlv-actions { display: flex; gap: .5rem; align-items: center; }
+.dlv-lock { font-size: .8rem; font-weight: 700; color: var(--warn); white-space: nowrap; }
+.dlv-admin-list { display: grid; gap: .5rem; margin: .5rem 0 1rem; }
+.dlv-admin { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding: .6rem .8rem; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface-2); }
+.dlv-admin b { font-size: .9rem; } .dlv-admin small { display: block; color: var(--muted); font-size: .76rem; }
+
+/* ---- Admin tabs + services ----------------------------------------------- */
+.admin-tabs { display: flex; gap: .4rem; margin-bottom: 1.4rem; flex-wrap: wrap; }
+.admin-tabs button { padding: .55rem 1.1rem; border-radius: var(--r-pill); border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-weight: 700; font-size: .9rem; }
+.admin-tabs button.active { background: var(--grad); color: #0a0d14; border-color: transparent; }
+.svc-list { display: grid; gap: .7rem; }
+.svc-item { display: flex; flex-wrap: wrap; gap: .6rem 1rem; align-items: center; justify-content: space-between; padding: .9rem 1.1rem; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); }
+.svc-item .t { font-weight: 700; }
+.svc-item .c { color: var(--muted); font-size: .82rem; }
+.svc-item.off { opacity: .6; }
