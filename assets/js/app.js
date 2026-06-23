@@ -52,10 +52,12 @@
     linkedin: '<path fill="currentColor" stroke="none" d="M4.98 3.5A2.5 2.5 0 1 1 5 8.5a2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05 4 0 4.75 2.65 4.75 6.1V21H17.6v-5.4c0-1.3 0-2.95-1.8-2.95s-2.05 1.4-2.05 2.85V21H9z"/>',
     dribbble: '<circle cx="12" cy="12" r="9.5"/><path d="M5 7c4 4 9 5 14 4M3 12.5c5-1 10 0 13 4M9 3c3 4 5 9 5 18"/>',
     instagram: '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none"/>',
+    facebook: '<path fill="currentColor" stroke="none" d="M22 12a10 10 0 1 0-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.4h-1.2c-1.2 0-1.6.8-1.6 1.5V12h2.7l-.4 2.9h-2.3v7A10 10 0 0 0 22 12z"/>',
+    x: '<path fill="currentColor" stroke="none" d="M18.9 2H22l-7.1 8.1L23.3 22h-6.6l-5.2-6.8L5.5 22H2.4l7.6-8.7L1.1 2h6.8l4.6 6.2L18.9 2zm-1.2 18h1.8L7.1 3.9H5.2L17.7 20z"/>',
   };
   function icon(name, attrs) {
     var inner = P[name] || "";
-    var filled = name === "star" || name === "whatsapp" || name === "github" || name === "linkedin" || name === "instagram";
+    var filled = ["star", "whatsapp", "github", "linkedin", "instagram", "facebook", "x"].indexOf(name) !== -1;
     var base = filled
       ? 'fill="currentColor" stroke="none"'
       : 'fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"';
@@ -91,12 +93,22 @@
     qsa("[data-wa-link]").forEach(function (e) { e.href = "https://wa.me/" + wa; });
     qsa("[data-wa-text]").forEach(function (e) { e.textContent = "+" + wa; });
 
-    // socials
-    var smap = { github: "github", linkedin: "linkedin", dribbble: "dribbble", instagram: "instagram" };
+    // socials — the icon ALWAYS shows; a filled URL makes it clickable, an empty
+    // one stays as a dimmed placeholder (so you can see what's wired up).
+    var smap = { instagram: "instagram", facebook: "facebook", linkedin: "linkedin", x: "x", github: "github" };
     Object.keys(smap).forEach(function (k) {
       qsa('[data-social="' + k + '"]').forEach(function (a) {
-        if (C.socials[k]) { a.href = C.socials[k]; a.innerHTML = icon(smap[k]); }
-        else { a.remove(); }
+        a.innerHTML = icon(smap[k]);
+        var url = C.socials && C.socials[k];
+        if (url) {
+          a.href = url; a.target = "_blank"; a.rel = "noopener";
+          a.removeAttribute("aria-disabled"); a.classList.remove("social-empty");
+        } else {
+          a.removeAttribute("href");
+          a.setAttribute("aria-disabled", "true");
+          a.classList.add("social-empty");
+          a.title = "Add your " + k + " link in assets/js/config.js → socials";
+        }
       });
     });
 
@@ -294,26 +306,98 @@
     animateCounters(); // re-run so "Services offered" reflects the new total
   }
 
-  // Merge services added from the developer dashboard with the built-in catalog.
+  function mapDbService(s) {
+    return {
+      id: s.slug, icon: s.icon || "spark", category: s.category || "Development",
+      title: s.title, short: s.short || "", tags: s.tags || [],
+      deliverables: s.deliverables || [], packages: s.packages || [],
+    };
+  }
+
+  // Pull the catalog from the backend. Once the developer has imported the
+  // built-ins ("managed"), the DB is authoritative (so hiding/deleting works).
+  // Before that, DB services are merged onto the built-ins (DB overrides by id).
   function fetchAndMergeServices() {
     fetch((C.apiBase || "") + "/api/services", { headers: { Accept: "application/json" } })
       .then(function (r) { if (!r.ok) throw new Error("no api"); return r.json(); })
-      .then(function (list) {
-        if (!Array.isArray(list) || !list.length) return;
-        var have = {}; D.services.forEach(function (s) { have[s.id] = true; });
-        var added = 0;
+      .then(function (res) {
+        var list = (res && res.services) || (Array.isArray(res) ? res : []);
+        if (!Array.isArray(list)) return;
+        if (res && res.managed) {
+          if (!list.length) return;            // safety: never blank the page
+          D.services = list.map(mapDbService);
+          applyServices();
+          return;
+        }
+        if (!list.length) return;
+        var idx = {}; D.services.forEach(function (s, i) { idx[s.id] = i; });
+        var changed = false;
         list.forEach(function (s) {
-          if (have[s.slug]) return;
-          D.services.push({
-            id: s.slug, icon: s.icon || "spark", category: s.category || "Development",
-            title: s.title, short: s.short || "", tags: s.tags || [],
-            deliverables: [], packages: s.packages || [],
-          });
-          added++;
+          var mapped = mapDbService(s);
+          if (idx[s.slug] != null) { D.services[idx[s.slug]] = mapped; }
+          else { D.services.push(mapped); }
+          changed = true;
         });
-        if (added) applyServices();
+        if (changed) applyServices();
       })
       .catch(function () { /* offline / static-only → keep data.js services */ });
+  }
+
+  // Pull approved client reviews and show them ahead of the sample ones.
+  function fetchTestimonials() {
+    fetch((C.apiBase || "") + "/api/testimonials", { headers: { Accept: "application/json" } })
+      .then(function (r) { if (!r.ok) throw new Error("no api"); return r.json(); })
+      .then(function (list) {
+        if (!Array.isArray(list) || !list.length) return;
+        var real = list.map(function (t) {
+          return { name: t.name, role: t.role || "Client", loc: t.location || "", rating: t.rating || 5, text: t.text };
+        });
+        D.testimonials = real.concat(D.testimonials);
+        renderTestimonials();
+      })
+      .catch(function () { /* offline / static-only → keep sample reviews */ });
+  }
+
+  function initReviewForm() {
+    var form = qs("#reviewForm"); if (!form) return;
+    var status = qs("#rv-status");
+    function setStatus(type, msg) { if (status) { status.textContent = msg; status.className = "form-status show " + type; } }
+    // star rating widget
+    var ratingInput = qs("#rv-rating");
+    qsa(".star-pick button", form).forEach(function (b) {
+      on(b, "click", function () {
+        var v = b.dataset.v; if (ratingInput) ratingInput.value = v;
+        qsa(".star-pick button", form).forEach(function (x) { x.classList.toggle("on", Number(x.dataset.v) <= Number(v)); });
+        b.setAttribute("aria-checked", "true");
+      });
+    });
+    on(form, "submit", function (e) {
+      e.preventDefault();
+      if (form.company && form.company.value) return; // honeypot
+      var payload = {
+        name: (form.name.value || "").trim(),
+        role: (form.role.value || "").trim(),
+        location: (form.location.value || "").trim(),
+        rating: parseInt(ratingInput && ratingInput.value, 10) || 5,
+        text: (form.text.value || "").trim(),
+        company: "",
+      };
+      if (payload.name.length < 2 || payload.text.length < 10) { setStatus("err", "Please add your name and a few words."); return; }
+      var btn = qs("button[type=submit]", form); if (btn) btn.disabled = true;
+      setStatus("", "Sending…");
+      fetch((C.apiBase || "") + "/api/testimonials", {
+        method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(payload),
+      }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (res) {
+          if (!res.ok) throw new Error((res.d && res.d.detail) || "Could not submit.");
+          setStatus("ok", res.d.message || "Thank you! Your review will appear once approved.");
+          form.reset(); if (ratingInput) ratingInput.value = "5";
+          qsa(".star-pick button", form).forEach(function (x) { x.classList.add("on"); });
+        })
+        .catch(function (err) { setStatus("err", err.message || "Could not submit — is the backend running?"); })
+        .then(function () { if (btn) btn.disabled = false; });
+    });
   }
 
   function fillServiceSelect() {
@@ -901,6 +985,8 @@
     renderPersonalProjects(); renderExperience(); renderPayments();
     fillServiceSelect();
     fetchAndMergeServices(); // pull any services added from the dashboard
+    fetchTestimonials();     // pull approved client reviews from the backend
+    initReviewForm();        // "leave a review" submission
 
     initContactForm();
     renderCart();

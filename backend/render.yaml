@@ -1,0 +1,44 @@
+# Render Blueprint — deploys the whole app (site + API + dashboards) on the free
+# tier. In the Render dashboard: New → Blueprint → connect this repo → Apply.
+#
+# You'll be asked to fill the two secret values (marked sync:false):
+#   ADMIN_PASSWORD  → a strong password (this gates your dashboard remotely!)
+#   DATABASE_URL    → your free Neon Postgres URL, converted to the pg8000 driver:
+#                     postgresql+pg8000://USER:PASSWORD@HOST/DBNAME?sslmode=require
+#                     (and uncomment pg8000 in backend/requirements.txt)
+#
+# Service name "smarnb" → your site lives at https://smarnb.onrender.com
+# SECRET_KEY is generated once and kept stable (so encrypted data stays readable).
+services:
+  - type: web
+    name: smarnb
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.5"
+      - key: SECRET_KEY
+        generateValue: true        # generated once, then stable across deploys
+      - key: ADMIN_EMAIL
+        value: shahjee975@gmail.com
+      - key: ADMIN_NAME
+        value: Muhammad Ali Raza
+      - key: ADMIN_PASSWORD
+        sync: false                # ⚠️ set a strong password when prompted
+      - key: DATABASE_URL
+        sync: false                # Neon Postgres (pg8000) URL — for persistence
+      - key: ENCRYPTION_KEY
+        sync: false                # optional; if blank, derived from SECRET_KEY
+      - key: CORS_ORIGINS
+        value: "*"                 # bearer-token API (no cookies) → * is safe
+      - key: PUBLIC_BASE_URL
+        value: https://smarnb.onrender.com   # used by Stripe redirects (if enabled later)
+      # --- Stripe (optional, add later to enable card payments) ---
+      # - key: STRIPE_SECRET_KEY
+      #   sync: false
+      # - key: STRIPE_WEBHOOK_SECRET
+      #   sync: false

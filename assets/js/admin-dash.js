@@ -20,8 +20,9 @@
   var STATUSES = [["received", "Received"], ["confirmed", "Confirmed"], ["in_progress", "In Progress"], ["in_review", "In Review"], ["delivered", "Delivered"], ["cancelled", "Cancelled"]];
   var ICON_CHOICES = ["spark", "code", "server", "layout", "bot", "eye", "pen", "box", "rocket", "chat", "doc", "shield", "clock", "card"];
 
-  var view = qs("#view"), pollTimer = null;
-  var state = { orders: [], stats: null, filter: "all", selected: null, tab: "orders" };
+  var view = qs("#view"), pollTimer = null, badgeTimer = null, convTimer = null;
+  var state = { orders: [], stats: null, filter: "all", selected: null, tab: "orders",
+                services: null, inboxList: null, selectedConv: null, reviews: null };
 
   /* theme */
   (function () {
@@ -38,8 +39,9 @@
     if (user) { who.hidden = false; who.innerHTML = "<b>" + esc(user.name || user.email) + "</b><small>" + esc(user.email) + "</small>"; out.hidden = false; }
     else { who.hidden = true; out.hidden = true; }
   }
-  qs("#logoutBtn").addEventListener("click", function () { API.logout(); stopPoll(); topbar(null); renderLogin(); });
-  function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+  qs("#logoutBtn").addEventListener("click", function () { API.logout(); stopPoll(); stopBadges(); topbar(null); renderLogin(); });
+  function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } if (convTimer) { clearInterval(convTimer); convTimer = null; } }
+  function stopBadges() { if (badgeTimer) { clearInterval(badgeTimer); badgeTimer = null; } }
 
   /* ---- LOGIN ---- */
   function renderLogin(err) {
@@ -68,11 +70,18 @@
   function renderShell() {
     topbar(API.getUser());
     view.innerHTML =
-      '<div class="dash-head"><div><h1>Developer Dashboard</h1><p>Orders, progress, deliverables &amp; services — your private control room.</p></div></div>' +
-      '<div class="admin-tabs"><button data-tab="orders" class="active">Orders</button><button data-tab="services">Services</button></div>' +
+      '<div class="dash-head"><div><h1>Developer Dashboard</h1><p>Orders, chat, reviews &amp; services — your private control room.</p></div></div>' +
+      '<div class="admin-tabs">' +
+        '<button data-tab="orders" class="active">Orders</button>' +
+        '<button data-tab="inbox">Inbox <span class="tab-badge" id="inboxBadge" hidden>0</span></button>' +
+        '<button data-tab="reviews">Reviews <span class="tab-badge" id="reviewsBadge" hidden>0</span></button>' +
+        '<button data-tab="services">Services</button>' +
+      '</div>' +
       '<div id="tabBody"></div>';
     qsa(".admin-tabs button").forEach(function (b) { b.addEventListener("click", function () { showTab(b.dataset.tab); }); });
-    showTab(location.hash === "#services" ? "services" : "orders");
+    var initial = { "#services": "services", "#inbox": "inbox", "#reviews": "reviews" }[location.hash] || "orders";
+    showTab(initial);
+    stopBadges(); pollBadges(); badgeTimer = setInterval(pollBadges, 30000);
   }
 
   function showTab(tab) {
@@ -80,7 +89,22 @@
     qsa(".admin-tabs button").forEach(function (b) { b.classList.toggle("active", b.dataset.tab === tab); });
     stopPoll();
     if (tab === "orders") { renderOrdersTab(); refresh(); pollTimer = setInterval(refresh, 25000); }
+    else if (tab === "inbox") { renderInboxTab(); }
+    else if (tab === "reviews") { renderReviewsTab(); }
     else { renderServicesTab(); }
+  }
+
+  /* Lightweight badge polling (unread chats + pending reviews) across tabs. */
+  function pollBadges() {
+    API.get("/api/admin/chat/conversations").then(function (list) {
+      var unread = list.reduce(function (n, c) { return n + (c.unread || 0); }, 0);
+      var b = qs("#inboxBadge"); if (b) { b.hidden = !unread; b.textContent = unread > 99 ? "99+" : unread; }
+      if (state.tab === "inbox" && state.inboxList) { state.inboxList = list; if (!state.selectedConv) renderConvList(); }
+    }).catch(function () {});
+    API.get("/api/admin/testimonials").then(function (list) {
+      var pending = list.filter(function (t) { return t.status === "pending"; }).length;
+      var b = qs("#reviewsBadge"); if (b) { b.hidden = !pending; b.textContent = pending; }
+    }).catch(function () {});
   }
 
   /* ---- ORDERS TAB ---- */
@@ -221,12 +245,20 @@
   function renderServicesTab() {
     qs("#tabBody").innerHTML =
       '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1rem">' +
-        '<p class="form-note" style="max-width:44rem;margin:0">Services added here show on your site next to the built-in catalog (the 10 built-ins live in <code>assets/js/data.js</code>). Changes appear on the next site load.</p>' +
+        '<p class="form-note" style="max-width:44rem;margin:0">These are the services shown on your site. Add, edit, hide or delete any of them here — changes appear on the next site load.</p>' +
         '<button class="btn btn-primary btn-sm" id="svcAdd">' + SVG.plus + " Add service</button></div>" +
+      '<div id="svcImport"></div>' +
       '<div id="svcForm"></div>' +
       '<div class="svc-list" id="svcList"><p class="form-note">Loading…</p></div>';
     qs("#svcAdd").addEventListener("click", function () { showServiceForm(null); });
     loadServices();
+  }
+
+  function builtinList() { return (window.SITE_DATA && window.SITE_DATA.services) || []; }
+  function builtinToService(b) {
+    return { title: b.title, category: b.category || "Development", icon: b.icon || "spark",
+      short: b.short || "", tags: b.tags || [], packages: b.packages || [],
+      deliverables: b.deliverables || [], active: true, sort_order: 0, slug: b.id };
   }
 
   function loadServices() {
@@ -236,10 +268,30 @@
     });
   }
 
+  function renderImportBanner(list) {
+    var box = qs("#svcImport"); if (!box) return;
+    var have = {}; list.forEach(function (s) { have[s.slug] = true; });
+    var missing = builtinList().filter(function (b) { return !have[b.id]; });
+    if (!missing.length) { box.innerHTML = ""; return; }
+    box.innerHTML =
+      '<div class="card" style="border:1px solid var(--accent);background:var(--grad-soft);margin-bottom:1.2rem">' +
+      '<b>Bring your built-in services into the dashboard</b>' +
+      '<p style="color:var(--muted);font-size:.92rem;margin:.4rem 0 .9rem">Your site has <b>' + missing.length +
+      '</b> built-in service(s) that aren\'t managed here yet. Import them once to edit, hide, reorder or delete them like any other.</p>' +
+      '<button class="btn btn-primary btn-sm" id="svcImportBtn">' + SVG.plus + " Import " + missing.length + " built-in service(s)</button></div>";
+    qs("#svcImportBtn").addEventListener("click", function () {
+      var btn = qs("#svcImportBtn"); btn.disabled = true; btn.textContent = "Importing…";
+      API.post("/api/admin/services/import", { services: missing.map(builtinToService) })
+        .then(function () { loadServices(); })
+        .catch(function (err) { btn.disabled = false; window.alert(err.message || "Import failed."); });
+    });
+  }
+
   function renderServiceList(list) {
     state.services = list;
+    renderImportBanner(list);
     var box = qs("#svcList");
-    if (!list.length) { box.innerHTML = '<p class="form-note">No dashboard services yet — click “Add service”.</p>'; return; }
+    if (!list.length) { box.innerHTML = '<p class="form-note">No services yet — click “Add service”, or import your built-ins above.</p>'; return; }
     box.innerHTML = list.map(function (s) {
       return '<div class="svc-item' + (s.active ? "" : " off") + '"><div><div class="t">' + esc(s.title) + '</div><div class="c">' + esc(s.category) + " · " + (s.packages ? s.packages.length : 0) + " package(s)" + (s.active ? "" : " · hidden") + "</div></div>" +
         '<div style="display:flex;gap:.5rem"><button class="btn btn-outline btn-sm" data-svcedit="' + s.id + '">Edit</button><button class="btn btn-outline btn-sm" data-svcdel="' + s.id + '">Delete</button></div></div>';
@@ -296,6 +348,169 @@
     });
   }
   function svcStatus(type, msg) { var s = qs("#svc-status"); if (s) { s.textContent = msg; s.className = "dash-status show " + type; } }
+
+  /* ---- INBOX (live chat) TAB ---- */
+  function authedBlob(path) {
+    return fetch((C.apiBase || "") + path, { headers: { Authorization: "Bearer " + API.getToken() } })
+      .then(function (r) { if (!r.ok) throw new Error("load failed"); return r.blob(); });
+  }
+  function mdLite(s) { var h = esc(s); h = h.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>"); return h.replace(/\n/g, "<br>"); }
+
+  function renderInboxTab() {
+    qs("#tabBody").innerHTML =
+      '<div class="admin-grid"><div class="order-rows" id="convRows"><p class="form-note">Loading…</p></div>' +
+      '<div id="convThread"><div class="card manage"><div class="empty">Select a conversation to read &amp; reply. The bot handles chats until you jump in.</div></div></div></div>';
+    loadConversations();
+  }
+
+  function loadConversations() {
+    API.get("/api/admin/chat/conversations").then(function (list) {
+      state.inboxList = list; renderConvList();
+      if (state.selectedConv) loadConvThread(state.selectedConv);
+    }).catch(function (err) {
+      if (err.status === 401 || err.status === 403) { API.logout(); renderLogin("Session expired."); return; }
+      var box = qs("#convRows"); if (box) box.innerHTML = '<div class="form-status err show">' + esc(err.message || "Failed.") + "</div>";
+    });
+  }
+
+  function renderConvList() {
+    var box = qs("#convRows"); if (!box) return;
+    var list = state.inboxList || [];
+    if (!list.length) { box.innerHTML = '<p class="form-note">No conversations yet.</p>'; return; }
+    box.innerHTML = list.map(function (c) {
+      var chip = c.unread ? '<span class="status-chip" style="background:var(--accent-3);color:#fff">' + c.unread + " new</span>"
+        : (c.needs_human ? '<span class="status-chip st-received">needs you</span>' : "");
+      return '<button class="order-row' + (state.selectedConv === c.public_id ? " active" : "") + '" data-cid="' + esc(c.public_id) + '">' +
+        '<div class="r1"><span class="oid">' + esc(c.customer_name || c.customer_email || "Visitor") + "</span>" + chip + "</div>" +
+        '<div class="who">' + esc(c.last_message || "…") + "</div>" +
+        '<div class="r2" style="justify-content:space-between"><small style="color:var(--muted)">' + esc(fmtDate(c.last_message_at)) + "</small>" +
+        (c.human_takeover ? '<small style="color:var(--accent-2)">live</small>' : '<small style="color:var(--muted-2)">bot</small>') + "</div></button>";
+    }).join("");
+    qsa("#convRows .order-row").forEach(function (b) { b.addEventListener("click", function () { openConv(b.dataset.cid); }); });
+  }
+
+  function openConv(cid) {
+    state.selectedConv = cid; renderConvList();
+    if (convTimer) clearInterval(convTimer);
+    loadConvThread(cid);
+    convTimer = setInterval(function () { if (state.tab === "inbox" && state.selectedConv === cid) loadConvThread(cid); }, 5000);
+  }
+
+  function loadConvThread(cid) {
+    API.get("/api/admin/chat/conversations/" + encodeURIComponent(cid)).then(renderConvThread).catch(function () {});
+  }
+
+  function renderAdmMsg(m) {
+    var who = m.sender === "dev" ? "me" : "them";
+    var label = m.sender === "bot" ? '<span class="adm-who">Bot</span>'
+      : (m.sender === "client" ? '<span class="adm-who">Client</span>' : "");
+    var content;
+    if (m.attachment) {
+      var a = m.attachment;
+      if ((a.content_type || "").indexOf("image/") === 0) {
+        content = '<img class="adm-att" data-att="' + a.id + '" alt="' + esc(a.filename) + '">';
+      } else {
+        content = '<button class="btn btn-outline btn-sm" data-attfile="' + a.id + '">📄 ' + esc(a.filename) + "</button>";
+      }
+    } else { content = mdLite(m.body); }
+    return '<div class="adm-msg ' + who + (m.sender === "bot" ? " bot" : "") + '">' + label + '<div class="adm-bubble">' + content + "</div></div>";
+  }
+
+  function renderConvThread(th) {
+    var manage = qs("#convThread"); if (!manage) return;
+    state.selectedConv = th.public_id;
+    (state.inboxList || []).forEach(function (c) { if (c.public_id === th.public_id) c.unread = 0; });
+    var msgs = (th.messages || []).map(renderAdmMsg).join("");
+    manage.innerHTML = '<div class="card manage">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap">' +
+        "<h3 style=\"margin:0\">" + esc(th.customer_name || "Visitor") + "</h3>" +
+        '<button class="btn btn-outline btn-sm" id="botToggle">Bot: ' + (th.human_takeover ? "paused" : "active") + "</button></div>" +
+      '<p class="sub">' + esc(th.customer_email || "no email on file") + (th.needs_human ? ' · <b style="color:var(--accent-3)">asked for a human</b>' : "") + "</p>" +
+      '<div class="adm-chat" id="admChat">' + msgs + "</div>" +
+      '<div class="dash-status" id="conv-status"></div>' +
+      '<div class="field"><textarea class="textarea" id="conv-msg" placeholder="Reply to the client…"></textarea></div>' +
+      '<label style="display:flex;align-items:center;gap:.5rem;font-size:.84rem;color:var(--muted);margin-bottom:.6rem"><input type="checkbox" id="conv-botresume"> Let the bot keep auto-answering after my reply</label>' +
+      '<button class="btn btn-primary btn-block" id="conv-send">Send reply</button></div>';
+    loadAdmAttachments();
+    var chat = qs("#admChat"); if (chat) chat.scrollTop = chat.scrollHeight;
+    renderConvList();
+    qs("#conv-send").addEventListener("click", function () { sendDevReply(th.public_id); });
+    qs("#botToggle").addEventListener("click", function () {
+      API.post("/api/admin/chat/conversations/" + encodeURIComponent(th.public_id) + "/bot", {})
+        .then(function () { loadConvThread(th.public_id); }).catch(function () {});
+    });
+  }
+
+  function loadAdmAttachments() {
+    qsa("#admChat img[data-att]").forEach(function (img) {
+      authedBlob("/api/admin/chat/attachments/" + img.dataset.att).then(function (b) {
+        var u = URL.createObjectURL(b); img.src = u; img.style.cursor = "pointer";
+        img.addEventListener("click", function () { window.open(u, "_blank"); });
+      }).catch(function () {});
+    });
+    qsa("#admChat [data-attfile]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        authedBlob("/api/admin/chat/attachments/" + btn.dataset.attfile)
+          .then(function (b) { window.open(URL.createObjectURL(b), "_blank"); })
+          .catch(function () { window.alert("Could not load file."); });
+      });
+    });
+  }
+
+  function sendDevReply(cid) {
+    var ta = qs("#conv-msg"), msg = (ta.value || "").trim();
+    if (!msg) { convStatus("err", "Write a reply first."); return; }
+    var resume = qs("#conv-botresume").checked;
+    convStatus("ok", "Sending…");
+    API.post("/api/admin/chat/conversations/" + encodeURIComponent(cid) + "/messages", { body: msg, let_bot_resume: resume })
+      .then(function () { ta.value = ""; loadConvThread(cid); pollBadges(); convStatus("ok", "Sent."); })
+      .catch(function (err) { convStatus("err", err.message || "Failed."); });
+  }
+  function convStatus(type, msg) { var s = qs("#conv-status"); if (s) { s.textContent = msg; s.className = "dash-status show " + type; } }
+
+  /* ---- REVIEWS TAB ---- */
+  function renderReviewsTab() {
+    qs("#tabBody").innerHTML =
+      '<p class="form-note" style="margin-bottom:1rem">Reviews submitted from your site. Approve to publish them; reject or delete spam.</p>' +
+      '<div id="revList"><p class="form-note">Loading…</p></div>';
+    loadReviews();
+  }
+  function loadReviews() {
+    API.get("/api/admin/testimonials").then(renderReviews).catch(function (err) {
+      if (err.status === 401 || err.status === 403) { API.logout(); renderLogin("Session expired."); return; }
+      qs("#revList").innerHTML = '<div class="form-status err show">' + esc(err.message || "Failed.") + "</div>";
+    });
+  }
+  function renderReviews(list) {
+    state.reviews = list; var box = qs("#revList");
+    if (!list.length) { box.innerHTML = '<p class="form-note">No reviews submitted yet.</p>'; return; }
+    var rank = { pending: 0, approved: 1, rejected: 2 };
+    list = list.slice().sort(function (a, b) { return (rank[a.status] || 0) - (rank[b.status] || 0); });
+    box.innerHTML = list.map(function (t) {
+      var stars = ""; for (var i = 0; i < (t.rating || 0); i++) stars += "★";
+      var chipClass = t.status === "approved" ? "st-delivered" : (t.status === "rejected" ? "st-cancelled" : "st-received");
+      return '<div class="rev-item card">' +
+        '<div class="rev-top"><div><b>' + esc(t.name) + '</b> <span style="color:var(--muted)">' + esc(t.role || "") + (t.location ? " · " + esc(t.location) : "") + "</span>" +
+        '<div style="color:var(--warn);letter-spacing:2px">' + stars + "</div></div>" +
+        '<span class="status-chip ' + chipClass + '">' + esc(t.status) + "</span></div>" +
+        '<p style="margin:.5rem 0">“' + esc(t.text) + "”</p>" +
+        '<div style="display:flex;gap:.5rem;flex-wrap:wrap">' +
+          (t.status !== "approved" ? '<button class="btn btn-primary btn-sm" data-rev-approve="' + t.id + '">Approve</button>' : "") +
+          (t.status !== "rejected" ? '<button class="btn btn-outline btn-sm" data-rev-reject="' + t.id + '">Reject</button>' : "") +
+          '<button class="btn btn-outline btn-sm" data-rev-del="' + t.id + '">Delete</button></div></div>';
+    }).join("");
+    qsa("[data-rev-approve]", box).forEach(function (b) { b.addEventListener("click", function () { setReview(b.dataset.revApprove, "approved"); }); });
+    qsa("[data-rev-reject]", box).forEach(function (b) { b.addEventListener("click", function () { setReview(b.dataset.revReject, "rejected"); }); });
+    qsa("[data-rev-del]", box).forEach(function (b) { b.addEventListener("click", function () { if (window.confirm("Delete this review permanently?")) delReview(b.dataset.revDel); }); });
+  }
+  function setReview(id, status) {
+    API.patch("/api/admin/testimonials/" + id, { status: status }).then(function () { loadReviews(); pollBadges(); })
+      .catch(function (err) { window.alert(err.message || "Failed."); });
+  }
+  function delReview(id) {
+    API.del("/api/admin/testimonials/" + id).then(function () { loadReviews(); pollBadges(); })
+      .catch(function (err) { window.alert(err.message || "Failed."); });
+  }
 
   function startDashboard() { renderShell(); }
 

@@ -1,7 +1,9 @@
 """Database operations (encryption-aware)."""
+import datetime as dt
 import json
 import random
 import re
+import secrets
 
 from sqlalchemy import func
 
@@ -91,6 +93,16 @@ def create_order(db, data, client=None):
 
 def get_order(db, public_id):
     return db.query(models.Order).filter_by(public_id=public_id).first()
+
+
+def mark_paid(db, order, note="Payment received."):
+    """Flag an order paid and log a client-visible update (used by the Stripe webhook)."""
+    if order.payment_status != "paid":
+        order.payment_status = "paid"
+        add_update(db, order, note, status=order.status, progress=order.progress)
+        db.commit()
+        db.refresh(order)
+    return order
 
 
 def orders_for_user(db, user):
@@ -204,6 +216,7 @@ def create_service(db, data):
         slug=slug, title=data.title, category=data.category, icon=data.icon, short=data.short,
         tags_json=json.dumps(data.tags),
         packages_json=json.dumps([p.model_dump() for p in data.packages]),
+        deliverables_json=json.dumps(data.deliverables),
         active=data.active, sort_order=data.sort_order,
     )
     db.add(svc)
@@ -219,6 +232,7 @@ def update_service(db, svc, data):
     svc.short = data.short
     svc.tags_json = json.dumps(data.tags)
     svc.packages_json = json.dumps([p.model_dump() for p in data.packages])
+    svc.deliverables_json = json.dumps(data.deliverables)
     svc.active = data.active
     svc.sort_order = data.sort_order
     db.commit()
@@ -228,4 +242,135 @@ def update_service(db, svc, data):
 
 def delete_service(db, svc):
     db.delete(svc)
+    db.commit()
+
+
+def get_setting(db, key, default=None):
+    s = db.get(models.Setting, key)
+    return s.value if s else default
+
+
+def set_setting(db, key, value):
+    s = db.get(models.Setting, key)
+    if s:
+        s.value = value
+    else:
+        s = models.Setting(key=key, value=value)
+        db.add(s)
+    db.commit()
+    return s
+
+
+def catalog_for_bot(db):
+    """Active services as plain dicts for the chat assistant."""
+    out = []
+    for s in list_services(db, active_only=True):
+        out.append({"slug": s.slug, "title": s.title, "short": s.short,
+                    "category": s.category, "tags": s.tags, "packages": s.packages,
+                    "deliverables": s.deliverables})
+    return out
+
+
+# --- Testimonials -------------------------------------------------------------
+def create_testimonial(db, data):
+    t = models.Testimonial(
+        name=data.name.strip(), role=(data.role or "").strip(),
+        location=(data.location or "").strip(), rating=max(1, min(5, data.rating)),
+        text=data.text.strip(), email=(data.email or "").strip(), status="pending",
+    )
+    db.add(t)
+    db.commit()
+    db.refresh(t)
+    return t
+
+
+def list_testimonials(db, status=None):
+    q = db.query(models.Testimonial)
+    if status:
+        q = q.filter(models.Testimonial.status == status)
+    return q.order_by(models.Testimonial.created_at.desc()).all()
+
+
+def get_testimonial(db, tid):
+    return db.get(models.Testimonial, tid)
+
+
+def set_testimonial_status(db, t, status):
+    t.status = status
+    db.commit()
+    db.refresh(t)
+    return t
+
+
+def delete_testimonial(db, t):
+    db.delete(t)
+    db.commit()
+
+
+# --- Chat ---------------------------------------------------------------------
+def gen_conversation_id(db):
+    while True:
+        pid = "C-" + "".join(random.choice(_ID_CHARS) for _ in range(8))
+        if not db.query(models.Conversation).filter_by(public_id=pid).first():
+            return pid
+
+
+def create_conversation(db, name="", email="", client=None):
+    conv = models.Conversation(
+        public_id=gen_conversation_id(db),
+        secret=secrets.token_urlsafe(24),
+        client_id=client.id if client else None,
+        customer_name=(client.name if client else name) or "",
+        customer_email=(client.email if client else email) or "",
+        customer_email_bidx=crypto.blind_index((client.email if client else email) or "") or "",
+        bot_state="{}",
+    )
+    db.add(conv)
+    db.commit()
+    db.refresh(conv)
+    return conv
+
+
+def get_conversation(db, public_id):
+    return db.query(models.Conversation).filter_by(public_id=public_id).first()
+
+
+def add_message(db, conv, sender, body, commit=True):
+    msg = models.ChatMessage(conversation_id=conv.id, sender=sender, body=body or "")
+    db.add(msg)
+    conv.last_message_at = models.utcnow()
+    if commit:
+        db.commit()
+        db.refresh(msg)
+    return msg
+
+
+def add_attachment(db, conv, message, filename, content_type, size, data):
+    att = models.ChatAttachment(
+        message_id=message.id, conversation_id=conv.id, filename=filename,
+        content_type=content_type, size=size, data=data,
+    )
+    db.add(att)
+    db.commit()
+    db.refresh(att)
+    return att
+
+
+def list_conversations(db):
+    return (db.query(models.Conversation)
+            .order_by(models.Conversation.last_message_at.desc()).all())
+
+
+def conversation_unread(conv, since_field="admin_read_at", from_senders=("client",)):
+    since = getattr(conv, since_field)
+    n = 0
+    for m in conv.messages:
+        if m.sender in from_senders and (since is None or m.created_at > since):
+            n += 1
+    return n
+
+
+def save_state(db, conv, state):
+    conv.bot_state = json.dumps(state or {})
+    conv.needs_human = bool((state or {}).get("needs_human")) or conv.needs_human
     db.commit()

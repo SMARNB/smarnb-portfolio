@@ -45,5 +45,14 @@ ADMIN_NAME = os.environ.get("ADMIN_NAME", "Muhammad Ali Raza")
 
 # --- Misc ---------------------------------------------------------------------
 CURRENCY = os.environ.get("CURRENCY", "$")
+CURRENCY_CODE = os.environ.get("CURRENCY_CODE", "usd").lower()   # ISO code for Stripe
 # Comma-separated allowed origins for the browser API (use your domains in prod).
 CORS_ORIGINS = [o.strip() for o in os.environ.get("CORS_ORIGINS", "*").split(",") if o.strip()] or ["*"]
+
+# --- Stripe (OPTIONAL) --------------------------------------------------------
+# Card payments stay OFF until you set STRIPE_SECRET_KEY (no cost / no footprint
+# until then). Add the key later + `pip install stripe` to switch it on.
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+# Used to build Stripe success/cancel redirect URLs (e.g. https://smarnb.onrender.com).
+PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")

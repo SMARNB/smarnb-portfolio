@@ -23,6 +23,24 @@
   function stageIndex(st) { for (var i = 0; i < STAGES.length; i++) { if (STAGES[i][0] === st) return i; } return 0; }
 
   var view = qs("#view"), pollTimer = null;
+  var payCfg = { stripe_enabled: false };
+  function loadPayConfig() { return API.get("/api/payments/config").then(function (c) { if (c) payCfg = c; }).catch(function () {}); }
+
+  function payPanelHtml(o) {
+    var pi = C.paymentInstructions || {};
+    var methods = (pi.methods || []).map(function (m) {
+      return '<div class="pay-method' + (m.soon ? " soon" : "") + '"><div><b>' + esc(m.label) + '</b><div class="pm-val">' + esc(m.value) + "</div>" +
+        (m.sub ? '<small>' + esc(m.sub) + "</small>" : "") + "</div></div>";
+    }).join("");
+    var stripeBtn = payCfg.stripe_enabled
+      ? '<button class="btn btn-primary btn-block" data-stripe="' + esc(o.public_id) + '">💳 Pay ' + money(o.total) + ' with card</button><div class="pay-or">or pay manually</div>'
+      : "";
+    return '<div class="pay-panel hidden" id="pay-' + esc(o.public_id) + '">' +
+      stripeBtn +
+      '<div class="pay-methods">' + methods + "</div>" +
+      (pi.note ? '<p class="form-note" style="margin-top:.6rem">' + esc(pi.note) + "</p>" : "") +
+      '<div class="dash-status" id="paystat-' + esc(o.public_id) + '"></div></div>';
+  }
 
   /* theme */
   (function () {
@@ -113,6 +131,17 @@
     box.innerHTML = orders.map(projectCard).join("");
     qsa("[data-toggle]", box).forEach(function (b) { b.addEventListener("click", function () { var t = qs("#tl-" + CSS.escape(b.dataset.toggle)); if (t) t.classList.toggle("hidden"); }); });
     qsa("[data-cancel]", box).forEach(function (b) { b.addEventListener("click", function () { cancelOrder(b.dataset.cancel); }); });
+    qsa("[data-pay]", box).forEach(function (b) { b.addEventListener("click", function () { var p = qs("#pay-" + CSS.escape(b.dataset.pay)); if (p) p.classList.toggle("hidden"); }); });
+    qsa("[data-stripe]", box).forEach(function (b) { b.addEventListener("click", function () { startStripe(b.dataset.stripe); }); });
+  }
+
+  function startStripe(pid) {
+    var st = qs("#paystat-" + CSS.escape(pid));
+    if (st) showStatus(st, "ok", "Opening secure checkout…");
+    API.post("/api/payments/stripe/checkout/" + encodeURIComponent(pid)).then(function (r) {
+      if (r && r.url) { window.location.href = r.url; }
+      else if (st) showStatus(st, "err", "Could not start checkout.");
+    }).catch(function (err) { if (st) showStatus(st, "err", err.message || "Card payments aren't enabled yet."); });
   }
 
   function deliverablesHtml(dels) {
@@ -133,6 +162,7 @@
     var prog = (typeof o.progress === "number") ? o.progress : Math.round(idx / (STAGES.length - 1) * 100);
     var items = (o.items || []).map(function (i) { return esc(i.service) + " (" + esc(i.tier) + (i.qty > 1 ? " ×" + i.qty : "") + ")"; }).join(", ");
     var cancellable = (o.status === "received" || o.status === "confirmed");
+    var unpaid = (o.payment_status !== "paid" && o.status !== "cancelled");
     var updates = (o.updates || []).slice().reverse();
     return '<article class="card proj-card">' +
       '<div class="proj-top"><span class="oid">' + esc(o.public_id) + "</span>" +
@@ -147,7 +177,11 @@
       (updates.length ? ('<button class="timeline-toggle" data-toggle="' + esc(o.public_id) + '">' + SVG.check + " View updates (" + updates.length + ")</button>" +
         '<div class="mini-timeline hidden" id="tl-' + esc(o.public_id) + '">' + updates.map(function (u) { return '<div class="mt-item"><span class="mt-dot"></span><div><p>' + esc(u.message) + "</p><small>" + esc(fmtDate(u.created_at)) + "</small></div></div>"; }).join("") + "</div>") : "") +
       deliverablesHtml(o.deliverables) +
-      (cancellable ? '<div style="margin-top:1rem"><button class="btn btn-outline btn-sm" data-cancel="' + esc(o.public_id) + '">Cancel order</button></div>' : "") +
+      (unpaid
+        ? '<div class="pay-row"><button class="btn btn-primary btn-sm" data-pay="' + esc(o.public_id) + '">Pay now · ' + money(o.total) + "</button>" +
+          (cancellable ? '<button class="btn btn-outline btn-sm" data-cancel="' + esc(o.public_id) + '">Cancel order</button>' : "") + "</div>" + payPanelHtml(o)
+        : (cancellable ? '<div style="margin-top:1rem"><button class="btn btn-outline btn-sm" data-cancel="' + esc(o.public_id) + '">Cancel order</button></div>' : "")) +
+      (o.payment_status === "paid" ? '<div class="paid-badge">✓ Paid — thank you!</div>' : "") +
       "</article>";
   }
 
@@ -156,10 +190,22 @@
     API.post("/api/orders/" + encodeURIComponent(pid) + "/cancel").then(loadProjects).catch(function (err) { window.alert(err.message || "Could not cancel."); });
   }
 
+  function maybeThankPaid() {
+    var m = /[?&]paid=([^&]+)/.exec(location.search || ""); if (!m) return;
+    try { window.history.replaceState({}, "", location.pathname); } catch (e) {}
+    var v = qs("#view"); if (!v) return;
+    var d = document.createElement("div"); d.className = "form-status ok show"; d.style.marginBottom = "1rem";
+    d.textContent = "Payment received — thank you! Your order will update to Paid shortly.";
+    v.insertBefore(d, v.firstChild);
+  }
+
   /* ---- boot ---- */
   if (API.isAuthed()) {
-    API.me().then(function (u) { API.setUser(u); renderDashboard(); }).catch(function () { API.logout(); renderAuth("login"); });
+    Promise.all([API.me(), loadPayConfig()])
+      .then(function (res) { API.setUser(res[0]); renderDashboard(); maybeThankPaid(); })
+      .catch(function () { API.logout(); renderAuth("login"); });
   } else {
+    loadPayConfig();
     renderAuth("login");
   }
 })();

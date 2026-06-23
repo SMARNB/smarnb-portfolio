@@ -28,13 +28,17 @@ window.SITE_CONFIG = {
   whatsapp: "923414527256",       // WhatsApp (international format, digits only)
   fiverr: "#",                    // TODO: your Fiverr profile URL
 
-  // --- Social links (leave "" to hide a link) -------------------------------
+  // --- Social links ---------------------------------------------------------
+  // ✏️ EDIT HERE: paste your full profile URL between the quotes for each one.
+  //    • A link with a URL  → its icon shows in the footer automatically.
+  //    • A link left as ""  → that icon is hidden (no broken/empty links).
+  //    Nothing else to change — the footer icons update from these values.
   socials: {
-    linkedin: "",                            // TODO: your LinkedIn URL
-    github: "https://github.com/SMARNB",     // your GitHub
-    dribbble: "",                            // TODO
-    instagram: "",                           // TODO
-    upwork: "",                              // TODO
+    instagram: "",   // ← paste here, e.g. "https://instagram.com/yourhandle"
+    facebook:  "",   // ← paste here, e.g. "https://facebook.com/yourpage"
+    linkedin:  "",   // ← paste here, e.g. "https://linkedin.com/in/yourname"
+    x:         "",   // ← paste here, e.g. "https://x.com/yourhandle"   (Twitter/X)
+    github:    "https://github.com/SMARNB",   // ← already set to your GitHub
   },
 
   // --- Sales center wiring --------------------------------------------------
@@ -53,28 +57,47 @@ window.SITE_CONFIG = {
   // API URL, e.g. "https://your-app.onrender.com" (and add it to the CSP).
   apiBase: "",
 
-  // --- Payment methods ------------------------------------------------------
-  // Shown in the Payments section + selectable at checkout. The choice is saved
-  // with the order; you then send a payment link/instructions to confirm.
-  // To go LIVE with a gateway (Stripe etc.), see backend/PAYMENTS.md.
+  // --- Live chat + assistant ------------------------------------------------
+  // The floating chat widget. The bot answers instantly from your services
+  // catalog; you can take over live from the developer dashboard's Inbox.
+  // Requires the backend to be running (it degrades to WhatsApp/email if not).
+  chat: {
+    enabled: true,
+    title: "Chat with us",
+    subtitle: "Ask about services, pricing, or start an order",
+  },
+
+  // --- Payment methods (the trust-signal grid on the homepage) --------------
+  // Shown in the Payments section. The actual "pay" details live in
+  // paymentInstructions below (shown to a client on their order).
   payments: [
-    { id: "jazzcash",      label: "JazzCash",                         group: "Local · Pakistan" },
-    { id: "easypaisa",     label: "Easypaisa",                        group: "Local · Pakistan" },
-    { id: "bank_pk",       label: "Bank transfer",                    group: "Local · Pakistan" },
-    { id: "jazzcash_bnpl", label: "JazzCash — Pay Later (Yeylo)",     group: "Buy now, pay later" },
-    { id: "baadmay",       label: "BaadMay — Pay Later",              group: "Buy now, pay later" },
-    { id: "stripe",        label: "Credit / Debit card (Stripe)",     group: "International" },
-    { id: "paypal",        label: "PayPal",                           group: "International" },
-    { id: "wise",          label: "Wise",                             group: "International" },
-    { id: "crypto",        label: "Crypto (USDT / BTC)",              group: "International" },
+    { id: "raast",    label: "Raast (instant)",       group: "Local · Pakistan" },
+    { id: "sadapay",  label: "SadaPay",               group: "Local · Pakistan" },
+    { id: "jazzcash", label: "JazzCash",              group: "Local · Pakistan" },
+    { id: "card",     label: "Credit / Debit card",   group: "International" },
+    { id: "paypal",   label: "PayPal",                group: "International" },
+    { id: "wise",     label: "Wise",                  group: "International" },
+    { id: "crypto",   label: "Crypto (USDT / BTC)",   group: "International" },
   ],
+
+  // --- Manual payment details (shown to a client on their order's "Pay now") -
+  // ✏️ Update these as your accounts change. These appear ONLY in the client
+  // dashboard for a specific unpaid order — not publicly on the homepage.
+  paymentInstructions: {
+    note: "Send the exact order total, then upload your receipt screenshot in the chat (bottom-right) so I can confirm and start your project.",
+    methods: [
+      { label: "Raast",   value: "0324 2225073", sub: "Instant transfer · linked to HBL & SadaPay" },
+      { label: "SadaPay", value: "0324 2225073", sub: "Send to this number" },
+      { label: "JazzCash", value: "Merchant ID: MC815133", sub: "Activating soon — please use Raast/SadaPay for now", soon: true },
+    ],
+  },
 
   // --- Trust stats (shown in hero) ------------------------------------------
   // ✏️ HONEST numbers only. These default to facts that are true for you today
   // (4 services, source always included, 0% cancellations, fast replies).
   // As you complete real orders, bump these up — don't inflate them.
   stats: [
-    { value: 4,   suffix: "",  label: "Services offered", auto: "services" },
+    { value: 10,  suffix: "",  label: "Services offered", auto: "services" },
     { value: 100, suffix: "%", label: "Source & rights to you" },
     { value: 0,   suffix: "%", label: "Cancellation rate" },
     { value: 24,  suffix: "h", label: "Avg. response time" },

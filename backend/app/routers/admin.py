@@ -107,6 +107,23 @@ def list_services(db: Session = Depends(get_db)):
     return crud.list_services(db, active_only=False)
 
 
+@router.post("/services/import", response_model=dict)
+def import_services(payload: schemas.ServiceImport, db: Session = Depends(get_db)):
+    """One-time import of the built-in catalog (sent from the dashboard, read from
+    assets/js/data.js) into the DB so every service is manageable here. After this
+    the site treats the DB as the authoritative catalog."""
+    existing = {s.slug for s in crud.list_services(db, active_only=False)}
+    created = 0
+    for item in payload.services:
+        slug = (item.slug or "").strip() or None
+        if slug and slug in existing:
+            continue
+        crud.create_service(db, item)
+        created += 1
+    crud.set_setting(db, "catalog_managed", "1")
+    return {"ok": True, "created": created}
+
+
 @router.post("/services", response_model=schemas.ServiceOut)
 def create_service(data: schemas.ServiceIn, db: Session = Depends(get_db)):
     return crud.create_service(db, data)

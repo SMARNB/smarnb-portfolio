@@ -137,3 +137,36 @@ main.dash-main { flex: 1; padding: clamp(1.5rem, 4vw, 2.5rem) 0 4rem; }
 .svc-item .t { font-weight: 700; }
 .svc-item .c { color: var(--muted); font-size: .82rem; }
 .svc-item.off { opacity: .6; }
+
+/* ---- Tab badges ---------------------------------------------------------- */
+.tab-badge { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; margin-left: .35rem; border-radius: var(--r-pill); background: var(--accent-3); color: #fff; font-size: .72rem; font-weight: 800; vertical-align: 1px; }
+.tab-badge[hidden] { display: none; }
+
+/* ---- Inbox (live chat) --------------------------------------------------- */
+.adm-chat { display: flex; flex-direction: column; gap: .55rem; max-height: 46vh; overflow-y: auto; padding: .4rem; margin-bottom: 1rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--r); }
+.adm-msg { display: flex; flex-direction: column; max-width: 84%; }
+.adm-msg.me { align-self: flex-end; align-items: flex-end; }
+.adm-msg.them { align-self: flex-start; }
+.adm-who { font-size: .68rem; font-weight: 700; color: var(--muted-2); margin: 0 4px 2px; }
+.adm-msg.bot .adm-who { color: var(--accent-2); }
+.adm-bubble { padding: .5rem .75rem; border-radius: 14px; font-size: .9rem; line-height: 1.45; word-wrap: break-word; overflow-wrap: anywhere; }
+.adm-msg.them .adm-bubble { background: var(--surface-2); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.adm-msg.me .adm-bubble { background: var(--grad); color: #fff; border-bottom-right-radius: 4px; }
+.adm-att { max-width: 200px; max-height: 200px; border-radius: 8px; display: block; }
+
+/* ---- Reviews ------------------------------------------------------------- */
+.rev-item { display: block; }
+.rev-item + .rev-item { margin-top: .8rem; }
+.rev-top { display: flex; justify-content: space-between; align-items: flex-start; gap: .6rem; }
+
+/* ---- Client pay flow ----------------------------------------------------- */
+.pay-row { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: 1rem; }
+.pay-panel { margin-top: .8rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--r); background: var(--bg-2); }
+.pay-panel.hidden { display: none; }
+.pay-or { text-align: center; color: var(--muted); font-size: .8rem; margin: .7rem 0; }
+.pay-methods { display: grid; gap: .5rem; }
+.pay-method { padding: .6rem .8rem; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); }
+.pay-method.soon { opacity: .65; }
+.pay-method .pm-val { font-weight: 700; font-size: 1.05rem; letter-spacing: .02em; color: var(--accent-2); }
+.pay-method small { color: var(--muted); display: block; margin-top: .15rem; }
+.paid-badge { margin-top: 1rem; color: var(--ok); font-weight: 700; }

@@ -14,5 +14,11 @@ node_modules/
 .venv/
 __pycache__/
 *.pyc
+*.db
 backend/*.db
 backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Claude Code local settings (keep machine-specific config out of the repo)
+.claude/settings.local.json

@@ -23,13 +23,15 @@
 
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="assets/css/styles.css?v=2">
+  <link rel="stylesheet" href="assets/css/styles.css?v=3">
+  <link rel="stylesheet" href="assets/css/chat.css?v=3">
 
   <!-- Scripts: load order matters. Defer keeps the page instant. -->
-  <script defer src="assets/js/config.js?v=2"></script>
-  <script defer src="assets/js/data.js?v=2"></script>
-  <script defer src="assets/js/store.js?v=2"></script>
-  <script defer src="assets/js/app.js?v=2"></script>
+  <script defer src="assets/js/config.js?v=3"></script>
+  <script defer src="assets/js/data.js?v=3"></script>
+  <script defer src="assets/js/store.js?v=3"></script>
+  <script defer src="assets/js/app.js?v=3"></script>
+  <script defer src="assets/js/chat.js?v=3"></script>
 
   <!-- Structured data for search engines -->
   <script type="application/ld+json">
@@ -189,20 +191,6 @@
       </div>
     </section>
 
-    <!-- ============================ PAYMENTS ============================ -->
-    <section id="payments" style="padding-top:0">
-      <div class="container">
-        <div class="card pay-band reveal">
-          <div class="pay-head">
-            <span class="eyebrow" style="margin-bottom:.6rem">Payments</span>
-            <h3>Pay your way — local &amp; global</h3>
-            <p class="lead">Local Pakistani methods, buy-now-pay-later, or international cards &amp; transfers. Pick a method at checkout; I'll send secure payment details to confirm.</p>
-          </div>
-          <div id="paymentsGrid"></div>
-        </div>
-      </div>
-    </section>
-
     <!-- ============================ WORK ============================ -->
     <section id="work">
       <div class="container">
@@ -283,9 +271,36 @@
         <div class="section-head center reveal">
           <span class="eyebrow">Client love</span>
           <h2 class="section-title">What clients say</h2>
-          <p class="lead" style="margin-inline:auto">A few words from people I've worked with. Swap these for your real Fiverr reviews.</p>
+          <p class="lead" style="margin-inline:auto">A few words from people I've worked with — and you can add yours below.</p>
         </div>
         <div class="grid cols-3" id="testimonialsGrid"></div>
+
+        <div class="review-cta reveal">
+          <details class="review-box">
+            <summary class="btn btn-outline">★ Leave a review</summary>
+            <form class="form card review-form" id="reviewForm" novalidate>
+              <h3 style="font-size:1.15rem">Share your experience</h3>
+              <p class="form-note" style="margin-top:-.3rem">Worked with me? I'd love your feedback. Reviews appear on the site once approved.</p>
+              <div class="two">
+                <div class="field"><label for="rv-name">Name <span class="req">*</span></label><input class="input" id="rv-name" name="name" required autocomplete="name"></div>
+                <div class="field"><label for="rv-role">Role / company</label><input class="input" id="rv-role" name="role" placeholder="e.g. SaaS Founder"></div>
+              </div>
+              <div class="two">
+                <div class="field"><label for="rv-location">Location</label><input class="input" id="rv-location" name="location" placeholder="e.g. Dubai, UAE 🇦🇪"></div>
+                <div class="field"><label>Rating</label>
+                  <div class="star-pick" role="radiogroup" aria-label="Rating">
+                    <button type="button" data-v="1" class="on" aria-label="1 star">★</button><button type="button" data-v="2" class="on" aria-label="2 stars">★</button><button type="button" data-v="3" class="on" aria-label="3 stars">★</button><button type="button" data-v="4" class="on" aria-label="4 stars">★</button><button type="button" data-v="5" class="on" aria-label="5 stars">★</button>
+                  </div>
+                  <input type="hidden" id="rv-rating" name="rating" value="5">
+                </div>
+              </div>
+              <div class="field"><label for="rv-text">Your review <span class="req">*</span></label><textarea class="textarea" id="rv-text" name="text" required placeholder="What did we build together? How was the experience?"></textarea></div>
+              <input class="hp" tabindex="-1" autocomplete="off" name="company" aria-hidden="true" placeholder="Leave this empty">
+              <div class="form-status" id="rv-status" role="alert"></div>
+              <button class="btn btn-primary btn-block" type="submit">Submit review</button>
+            </form>
+          </details>
+        </div>
       </div>
     </section>
 
@@ -380,6 +395,20 @@
         </div>
       </div>
     </section>
+
+    <!-- ============================ PAYMENTS (near footer) ============================ -->
+    <section id="payments">
+      <div class="container">
+        <div class="card pay-band reveal">
+          <div class="pay-head">
+            <span class="eyebrow" style="margin-bottom:.6rem">Payments</span>
+            <h3>Pay your way — local &amp; global</h3>
+            <p class="lead">Local Pakistani methods (Raast, SadaPay, JazzCash), buy-now-pay-later, or international transfers. Pick a method at checkout; I'll send secure payment details to confirm.</p>
+          </div>
+          <div id="paymentsGrid"></div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <!-- ============================ FOOTER ============================ -->
@@ -390,10 +419,11 @@
           <a class="brand" href="#top"><span class="mark" data-initials>MAR</span><span data-brand>Muhammad Ali Raza</span></a>
           <p class="desc" data-tagline></p>
           <div class="socials">
-            <a data-social="github" href="#" aria-label="GitHub"></a>
-            <a data-social="linkedin" href="#" aria-label="LinkedIn"></a>
-            <a data-social="dribbble" href="#" aria-label="Dribbble"></a>
             <a data-social="instagram" href="#" aria-label="Instagram"></a>
+            <a data-social="facebook" href="#" aria-label="Facebook"></a>
+            <a data-social="linkedin" href="#" aria-label="LinkedIn"></a>
+            <a data-social="x" href="#" aria-label="X (Twitter)"></a>
+            <a data-social="github" href="#" aria-label="GitHub"></a>
           </div>
         </div>
         <div>

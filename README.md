@@ -107,15 +107,17 @@ portfolio/
 ├── assets/
 │   ├── css/
 │   │   ├── styles.css      # design system, responsive, animations
-│   │   └── dashboard.css   # dashboard styles
+│   │   ├── dashboard.css   # dashboard styles
+│   │   └── chat.css        # chat widget + "leave a review" form
 │   ├── js/
-│   │   ├── config.js       # ✏️ your details, payments, apiBase  (edit first)
+│   │   ├── config.js       # ✏️ your details, socials, payments, apiBase  (edit first)
 │   │   ├── data.js         # ✏️ services, prices, portfolio, projects, reviews
 │   │   ├── store.js        # cart / orders / tracking + API + Formspree
-│   │   ├── app.js          # rendering, interactions, a11y, sales flow
+│   │   ├── app.js          # rendering, interactions, a11y, sales flow, reviews
 │   │   ├── api.js          # dashboard API client
+│   │   ├── chat.js         # floating chat assistant + live chat widget
 │   │   ├── client-dash.js  # client dashboard logic
-│   │   └── admin-dash.js   # developer dashboard logic
+│   │   └── admin-dash.js   # developer dashboard (orders, inbox, reviews, services)
 │   ├── img/profile.jpg, favicon.svg, og-image.svg
 └── backend/                # FastAPI app (API + dashboards) — see backend/README.md
     ├── app/                # config, models, schemas, security, crud, routers
@@ -133,7 +135,16 @@ cd backend && python -m venv .venv
 ```
 → `/` site · `/app` client dashboard · `/admin` developer dashboard
 (admin: `shahjee975@gmail.com` / `admin12345` — **change it** via `.env`).
-Full details + free deploy (Render + Neon): **[backend/README.md](backend/README.md)**.
+
+In the developer dashboard you also get an **Inbox** (live chat — the bot answers
+when you're away, you reply when you're in), a **Reviews** tab (approve client
+testimonials submitted from the site), and a **Services** tab (one click to
+**Import built-in services**, then add/edit/hide/delete them — the site and the
+chat bot both read from there). A floating **chat widget** appears on the site and
+client dashboard; it accepts image/PDF uploads only (no third-party forms).
+
+**Access it from anywhere** (phone/laptop) by deploying — the dashboards are fully
+responsive. Full details + free deploy (Render + Neon): **[backend/README.md](backend/README.md)**.
 
 ---
 

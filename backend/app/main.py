@@ -9,13 +9,26 @@ from fastapi.staticfiles import StaticFiles
 
 from . import config, crud
 from .database import Base, SessionLocal, engine
-from .routers import admin, auth, orders, services
+from .routers import admin, auth, chat, orders, payments, services, testimonials
+
+
+def _ensure_columns():
+    """Tiny migration for pre-existing databases: add columns that newer models
+    introduced (create_all only creates missing *tables*, not new columns)."""
+    from sqlalchemy import inspect, text
+    insp = inspect(engine)
+    if "services" in insp.get_table_names():
+        cols = {c["name"] for c in insp.get_columns("services")}
+        if "deliverables_json" not in cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE services ADD COLUMN deliverables_json TEXT DEFAULT '[]'"))
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Create tables and seed the admin (developer) account on first run.
     Base.metadata.create_all(bind=engine)
+    _ensure_columns()
     db = SessionLocal()
     try:
         if not crud.get_user_by_email(db, config.ADMIN_EMAIL):
@@ -84,6 +97,10 @@ app.include_router(auth.router)
 app.include_router(orders.router)
 app.include_router(admin.router)
 app.include_router(services.router)
+app.include_router(testimonials.router)
+app.include_router(chat.router)
+app.include_router(chat.admin_router)
+app.include_router(payments.router)
 
 
 @app.get("/api/health")

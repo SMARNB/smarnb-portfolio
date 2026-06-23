@@ -145,6 +145,7 @@ class ServiceIn(BaseModel):
     short: str = Field(default="", max_length=600)
     tags: List[str] = []
     packages: List[ServicePackage] = []
+    deliverables: List[str] = []
     active: bool = True
     sort_order: int = 0
     slug: Optional[str] = None
@@ -159,8 +160,110 @@ class ServiceOut(BaseModel):
     short: str
     tags: List[str] = []
     packages: List[Any] = []
+    deliverables: List[str] = []
     active: bool
     sort_order: int
 
     class Config:
         from_attributes = True
+
+
+class PublicCatalog(BaseModel):
+    """Public services response. `managed=True` once the developer has imported the
+    built-in catalog into the DB — the site then treats the DB as authoritative."""
+    managed: bool = False
+    services: List[ServiceOut] = []
+
+
+class ServiceImport(BaseModel):
+    services: List[ServiceIn] = []
+
+
+# --- Testimonials -------------------------------------------------------------
+class TestimonialIn(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    role: str = Field(default="", max_length=120)
+    location: str = Field(default="", max_length=120)
+    rating: int = Field(default=5, ge=1, le=5)
+    text: str = Field(min_length=10, max_length=1000)
+    email: str = Field(default="", max_length=200)
+    company: str = Field(default="", max_length=200)   # honeypot: must stay empty
+
+
+class TestimonialOut(BaseModel):
+    id: int
+    name: str
+    role: str = ""
+    location: str = ""
+    rating: int
+    text: str
+    created_at: dt.datetime
+
+    class Config:
+        from_attributes = True
+
+
+class TestimonialAdminOut(TestimonialOut):
+    status: str
+
+
+class TestimonialPatch(BaseModel):
+    status: str  # approved | rejected | pending
+
+
+# --- Chat ---------------------------------------------------------------------
+class ChatStartIn(BaseModel):
+    name: str = Field(default="", max_length=120)
+    email: str = Field(default="", max_length=200)
+
+
+class ChatSendIn(BaseModel):
+    body: str = Field(min_length=1, max_length=2000)
+
+
+class AttachmentOut(BaseModel):
+    id: int
+    filename: str
+    content_type: str
+    size: int
+
+    class Config:
+        from_attributes = True
+
+
+class ChatMessageOut(BaseModel):
+    id: int
+    sender: str
+    body: str
+    created_at: dt.datetime
+    attachment: Optional[AttachmentOut] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ChatThreadOut(BaseModel):
+    public_id: str
+    secret: Optional[str] = None          # only returned when the thread is created
+    status: str
+    human_takeover: bool = False
+    needs_human: bool = False
+    messages: List[ChatMessageOut] = []
+    quick_replies: List[str] = []
+
+
+class ConversationSummary(BaseModel):
+    public_id: str
+    customer_name: str = ""
+    customer_email: str = ""
+    last_message: str = ""
+    last_message_at: dt.datetime
+    unread: int = 0
+    status: str = "open"
+    needs_human: bool = False
+    human_takeover: bool = False
+
+
+class DevSendIn(BaseModel):
+    body: str = Field(min_length=1, max_length=2000)
+    let_bot_resume: bool = False
