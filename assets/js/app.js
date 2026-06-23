@@ -139,6 +139,7 @@
     qsa(".js-view-packages", grid).forEach(function (b) {
       on(b, "click", function () { selectService(b.dataset.service, true); });
     });
+    observeReveal(grid); // re-arm the reveal animation for freshly-rendered cards
   }
 
   function renderPriceTabs() {
@@ -251,6 +252,7 @@
       var sub = esc(t.role) + (t.loc ? " · " + esc(t.loc) : "");
       return '<article class="card tcard reveal" style="--d:' + (i * 60) + 'ms"><div class="stars">' + stars + "</div><p>“" + esc(t.text) + '”</p><div class="tperson"><span class="av">' + esc(initials) + "</span><span><b>" + esc(t.name) + "</b><small>" + sub + "</small></span></div></article>";
     }).join("");
+    observeReveal(el); // re-arm reveal for cards rendered after the async fetch
   }
 
   function renderFAQ() {
