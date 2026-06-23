@@ -19,6 +19,12 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
+    # rootDir would otherwise limit autodeploys to backend/ changes only. This filter
+    # re-includes the whole repo (paths are relative to repo root) so FRONTEND edits
+    # (assets/, *.html) also auto-deploy on every push. "**/*" = every file, any depth.
+    buildFilter:
+      paths:
+        - "**/*"
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.5"
