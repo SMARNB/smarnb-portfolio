@@ -1,6 +1,7 @@
 """FastAPI application: JSON API + serves the static site and dashboards."""
 import os
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +11,26 @@ from fastapi.staticfiles import StaticFiles
 from . import config, crud
 from .database import Base, SessionLocal, engine
 from .routers import admin, auth, chat, orders, payments, services, testimonials
+
+
+def _detect_commit():
+    """The deployed git SHA. Render injects RENDER_GIT_COMMIT at build time; locally
+    we ask git once at startup (best-effort, never fatal)."""
+    sha = os.environ.get("RENDER_GIT_COMMIT", "").strip()
+    if sha:
+        return sha
+    try:
+        import subprocess
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=config.SITE_DIR,
+            stderr=subprocess.DEVNULL, timeout=2,
+        ).decode().strip()
+    except Exception:
+        return ""
+
+
+_COMMIT = _detect_commit()
+_STARTED_AT = datetime.now(timezone.utc).isoformat()
 
 
 def _ensure_columns():
@@ -106,6 +127,19 @@ app.include_router(payments.router)
 @app.get("/api/health")
 def health():
     return {"ok": True, "service": "portfolio-api"}
+
+
+@app.get("/api/version")
+def version():
+    """What's actually running — confirm a push auto-deployed by checking `commit`,
+    and see when the live instance booted via `started_at`."""
+    return {
+        "commit": _COMMIT[:7] if _COMMIT else "unknown",
+        "commit_full": _COMMIT,
+        "branch": os.environ.get("RENDER_GIT_BRANCH", ""),
+        "on_render": os.environ.get("RENDER", "").lower() == "true",
+        "started_at": _STARTED_AT,
+    }
 
 
 # Clean URLs for the two dashboards (the HTML lives in the site root).
