@@ -66,13 +66,17 @@ Render's own disk resets on each deploy, so we store data in a free Neon Postgre
 
 ## Updating the live site later
 
-Render auto-deploys every push to `main`:
+Render auto-deploys every push to `main` — **frontend or backend**. (`render.yaml`
+sets `buildFilter: "**/*"` so a change *anywhere* in the repo triggers a deploy;
+without it, `rootDir: backend` would only redeploy on `backend/` changes.)
 ```bash
 git add -A
 git commit -m "Update content"
 git push
 ```
-Within a minute Render rebuilds and your live site updates.
+Within a minute Render rebuilds and your live site updates. To confirm exactly
+what's live, open **`/api/version`** — `commit` is the deployed git SHA and
+`started_at` is when the current instance booted.
 
 ---
 
