@@ -13,6 +13,23 @@ window.SITE_DATA = {
   -------------------------------------------------------------------------- */
   services: [
     {
+      id: "ai-chatbot-integration",
+      icon: "chat",
+      category: "AI / Computer Vision",
+      title: "AI Chatbot Integration",
+      short:
+        "Add a smart LLM chatbot (support, sales, FAQ) to your site or app.",
+      tags: ["LLM", "Python", "API", "RAG"],
+      deliverables: ["Custom knowledge base", "Web widget", "API integration"],
+      packages: [
+        {
+          tier: "Standard", price: 350, delivery: "7 days", revisions: 3, popular: true,
+          summary: "A working chatbot",
+          features: ["Custom knowledge base", "Web widget", "API integration"],
+        },
+      ],
+    },
+    {
       id: "saas-dashboard",
       icon: "code",
       category: "Development",
