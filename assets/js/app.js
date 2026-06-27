@@ -269,7 +269,8 @@
       on(b, "click", function () {
         // Store page → scroll to pricing; teaser (homepage) → jump to the store page.
         if (hasPricing) selectService(b.dataset.service, true);
-        else location.href = "store.html#svc-" + b.dataset.service;
+        else { var href = "store.html#svc-" + b.dataset.service;
+               if (window.SPA) window.SPA.navigate(href); else location.href = href; }
       });
     });
     observeReveal(grid); // re-arm the reveal animation for freshly-rendered cards

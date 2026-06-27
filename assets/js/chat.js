@@ -254,12 +254,16 @@
 
   function restartPoll() {
     if (S.timer) clearInterval(S.timer);
+    // Clear a previous instance's poll too (SPA navigation re-runs this script,
+    // so without this each page swap would leave another interval running).
+    if (window.__chatPoll) clearInterval(window.__chatPoll);
     if (!S.started && !S.conv) return;
     var every = S.open ? POLL_OPEN : POLL_IDLE;
     S.timer = setInterval(function () {
       if (S.sending) return;
       fetchThread();
     }, every);
+    window.__chatPoll = S.timer;
   }
 
   /* ---- boot ---- */
