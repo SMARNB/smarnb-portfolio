@@ -44,6 +44,8 @@ services:
         value: "*"                 # bearer-token API (no cookies) → * is safe
       - key: PUBLIC_BASE_URL
         value: https://smarnb.onrender.com   # used by Stripe redirects (if enabled later)
+      - key: CONTACT_WHATSAPP
+        value: "+92 341 4527256"             # the assistant shares this when asked how to reach you
       # --- Stripe (optional, add later to enable card payments) ---
       # - key: STRIPE_SECRET_KEY
       #   sync: false

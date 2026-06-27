@@ -3,6 +3,16 @@
    Design system + components. Theme via CSS variables. Mobile-first.
    ========================================================================== */
 
+/* ---- Smooth multi-page navigation ---------------------------------------- */
+/* Animate same-origin page loads (e.g. Home ↔ Store) so they cross-fade
+   instead of showing a jarring full-page reload. Progressive enhancement:
+   browsers without cross-document view transitions just navigate normally. */
+@view-transition { navigation: auto; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .28s; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+}
+
 /* ---- Reset --------------------------------------------------------------- */
 *, *::before, *::after { box-sizing: border-box; }
 * { margin: 0; }

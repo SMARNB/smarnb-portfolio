@@ -296,43 +296,20 @@ window.SITE_DATA = {
         "dress-code detection, blacklist/visitor management, violation logging and " +
         "analytics. License the finished system instead of building from scratch.",
       includes: [
-        "Full working system (Django REST + React)",
+        "Fully deployed, production-ready system",
         "RGB liveness / anti-spoofing engine",
         "Multi-camera real-time pipeline",
         "Setup, deployment & onboarding support",
-        "Documentation & source (per license tier)",
+        "Documentation & training (source code is never shared)",
       ],
+      // Licensing scales by deployment size only — no source code, no resale.
       licenses: [
-        { tier: "Single-Deployment License", price: 3500, popular: true,
-          note: "Run CodeWatch at one site/organization. Compiled build + 3 months support." },
-        { tier: "Commercial Source License", price: 20000,
-          note: "Full source code — modify, self-host & deploy across your business. 1 year of updates." },
-        { tier: "Full Rights / White-Label", price: 70000, contact: true,
-          note: "Own it outright — full IP transfer, rebrand and resell as your own product." },
-      ],
-    },
-    {
-      id: "automation-toolkit-license",
-      title: "Selenium Automation Toolkit",
-      subtitle: "Reusable scraping + OCR pipelines",
-      badge: "Ready to deploy",
-      category: "Automation",
-      art: "p7",
-      desc:
-        "My battle-tested Selenium spiders and OCR extractors, packaged for reuse — " +
-        "login & pagination handling, proxy rotation, anti-block patterns and clean " +
-        "CSV/Excel/JSON exporters. Skip months of trial-and-error.",
-      includes: [
-        "Source code + modular exporters",
-        "Anti-block & proxy-rotation patterns",
-        "OCR extraction for PDFs & images",
-        "Setup guide & examples",
-      ],
-      licenses: [
-        { tier: "Personal License", price: 250, popular: true,
-          note: "Use it on your own projects. Source + docs." },
-        { tier: "Commercial License", price: 900,
-          note: "Use across client work & your business, with priority support." },
+        { tier: "Single-Deployment License", price: 30000, popular: true,
+          note: "Run CodeWatch at one site/location. Fully managed, hosted production build — source code is never shared." },
+        { tier: "Multi-Site License", price: 75000,
+          note: "Deploy across up to 5 sites/branches in your organization, with priority support. No source code shared." },
+        { tier: "Enterprise (Unlimited)", price: 150000, contact: true,
+          note: "Unlimited deployments organization-wide, SLA & dedicated support. For your own use — not for resale, no source code." },
       ],
     },
   ],
