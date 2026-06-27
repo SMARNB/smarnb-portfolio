@@ -54,6 +54,19 @@ CONTACT_EMAIL = os.environ.get("CONTACT_EMAIL", ADMIN_EMAIL)
 CONTACT_WHATSAPP = os.environ.get("CONTACT_WHATSAPP", "")   # e.g. +92 324 2225073
 LOCATION = os.environ.get("LOCATION", "Pakistan · working with clients worldwide (remote)")
 
+# --- Owner WhatsApp pings (OPTIONAL) ------------------------------------------
+# The bot can ping YOU on WhatsApp (with the chat/client id) when a visitor asks
+# for a human or places an order. OFF until a sender is configured below.
+# Recipient defaults to CONTACT_WHATSAPP. Choose ONE sender:
+#   • CallMeBot (easiest, free): message the CallMeBot number once to get an API
+#     key, then set CALLMEBOT_APIKEY. https://www.callmebot.com/blog/free-api-whatsapp-messages/
+#   • WhatsApp Cloud API (official, Meta): set WHATSAPP_TOKEN + WHATSAPP_PHONE_ID.
+OWNER_WHATSAPP = os.environ.get("OWNER_WHATSAPP", CONTACT_WHATSAPP)
+CALLMEBOT_APIKEY = os.environ.get("CALLMEBOT_APIKEY", "")
+WHATSAPP_TOKEN = os.environ.get("WHATSAPP_TOKEN", "")
+WHATSAPP_PHONE_ID = os.environ.get("WHATSAPP_PHONE_ID", "")
+WHATSAPP_API_VERSION = os.environ.get("WHATSAPP_API_VERSION", "v21.0")
+
 # --- Misc ---------------------------------------------------------------------
 CURRENCY = os.environ.get("CURRENCY", "$")
 CURRENCY_CODE = os.environ.get("CURRENCY_CODE", "usd").lower()   # ISO code for Stripe

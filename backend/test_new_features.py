@@ -194,6 +194,22 @@ with TestClient(app) as c:
     check("knowledge deletable",
           c.delete("/api/admin/chat/knowledge/%s" % kn["id"], headers=AH).status_code == 200)
 
+    print("== Chat: contact intent + owner ping ==")
+    # "contact you" now gives contact details, not the human-handoff escape
+    r = c.post("/api/chat/start", json={})
+    cid3, sec3 = r.json()["public_id"], r.json()["secret"]
+    SH3 = {"X-Chat-Secret": sec3}
+    last = c.post("/api/chat/%s/messages" % cid3, headers=SH3,
+                  json={"body": "how can i contact you?"}).json()["messages"][-1]["body"].lower()
+    check("contact question gives details (not handoff)", "email" in last or "whatsapp" in last)
+    # asking for a human flags needs_human (which is what triggers the owner ping)
+    th = c.post("/api/chat/%s/messages" % cid3, headers=SH3,
+                json={"body": "i want to talk to a human"}).json()
+    check("human request flags needs_human", th["needs_human"] is True)
+    # owner ping is a no-op (returns False) until a sender is configured
+    from app import notify  # noqa: E402
+    check("owner ping off by default", notify.notify_owner("test") is False)
+
 print("\n==== RESULT: %d passed, %d failed ====" % (ok, fail))
 if os.path.exists(_DB):
     try:

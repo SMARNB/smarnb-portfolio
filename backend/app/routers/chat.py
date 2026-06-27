@@ -16,7 +16,7 @@ from fastapi import (APIRouter, Depends, File, Header, HTTPException, Request,
                      Response, UploadFile)
 from sqlalchemy.orm import Session
 
-from .. import bot, crud, crypto, models, schemas
+from .. import bot, config, crud, crypto, models, notify, schemas
 from ..database import get_db
 from ..deps import get_current_admin, get_optional_user
 
@@ -148,6 +148,17 @@ def _order_from_chat(db, conv, action):
         ("🎉 All set! Your order is **{}**. You can track its progress anytime from the "
          "site (Track an order), and {} will confirm the details with you shortly.")
         .format(order.public_id, bot._dev()))
+    # Ping the owner — a new order via chat is a hot lead.
+    notify.notify_owner(
+        "🛒 New order via chat: {}\n"
+        "Client/chat id: {}\n"
+        "From: {} <{}>\n"
+        "{} — {} ({})\n"
+        "Open: {}".format(
+            order.public_id, conv.public_id,
+            action.get("name", "") or "—", action.get("email", "") or "—",
+            action.get("service", ""), action.get("tier", ""),
+            bot._money(action.get("price", 0)), _admin_link()))
 
 
 # ---- Public endpoints --------------------------------------------------------
@@ -179,15 +190,35 @@ def send(public_id: str, data: schemas.ChatSendIn,
     if conv.status == "closed":
         conv.status = "open"
     _throttle(public_id)
-    crud.add_message(db, conv, "client", data.body.strip())
+    was_needs_human = conv.needs_human
+    body = data.body.strip()
+    crud.add_message(db, conv, "client", body)
     if not conv.human_takeover:
-        _run_bot(db, conv, data.body.strip())
+        _run_bot(db, conv, body)
     else:
         # developer is handling this thread — just flag it for their attention
         st = conv.state(); st["_quick"] = []
         crud.save_state(db, conv, st)
     db.refresh(conv)
+    # Ping the owner on WhatsApp the moment a visitor first needs a human.
+    if conv.needs_human and not was_needs_human:
+        _ping_owner_handoff(conv, body)
     return _thread(conv)
+
+
+def _admin_link():
+    base = (config.PUBLIC_BASE_URL or "").rstrip("/")
+    return (base + "/admin#inbox") if base else "your admin dashboard (/admin)"
+
+
+def _ping_owner_handoff(conv, last_text):
+    who = conv.customer_name or conv.customer_email or "A visitor"
+    notify.notify_owner(
+        "🔔 Someone needs you on the SMARNB chat.\n"
+        "Client/chat id: {}\n"
+        "From: {}\n"
+        "They said: \"{}\"\n"
+        "Reply here: {}".format(conv.public_id, who, (last_text or "")[:160], _admin_link()))
 
 
 @router.post("/{public_id}/upload", response_model=schemas.ChatThreadOut)

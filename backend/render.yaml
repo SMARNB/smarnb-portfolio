@@ -46,6 +46,16 @@ services:
         value: https://smarnb.onrender.com   # used by Stripe redirects (if enabled later)
       - key: CONTACT_WHATSAPP
         value: "+92 341 4527256"             # the assistant shares this when asked how to reach you
+      # --- Owner WhatsApp pings (optional): get pinged with the chat/client id when
+      # a visitor needs a human or places an order. Pings go to CONTACT_WHATSAPP.
+      # Easiest: CallMeBot — message their number once for a key, then set it here.
+      # - key: CALLMEBOT_APIKEY
+      #   sync: false
+      # Or the official WhatsApp Cloud API instead:
+      # - key: WHATSAPP_TOKEN
+      #   sync: false
+      # - key: WHATSAPP_PHONE_ID
+      #   sync: false
       # --- Stripe (optional, add later to enable card payments) ---
       # - key: STRIPE_SECRET_KEY
       #   sync: false

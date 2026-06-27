@@ -30,8 +30,8 @@ GREETINGS = ("hi", "hello", "hey", "hey there", "yo", "salam", "assalam", "asala
              "morning", "evening", "greetings", "howdy")
 THANKS = ("thanks", "thank you", "thankyou", "thx", "appreciate", "much appreciated")
 HUMAN = ("human", "real person", "agent", "talk to ali", "talk to you", "speak to",
-         "speak with", "contact you", "call you", "live chat", "representative",
-         "real human", "talk to a person", "talk to someone")
+         "speak with", "live chat", "representative",
+         "real human", "talk to a person", "talk to someone", "talk to a human")
 ORDER_WORDS = ("order", "buy", "purchase", "hire", "book", "get started", "place an order",
                "i want", "i need", "start a project", "checkout", "lets do it", "lets go")
 SERVICE_WORDS = ("service", "services", "offer", "what do you do", "what can you", "help with",
