@@ -116,6 +116,16 @@ def _run_bot(db, conv, text):
         crud.bump_knowledge_hit(db, res["matched_knowledge_id"])
     if res.get("unanswered"):
         crud.log_unanswered(db, text)
+        # Ping the owner the first time the bot is stuck on this thread (once, to
+        # avoid spam — later unanswered questions on the same chat won't re-ping).
+        st = res.get("state") or {}
+        if not st.get("_unans_pinged"):
+            st["_unans_pinged"] = True
+            notify.notify_owner(
+                "🤔 The bot couldn't answer a visitor on the SMARNB chat.\n"
+                "Client/chat id: {}\n"
+                "Question: \"{}\"\n"
+                "Jump in or teach it a reply: {}".format(conv.public_id, (text or "")[:160], _admin_link()))
     action = res.get("action")
     if action and action.get("type") == "create_order":
         _order_from_chat(db, conv, action)
