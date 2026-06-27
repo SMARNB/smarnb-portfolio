@@ -18,9 +18,17 @@
   // spa.js itself is deliberately excluded so this stays a single instance.
   var PAGE_SCRIPT = /assets\/js\/(config|data|store|app|chat)\.js/;
   var busy = false;
+
+  // Treat "/" and "/index.html" as the same page so Home links and in-page
+  // anchors on the homepage don't trigger a needless swap.
+  function norm(pathname) {
+    return (pathname === "/" || pathname === "") ? "/index.html" : pathname;
+  }
+  function key(url) { return norm(url.pathname) + url.search; }
+
   // Track what's actually rendered. On popstate the URL has already changed, so
   // we can't compare against location — we compare against this instead.
-  var current = location.pathname + location.search;
+  var current = key(location);
 
   function isPageScript(src) { return PAGE_SCRIPT.test(src || ""); }
 
@@ -50,14 +58,14 @@
 
   // Remove the live document's page scripts, then load the new ones in order so
   // they execute fresh (config → data → store → app → chat).
-  function rerunScripts(srcs) {
+  function rerunScripts(srcs, done) {
     Array.prototype.forEach.call(document.querySelectorAll("script[src]"), function (s) {
       if (isPageScript(s.getAttribute("src")) || isPageScript(s.src)) {
         if (s.parentNode) s.parentNode.removeChild(s);
       }
     });
     (function next(i) {
-      if (i >= srcs.length) return;
+      if (i >= srcs.length) { if (done) done(); return; }
       var el = document.createElement("script");
       el.src = srcs[i];
       el.onload = el.onerror = function () { next(i + 1); };
@@ -65,25 +73,32 @@
     })(0);
   }
 
+  function scrollToTarget(url) {
+    // Instant (not smooth) — a fresh page landing shouldn't animate a long scroll.
+    if (url.hash) {
+      var t = document.querySelector(url.hash);
+      if (t) { t.scrollIntoView({ behavior: "auto" }); return; }
+    }
+    window.scrollTo(0, 0);
+  }
+
   function paint(doc, url) {
     document.title = doc.title;
     document.body.innerHTML = doc.body.innerHTML;
-    rerunScripts(pageScriptSrcs(doc));
-    current = url.pathname + url.search;           // remember what's now rendered
-    if (url.hash) {
-      var t = document.querySelector(url.hash);
-      if (t) { t.scrollIntoView(); return; }     // section already in static markup
-    }
-    window.scrollTo(0, 0);                         // dynamic targets handled by app.js
+    current = key(url);                            // remember what's now rendered
+    if (!url.hash) window.scrollTo(0, 0);          // instant top for plain page loads
+    // Re-run the page scripts, then land on the target AFTER the app has rendered
+    // (dynamic sections above the anchor change the offset otherwise).
+    rerunScripts(pageScriptSrcs(doc), function () { scrollToTarget(url); });
   }
 
   function navigate(href, push) {
     var url;
     try { url = new URL(href, location.href); } catch (e) { location.href = href; return; }
     // Same page already rendered → just move to the hash / top, no swap needed.
-    if ((url.pathname + url.search) === current) {
+    if (key(url) === current) {
       if (push) history.pushState({ spa: 1 }, "", url.href);
-      if (url.hash) { var el = document.querySelector(url.hash); if (el) el.scrollIntoView(); }
+      if (url.hash) { var el = document.querySelector(url.hash); if (el) el.scrollIntoView({ behavior: "smooth" }); }
       else window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }

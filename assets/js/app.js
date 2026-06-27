@@ -1021,7 +1021,11 @@
       var spy = new IntersectionObserver(function (entries) {
         entries.forEach(function (en) {
           if (en.isIntersecting) {
-            navlinks.forEach(function (a) { a.classList.toggle("active", a.getAttribute("href") === "#" + en.target.id); });
+            navlinks.forEach(function (a) {
+              var h = a.getAttribute("href") || "";
+              var frag = h.indexOf("#") >= 0 ? h.slice(h.indexOf("#") + 1) : "";
+              a.classList.toggle("active", frag === en.target.id);
+            });
           }
         });
       }, { rootMargin: "-45% 0px -50% 0px" });
