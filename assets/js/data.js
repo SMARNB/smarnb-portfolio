@@ -276,6 +276,68 @@ window.SITE_DATA = {
   ],
 
   /* --------------------------------------------------------------------------
+     PRODUCTS & LICENSES  — sell your FINISHED products (not per-project work).
+     This is where high-value items like CodeWatch live. Each product has license
+     tiers: a fixed price adds to the cart; tier.contact:true shows a "Request a
+     quote" button instead (best for big IP / white-label deals).
+       art = a key in PRODUCT/PORTFOLIO art maps (falls back to category)
+  -------------------------------------------------------------------------- */
+  products: [
+    {
+      id: "codewatch-license",
+      title: "CodeWatch",
+      subtitle: "AI Surveillance & Face-Liveness System",
+      badge: "Flagship product",
+      category: "AI / Computer Vision",
+      art: "codewatch",
+      desc:
+        "A complete, production-ready computer-vision platform — real-time face " +
+        "recognition gated by anti-spoofing liveness detection, YOLO person & " +
+        "dress-code detection, blacklist/visitor management, violation logging and " +
+        "analytics. License the finished system instead of building from scratch.",
+      includes: [
+        "Full working system (Django REST + React)",
+        "RGB liveness / anti-spoofing engine",
+        "Multi-camera real-time pipeline",
+        "Setup, deployment & onboarding support",
+        "Documentation & source (per license tier)",
+      ],
+      licenses: [
+        { tier: "Single-Deployment License", price: 3500, popular: true,
+          note: "Run CodeWatch at one site/organization. Compiled build + 3 months support." },
+        { tier: "Commercial Source License", price: 20000,
+          note: "Full source code — modify, self-host & deploy across your business. 1 year of updates." },
+        { tier: "Full Rights / White-Label", price: 70000, contact: true,
+          note: "Own it outright — full IP transfer, rebrand and resell as your own product." },
+      ],
+    },
+    {
+      id: "automation-toolkit-license",
+      title: "Selenium Automation Toolkit",
+      subtitle: "Reusable scraping + OCR pipelines",
+      badge: "Ready to deploy",
+      category: "Automation",
+      art: "p7",
+      desc:
+        "My battle-tested Selenium spiders and OCR extractors, packaged for reuse — " +
+        "login & pagination handling, proxy rotation, anti-block patterns and clean " +
+        "CSV/Excel/JSON exporters. Skip months of trial-and-error.",
+      includes: [
+        "Source code + modular exporters",
+        "Anti-block & proxy-rotation patterns",
+        "OCR extraction for PDFs & images",
+        "Setup guide & examples",
+      ],
+      licenses: [
+        { tier: "Personal License", price: 250, popular: true,
+          note: "Use it on your own projects. Source + docs." },
+        { tier: "Commercial License", price: 900,
+          note: "Use across client work & your business, with priority support." },
+      ],
+    },
+  ],
+
+  /* --------------------------------------------------------------------------
      PORTFOLIO  (replace with your real projects + images in /assets/img)
      image = "" uses an auto-generated gradient thumbnail (no asset needed)
   -------------------------------------------------------------------------- */
@@ -373,6 +435,8 @@ window.SITE_DATA = {
       tags: ["Python", "PyTorch", "InsightFace", "YOLO", "OpenCV", "Django REST", "React"],
       link: "https://github.com/SMARNB/CodeWatch",
       linkLabel: "View on GitHub",
+      licenseLink: "store.html#products",
+      licenseLabel: "License this product",
       category: "AI / Computer Vision",
     },
     // ✏️ Add more of your own projects here (copy the shape below):

@@ -76,10 +76,11 @@
         '<button data-tab="inbox">Inbox <span class="tab-badge" id="inboxBadge" hidden>0</span></button>' +
         '<button data-tab="reviews">Reviews <span class="tab-badge" id="reviewsBadge" hidden>0</span></button>' +
         '<button data-tab="services">Services</button>' +
+        '<button data-tab="bot">Bot training <span class="tab-badge" id="botBadge" hidden>0</span></button>' +
       '</div>' +
       '<div id="tabBody"></div>';
     qsa(".admin-tabs button").forEach(function (b) { b.addEventListener("click", function () { showTab(b.dataset.tab); }); });
-    var initial = { "#services": "services", "#inbox": "inbox", "#reviews": "reviews" }[location.hash] || "orders";
+    var initial = { "#services": "services", "#inbox": "inbox", "#reviews": "reviews", "#bot": "bot" }[location.hash] || "orders";
     showTab(initial);
     stopBadges(); pollBadges(); badgeTimer = setInterval(pollBadges, 30000);
   }
@@ -91,6 +92,7 @@
     if (tab === "orders") { renderOrdersTab(); refresh(); pollTimer = setInterval(refresh, 25000); }
     else if (tab === "inbox") { renderInboxTab(); }
     else if (tab === "reviews") { renderReviewsTab(); }
+    else if (tab === "bot") { renderBotTab(); }
     else { renderServicesTab(); }
   }
 
@@ -104,6 +106,10 @@
     API.get("/api/admin/testimonials").then(function (list) {
       var pending = list.filter(function (t) { return t.status === "pending"; }).length;
       var b = qs("#reviewsBadge"); if (b) { b.hidden = !pending; b.textContent = pending; }
+    }).catch(function () {});
+    API.get("/api/admin/chat/unanswered").then(function (list) {
+      var n = list.length;
+      var b = qs("#botBadge"); if (b) { b.hidden = !n; b.textContent = n > 99 ? "99+" : n; }
     }).catch(function () {});
   }
 
@@ -510,6 +516,128 @@
   function delReview(id) {
     API.del("/api/admin/testimonials/" + id).then(function () { loadReviews(); pollBadges(); })
       .catch(function (err) { window.alert(err.message || "Failed."); });
+  }
+
+  /* ---- BOT TRAINING TAB ---- */
+  function renderBotTab() {
+    qs("#tabBody").innerHTML =
+      '<p class="form-note" style="margin-bottom:1rem">Teach your assistant. It answers from your services automatically; add custom Q&amp;A here, and review questions it couldn\'t answer so you can teach it a reply. No third-party AI — everything stays first-party.</p>' +
+      '<div class="card" style="margin-bottom:1.2rem">' +
+        '<h3 style="margin-bottom:.6rem">Unanswered questions</h3>' +
+        '<p class="form-note" style="margin-top:0">Visitors asked these and the bot wasn\'t sure. Teach it an answer (adds it to the knowledge base) or dismiss.</p>' +
+        '<div id="unansList"><p class="form-note">Loading…</p></div>' +
+      '</div>' +
+      '<div class="card">' +
+        '<h3 style="margin-bottom:.6rem">Knowledge base</h3>' +
+        '<form class="form" id="knForm" novalidate style="margin-bottom:1rem">' +
+          '<div class="field"><label for="kn-q">Question / trigger phrase</label>' +
+            '<input class="input" id="kn-q" placeholder="e.g. Do you offer hosting?"></div>' +
+          '<div class="field"><label for="kn-a">Answer</label>' +
+            '<textarea class="textarea" id="kn-a" placeholder="What the bot should reply. **Bold** works."></textarea></div>' +
+          '<div class="field"><label for="kn-k">Extra keywords <span style="color:var(--muted);font-weight:400">(optional, comma-separated)</span></label>' +
+            '<input class="input" id="kn-k" placeholder="hosting, deploy, server, maintenance"></div>' +
+          '<div class="dash-status" id="kn-status"></div>' +
+          '<button class="btn btn-primary btn-sm" type="submit">' + SVG.plus + ' Add to knowledge base</button>' +
+        '</form>' +
+        '<div id="knList"><p class="form-note">Loading…</p></div>' +
+      '</div>';
+
+    qs("#knForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      addKnowledge(qs("#kn-q").value, qs("#kn-a").value, qs("#kn-k").value);
+    });
+    loadUnanswered();
+    loadKnowledge();
+  }
+
+  function loadUnanswered() {
+    API.get("/api/admin/chat/unanswered").then(function (list) {
+      var box = qs("#unansList"); if (!box) return;
+      if (!list.length) { box.innerHTML = '<p class="form-note">Nothing pending — the bot is handling everything. 🎉</p>'; return; }
+      box.innerHTML = list.map(function (u) {
+        return '<div class="rev-item card" style="padding:.9rem 1rem">' +
+          '<div class="rev-top"><div><b>' + esc(u.question) + '</b>' +
+            (u.count > 1 ? ' <span class="status-chip st-received">asked ' + u.count + '×</span>' : '') +
+            '<div style="color:var(--muted);font-size:.8rem">last seen ' + esc(fmtDate(u.last_seen)) + '</div></div></div>' +
+          '<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem">' +
+            '<button class="btn btn-primary btn-sm" data-teach="' + u.id + '" data-q="' + esc(u.question) + '">Teach an answer</button>' +
+            '<button class="btn btn-outline btn-sm" data-dismiss="' + u.id + '">Dismiss</button></div></div>';
+      }).join("");
+      qsa("[data-teach]", box).forEach(function (b) {
+        b.addEventListener("click", function () {
+          qs("#kn-q").value = b.dataset.q;
+          qs("#kn-q").dataset.unans = b.dataset.teach;
+          qs("#kn-a").focus();
+          qs("#kn-a").scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+      });
+      qsa("[data-dismiss]", box).forEach(function (b) {
+        b.addEventListener("click", function () { dismissUnanswered(b.dataset.dismiss); });
+      });
+    }).catch(function (err) {
+      if (err.status === 401 || err.status === 403) { API.logout(); renderLogin("Session expired."); return; }
+      var box = qs("#unansList"); if (box) box.innerHTML = '<div class="form-status err show">' + esc(err.message || "Failed.") + "</div>";
+    });
+  }
+
+  function dismissUnanswered(id) {
+    API.post("/api/admin/chat/unanswered/" + id + "/resolve").then(function () { loadUnanswered(); pollBadges(); })
+      .catch(function (err) { window.alert(err.message || "Failed."); });
+  }
+
+  function addKnowledge(q, a, k) {
+    var status = qs("#kn-status");
+    q = (q || "").trim(); a = (a || "").trim();
+    if (!q || !a) { if (status) { status.textContent = "Both a question and an answer are required."; status.className = "dash-status show err"; } return; }
+    var unansId = qs("#kn-q").dataset.unans;
+    API.post("/api/admin/chat/knowledge", { question: q, answer: a, keywords: (k || "").trim(), enabled: true })
+      .then(function () {
+        qs("#knForm").reset();
+        delete qs("#kn-q").dataset.unans;
+        if (status) { status.textContent = "Added! The bot now knows this. ✅"; status.className = "dash-status show ok"; }
+        if (unansId) { return API.post("/api/admin/chat/unanswered/" + unansId + "/resolve").catch(function () {}); }
+      })
+      .then(function () { loadKnowledge(); loadUnanswered(); pollBadges(); })
+      .catch(function (err) { if (status) { status.textContent = err.message || "Failed."; status.className = "dash-status show err"; } });
+  }
+
+  function loadKnowledge() {
+    API.get("/api/admin/chat/knowledge").then(function (list) {
+      var box = qs("#knList"); if (!box) return;
+      if (!list.length) { box.innerHTML = '<p class="form-note">No custom answers yet. The bot still answers from your services, pricing and built-in common questions.</p>'; return; }
+      box.innerHTML = list.map(function (k) {
+        return '<div class="rev-item card" style="padding:.9rem 1rem">' +
+          '<div class="rev-top"><div><b>' + esc(k.question) + '</b>' +
+            (k.hits ? ' <span class="status-chip st-delivered">' + k.hits + ' hit' + (k.hits === 1 ? '' : 's') + '</span>' : '') +
+            (k.enabled ? '' : ' <span class="status-chip st-cancelled">off</span>') + '</div></div>' +
+          '<p style="margin:.4rem 0;color:var(--muted);white-space:pre-wrap">' + esc(k.answer) + '</p>' +
+          (k.keywords ? '<div style="color:var(--muted);font-size:.8rem">keywords: ' + esc(k.keywords) + '</div>' : '') +
+          '<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem">' +
+            '<button class="btn btn-outline btn-sm" data-kn-toggle="' + k.id + '" data-on="' + (k.enabled ? '1' : '0') + '">' + (k.enabled ? 'Disable' : 'Enable') + '</button>' +
+            '<button class="btn btn-outline btn-sm" data-kn-del="' + k.id + '">Delete</button></div></div>';
+      }).join("");
+      qsa("[data-kn-del]", box).forEach(function (b) {
+        b.addEventListener("click", function () { if (window.confirm("Delete this answer?")) delKnowledge(b.dataset.knDel); });
+      });
+      qsa("[data-kn-toggle]", box).forEach(function (b) {
+        b.addEventListener("click", function () { toggleKnowledge(b.dataset.knToggle, b.dataset.on !== "1"); });
+      });
+    }).catch(function (err) {
+      var box = qs("#knList"); if (box) box.innerHTML = '<div class="form-status err show">' + esc(err.message || "Failed.") + "</div>";
+    });
+  }
+
+  function delKnowledge(id) {
+    API.del("/api/admin/chat/knowledge/" + id).then(loadKnowledge).catch(function (err) { window.alert(err.message || "Failed."); });
+  }
+  function toggleKnowledge(id, enable) {
+    // PATCH requires the full row; fetch current then send it back with enabled flipped.
+    API.get("/api/admin/chat/knowledge").then(function (list) {
+      var k = list.filter(function (x) { return String(x.id) === String(id); })[0];
+      if (!k) return;
+      return API.patch("/api/admin/chat/knowledge/" + id,
+        { question: k.question, answer: k.answer, keywords: k.keywords || "", enabled: enable });
+    }).then(loadKnowledge).catch(function (err) { window.alert(err.message || "Failed."); });
   }
 
   function startDashboard() { renderShell(); }

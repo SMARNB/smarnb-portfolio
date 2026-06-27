@@ -374,3 +374,97 @@ def save_state(db, conv, state):
     conv.bot_state = json.dumps(state or {})
     conv.needs_human = bool((state or {}).get("needs_human")) or conv.needs_human
     db.commit()
+
+
+# --- Bot knowledge base (curated "learning") ----------------------------------
+def _norm_q(text):
+    return re.sub(r"\s+", " ", (text or "").strip().lower())[:300]
+
+
+def knowledge_for_bot(db):
+    """Enabled curated Q&A as plain dicts for the assistant."""
+    rows = (db.query(models.BotKnowledge)
+            .filter(models.BotKnowledge.enabled.is_(True))
+            .order_by(models.BotKnowledge.id).all())
+    return [{"id": r.id, "question": r.question or "", "answer": r.answer or "",
+             "keywords": r.keywords or ""} for r in rows]
+
+
+def list_bot_knowledge(db):
+    return db.query(models.BotKnowledge).order_by(models.BotKnowledge.id.desc()).all()
+
+
+def create_bot_knowledge(db, question, answer, keywords="", enabled=True):
+    kn = models.BotKnowledge(question=(question or "").strip(), answer=(answer or "").strip(),
+                             keywords=(keywords or "").strip(), enabled=bool(enabled))
+    db.add(kn)
+    db.commit()
+    db.refresh(kn)
+    return kn
+
+
+def update_bot_knowledge(db, kn, question=None, answer=None, keywords=None, enabled=None):
+    if question is not None:
+        kn.question = question.strip()
+    if answer is not None:
+        kn.answer = answer.strip()
+    if keywords is not None:
+        kn.keywords = keywords.strip()
+    if enabled is not None:
+        kn.enabled = bool(enabled)
+    db.commit()
+    db.refresh(kn)
+    return kn
+
+
+def delete_bot_knowledge(db, kn):
+    db.delete(kn)
+    db.commit()
+
+
+def bump_knowledge_hit(db, kid):
+    kn = db.get(models.BotKnowledge, kid)
+    if kn:
+        kn.hits = (kn.hits or 0) + 1
+        db.commit()
+    return kn
+
+
+def log_unanswered(db, question):
+    """Record a question the bot couldn't answer, deduped by normalized text."""
+    norm = _norm_q(question)
+    if not norm:
+        return None
+    row = (db.query(models.BotUnanswered)
+           .filter(models.BotUnanswered.norm == norm,
+                   models.BotUnanswered.resolved.is_(False)).first())
+    if row:
+        row.count = (row.count or 0) + 1
+        row.question = (question or "").strip()[:2000]
+        row.last_seen = models.utcnow()
+    else:
+        row = models.BotUnanswered(norm=norm, question=(question or "").strip()[:2000], count=1)
+        db.add(row)
+    db.commit()
+    return row
+
+
+def list_unanswered(db, include_resolved=False):
+    q = db.query(models.BotUnanswered)
+    if not include_resolved:
+        q = q.filter(models.BotUnanswered.resolved.is_(False))
+    return q.order_by(models.BotUnanswered.count.desc(),
+                      models.BotUnanswered.last_seen.desc()).all()
+
+
+def resolve_unanswered(db, uid):
+    row = db.get(models.BotUnanswered, uid)
+    if row:
+        row.resolved = True
+        db.commit()
+    return row
+
+
+def delete_unanswered(db, row):
+    db.delete(row)
+    db.commit()

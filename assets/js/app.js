@@ -69,8 +69,133 @@
     Design: "linear-gradient(135deg,#f472b6,#7c5cff)",
     Automation: "linear-gradient(135deg,#22d3ee,#34d399)",
     Packaging: "linear-gradient(135deg,#fbbf24,#f472b6)",
+    "AI / Computer Vision": "linear-gradient(135deg,#34d399,#7c5cff)",
   };
   var CAT_ICON = { Development: "code", Design: "pen", Automation: "bot", Packaging: "box" };
+
+  /* Illustrated header art for service cards (first-party SVG, no external assets).
+     Keyed by category; falls back to a generic motif. White line-art sits on the
+     category's gradient so each card reads as an "image" rather than a placeholder. */
+  var SVC_ART = {
+    "Development":
+      '<rect x="64" y="34" width="192" height="92" rx="10" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.75)" stroke-width="2"/>' +
+      '<line x1="64" y1="54" x2="256" y2="54" stroke="rgba(255,255,255,.75)" stroke-width="2"/>' +
+      '<circle cx="78" cy="44" r="3" fill="#fff"/><circle cx="90" cy="44" r="3" fill="rgba(255,255,255,.7)"/><circle cx="102" cy="44" r="3" fill="rgba(255,255,255,.5)"/>' +
+      '<rect x="80" y="68" width="64" height="6" rx="3" fill="rgba(255,255,255,.55)"/>' +
+      '<rect x="80" y="82" width="92" height="6" rx="3" fill="rgba(255,255,255,.35)"/>' +
+      '<rect x="80" y="96" width="46" height="6" rx="3" fill="rgba(255,255,255,.35)"/>' +
+      '<rect x="196" y="96" width="10" height="20" rx="2" fill="rgba(255,255,255,.55)"/>' +
+      '<rect x="212" y="84" width="10" height="32" rx="2" fill="rgba(255,255,255,.78)"/>' +
+      '<rect x="228" y="72" width="10" height="44" rx="2" fill="#fff"/>',
+    "Design":
+      '<circle cx="124" cy="82" r="34" fill="rgba(255,255,255,.18)"/>' +
+      '<rect x="150" y="52" width="58" height="58" rx="12" fill="rgba(255,255,255,.26)" transform="rotate(12 179 81)"/>' +
+      '<path d="M150 116 l8 -30 44 -44 22 22 -44 44z" fill="rgba(255,255,255,.9)" stroke="rgba(255,255,255,.9)" stroke-width="2" stroke-linejoin="round"/>' +
+      '<path d="M196 64 l16 16" stroke="rgba(0,0,0,.18)" stroke-width="2"/>',
+    "Automation":
+      '<rect x="120" y="56" width="80" height="62" rx="13" fill="rgba(255,255,255,.16)" stroke="rgba(255,255,255,.75)" stroke-width="2"/>' +
+      '<circle cx="160" cy="42" r="4" fill="#fff"/><line x1="160" y1="46" x2="160" y2="56" stroke="rgba(255,255,255,.75)" stroke-width="2"/>' +
+      '<circle cx="144" cy="86" r="8" fill="#fff"/><circle cx="176" cy="86" r="8" fill="#fff"/>' +
+      '<rect x="140" y="104" width="40" height="6" rx="3" fill="rgba(255,255,255,.5)"/>' +
+      '<g stroke="rgba(255,255,255,.78)" stroke-width="2" fill="none"><circle cx="228" cy="92" r="13"/><path d="M228 75v-6M228 115v-6M207 92h-6M249 92h-6M213 77l-4-4M247 111l4 4"/></g>',
+    "Packaging":
+      '<path d="M160 38 l56 31 v44 l-56 31 -56 -31 v-44z" fill="rgba(255,255,255,.14)" stroke="rgba(255,255,255,.8)" stroke-width="2" stroke-linejoin="round"/>' +
+      '<path d="M160 38 l56 31 -56 31 -56 -31z" fill="rgba(255,255,255,.3)" stroke="rgba(255,255,255,.8)" stroke-width="2" stroke-linejoin="round"/>' +
+      '<path d="M160 100 v44" stroke="rgba(255,255,255,.8)" stroke-width="2"/>',
+    "AI / Computer Vision":
+      '<g stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M120 58h-14v-14M200 58h14v-14M120 110h-14v14M200 110h14v14"/></g>' +
+      '<circle cx="160" cy="84" r="30" fill="rgba(255,255,255,.16)" stroke="rgba(255,255,255,.85)" stroke-width="2"/>' +
+      '<circle cx="160" cy="84" r="10" fill="#fff"/>' +
+      '<path d="M108 84h104" stroke="rgba(255,255,255,.45)" stroke-width="2" stroke-dasharray="3 7"/>',
+  };
+  var SVC_ART_GENERIC =
+    '<g fill="#fff"><path d="M160 50l9 24 24 9-24 9-9 24-9-24-24-9 24-9z" opacity=".9"/>' +
+    '<path d="M214 60l4 11 11 4-11 4-4 11-4-11-11-4 11-4z" opacity=".55"/>' +
+    '<path d="M104 96l4 11 11 4-11 4-4 11-4-11-11-4 11-4z" opacity=".4"/></g>';
+
+  function serviceArt(s) {
+    var grad = CAT_GRAD[s.category] || "linear-gradient(135deg,#7c5cff,#22d3ee)";
+    var motif = SVC_ART[s.category] || SVC_ART_GENERIC;
+    return '<div class="svc-media" style="background:' + grad + '">' +
+      '<svg class="svc-art" viewBox="0 0 320 160" preserveAspectRatio="xMidYMid meet" aria-hidden="true">' + motif + '</svg>' +
+      '<span class="svc-badge">' + esc(s.category) + '</span>' +
+      '<span class="svc-chip">' + icon(s.icon) + '</span>' +
+      '</div>';
+  }
+
+  /* Per-project illustrations for the "Selected work" cards — each one reflects
+     what the project actually is, so they read as relevant images not placeholders. */
+  var PORTFOLIO_ART = {
+    // Analytics SaaS Dashboard — rising line chart + KPI chips
+    p1: '<rect x="58" y="38" width="204" height="84" rx="10" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.7)" stroke-width="2"/>' +
+        '<rect x="72" y="50" width="36" height="9" rx="4" fill="rgba(255,255,255,.55)"/>' +
+        '<rect x="116" y="50" width="24" height="9" rx="4" fill="rgba(255,255,255,.35)"/>' +
+        '<polyline points="74,106 104,88 134,96 164,68 194,76 224,52" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '<circle cx="224" cy="52" r="3.6" fill="#fff"/>',
+    // Fintech Admin UI Kit — two UI screens / wireframes
+    p2: '<rect x="66" y="42" width="82" height="74" rx="8" fill="rgba(255,255,255,.14)" stroke="rgba(255,255,255,.7)" stroke-width="2"/>' +
+        '<rect x="158" y="42" width="92" height="74" rx="8" fill="rgba(255,255,255,.2)" stroke="rgba(255,255,255,.7)" stroke-width="2"/>' +
+        '<rect x="78" y="54" width="58" height="6" rx="3" fill="rgba(255,255,255,.6)"/>' +
+        '<rect x="78" y="70" width="44" height="6" rx="3" fill="rgba(255,255,255,.4)"/>' +
+        '<rect x="78" y="86" width="50" height="6" rx="3" fill="rgba(255,255,255,.4)"/>' +
+        '<rect x="170" y="54" width="68" height="6" rx="3" fill="rgba(255,255,255,.6)"/>' +
+        '<circle cx="182" cy="86" r="11" fill="rgba(255,255,255,.5)"/>' +
+        '<rect x="200" y="82" width="40" height="6" rx="3" fill="rgba(255,255,255,.4)"/>',
+    // Invoice OCR Pipeline — document → scan → structured data
+    p3: '<rect x="60" y="40" width="72" height="90" rx="8" fill="rgba(255,255,255,.14)" stroke="rgba(255,255,255,.75)" stroke-width="2"/>' +
+        '<rect x="72" y="54" width="48" height="6" rx="3" fill="rgba(255,255,255,.55)"/>' +
+        '<rect x="72" y="68" width="42" height="5" rx="2.5" fill="rgba(255,255,255,.4)"/>' +
+        '<rect x="72" y="80" width="48" height="5" rx="2.5" fill="rgba(255,255,255,.4)"/>' +
+        '<line x1="64" y1="98" x2="128" y2="98" stroke="#fff" stroke-width="2" stroke-dasharray="4 4"/>' +
+        '<path d="M146 84h26m0 0l-8-8m8 8l-8 8" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '<rect x="188" y="54" width="68" height="62" rx="8" fill="rgba(255,255,255,.18)" stroke="rgba(255,255,255,.75)" stroke-width="2"/>' +
+        '<rect x="200" y="66" width="44" height="6" rx="3" fill="rgba(255,255,255,.6)"/>' +
+        '<rect x="200" y="80" width="34" height="6" rx="3" fill="rgba(255,255,255,.4)"/>' +
+        '<rect x="200" y="94" width="40" height="6" rx="3" fill="rgba(255,255,255,.4)"/>',
+    // Organic Tea Box Range — package box + leaf
+    p4: '<path d="M150 40 l52 29 v42 l-52 29 -52 -29 v-42z" fill="rgba(255,255,255,.14)" stroke="rgba(255,255,255,.8)" stroke-width="2" stroke-linejoin="round"/>' +
+        '<path d="M150 40 l52 29 -52 29 -52 -29z" fill="rgba(255,255,255,.3)" stroke="rgba(255,255,255,.8)" stroke-width="2" stroke-linejoin="round"/>' +
+        '<path d="M150 98 v42" stroke="rgba(255,255,255,.8)" stroke-width="2"/>' +
+        '<path d="M214 64 c-16 2 -24 12 -22 26 14 2 24 -8 22 -26z" fill="rgba(255,255,255,.6)"/>' +
+        '<path d="M198 88 q8 -10 16 -22" stroke="rgba(10,13,20,.18)" stroke-width="2" fill="none"/>',
+    // Inventory Control Panel — data table + bars
+    p5: '<rect x="60" y="42" width="200" height="76" rx="10" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.7)" stroke-width="2"/>' +
+        '<line x1="60" y1="62" x2="260" y2="62" stroke="rgba(255,255,255,.5)" stroke-width="1.5"/>' +
+        '<line x1="124" y1="42" x2="124" y2="118" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>' +
+        '<rect x="74" y="72" width="34" height="6" rx="3" fill="rgba(255,255,255,.5)"/>' +
+        '<rect x="74" y="88" width="34" height="6" rx="3" fill="rgba(255,255,255,.5)"/>' +
+        '<rect x="74" y="104" width="28" height="6" rx="3" fill="rgba(255,255,255,.5)"/>' +
+        '<rect x="138" y="72" width="64" height="8" rx="4" fill="rgba(255,255,255,.6)"/>' +
+        '<rect x="138" y="88" width="44" height="8" rx="4" fill="rgba(255,255,255,.4)"/>' +
+        '<rect x="138" y="104" width="54" height="8" rx="4" fill="rgba(255,255,255,.4)"/>',
+    // Crypto Wallet Dashboard — candlestick chart
+    p6: '<rect x="58" y="38" width="204" height="84" rx="10" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.7)" stroke-width="2"/>' +
+        '<g stroke="#fff" stroke-width="2" fill="none"><line x1="88" y1="56" x2="88" y2="104"/><line x1="120" y1="62" x2="120" y2="110"/>' +
+        '<line x1="152" y1="50" x2="152" y2="100"/><line x1="184" y1="60" x2="184" y2="108"/><line x1="216" y1="46" x2="216" y2="96"/></g>' +
+        '<g fill="none"><rect x="82" y="68" width="12" height="24" rx="2" fill="rgba(255,255,255,.6)"/>' +
+        '<rect x="114" y="78" width="12" height="20" rx="2" fill="rgba(255,255,255,.4)"/>' +
+        '<rect x="146" y="60" width="12" height="28" rx="2" fill="rgba(255,255,255,.7)"/>' +
+        '<rect x="178" y="74" width="12" height="22" rx="2" fill="rgba(255,255,255,.45)"/>' +
+        '<rect x="210" y="54" width="12" height="26" rx="2" fill="#fff"/></g>',
+    // Lead-Gen Scraper Suite — network / nodes
+    p7: '<g stroke="rgba(255,255,255,.55)" stroke-width="2"><line x1="160" y1="82" x2="100" y2="50"/><line x1="160" y1="82" x2="100" y2="112"/>' +
+        '<line x1="160" y1="82" x2="222" y2="54"/><line x1="160" y1="82" x2="224" y2="106"/><line x1="160" y1="82" x2="160" y2="42"/></g>' +
+        '<circle cx="160" cy="82" r="15" fill="rgba(255,255,255,.25)" stroke="#fff" stroke-width="2"/>' +
+        '<g fill="#fff"><circle cx="100" cy="50" r="7"/><circle cx="100" cy="112" r="7"/><circle cx="222" cy="54" r="7"/><circle cx="224" cy="106" r="7"/><circle cx="160" cy="42" r="6"/></g>',
+    // Skincare Pouch Series — cosmetic bottles
+    p8: '<rect x="118" y="56" width="36" height="66" rx="10" fill="rgba(255,255,255,.2)" stroke="rgba(255,255,255,.75)" stroke-width="2"/>' +
+        '<rect x="128" y="44" width="16" height="14" rx="3" fill="rgba(255,255,255,.6)"/>' +
+        '<rect x="124" y="80" width="24" height="22" rx="4" fill="rgba(255,255,255,.5)"/>' +
+        '<rect x="170" y="64" width="42" height="58" rx="16" fill="rgba(255,255,255,.14)" stroke="rgba(255,255,255,.75)" stroke-width="2"/>' +
+        '<rect x="183" y="54" width="16" height="12" rx="3" fill="rgba(255,255,255,.55)"/>' +
+        '<rect x="177" y="86" width="28" height="18" rx="4" fill="rgba(255,255,255,.4)"/>',
+  };
+
+  function portfolioArt(p) {
+    var motif = PORTFOLIO_ART[p.id] || SVC_ART[p.category] || SVC_ART_GENERIC;
+    return '<svg class="work-art" viewBox="0 0 320 160" preserveAspectRatio="xMidYMid meet" aria-hidden="true">' + motif + '</svg>';
+  }
 
   /* =========================================================================
      1. CONTENT FROM CONFIG
@@ -125,11 +250,15 @@
   ========================================================================= */
   function renderServices() {
     var grid = qs("#servicesGrid"); if (!grid) return;
-    grid.innerHTML = D.services.map(function (s, i) {
+    // On the homepage the grid is a teaser (data-limit); the store page shows all.
+    var limit = parseInt(grid.dataset.limit || "0", 10) || 0;
+    var hasPricing = !!qs("#pricing");   // the full store page has the pricing section
+    var list = limit > 0 ? D.services.slice(0, limit) : D.services;
+    grid.innerHTML = list.map(function (s, i) {
       var min = Math.min.apply(null, s.packages.map(function (p) { return p.price; }));
       return '<article class="card service-card reveal" style="--d:' + (i * 80) + 'ms">' +
+        serviceArt(s) +
         '<div class="from">from <b>' + money(min) + '</b></div>' +
-        '<div class="ic">' + icon(s.icon) + "</div>" +
         "<h3>" + esc(s.title) + "</h3>" +
         "<p>" + esc(s.short) + "</p>" +
         '<div class="tag-row">' + s.tags.slice(0, 4).map(function (t) { return '<span class="tag">' + esc(t) + "</span>"; }).join("") + "</div>" +
@@ -137,9 +266,26 @@
         "</article>";
     }).join("");
     qsa(".js-view-packages", grid).forEach(function (b) {
-      on(b, "click", function () { selectService(b.dataset.service, true); });
+      on(b, "click", function () {
+        // Store page → scroll to pricing; teaser (homepage) → jump to the store page.
+        if (hasPricing) selectService(b.dataset.service, true);
+        else location.href = "store.html#svc-" + b.dataset.service;
+      });
     });
     observeReveal(grid); // re-arm the reveal animation for freshly-rendered cards
+  }
+
+  // On the store page, honour a #svc-<id> hash by preselecting that service once.
+  var _hashApplied = false;
+  function applyHashService() {
+    if (_hashApplied) return;
+    if (!qs("#priceGrid")) return;
+    var m = /^#svc-(.+)$/.exec(location.hash || "");
+    if (!m) return;
+    var id = decodeURIComponent(m[1]);
+    if (!D.services.some(function (s) { return s.id === id; })) return;
+    _hashApplied = true;
+    selectService(id, true);
   }
 
   function renderPriceTabs() {
@@ -193,7 +339,7 @@
     grid.innerHTML = items.map(function (p, i) {
       var thumb = p.image
         ? '<img class="ph" src="' + esc(p.image) + '" alt="' + esc(p.title) + '" loading="lazy" width="600" height="375">'
-        : '<span class="ph" style="background:' + CAT_GRAD[p.category] + '"></span>' + icon(CAT_ICON[p.category], 'class="cat-ic"');
+        : '<span class="ph" style="background:' + (CAT_GRAD[p.category] || "linear-gradient(135deg,#7c5cff,#22d3ee)") + '"></span>' + portfolioArt(p);
       return '<article class="card work-card reveal" style="--d:' + (i * 60) + 'ms" data-id="' + p.id + '" tabindex="0" role="button" aria-label="View ' + esc(p.title) + '">' +
         '<div class="work-thumb">' + thumb + '<span class="hover-go">' + icon("arrow") + "</span></div>" +
         '<div class="work-body"><span class="cat">' + esc(p.category) + "</span><h3>" + esc(p.title) + "</h3><p>" + esc(p.desc) + "</p>" +
@@ -204,6 +350,49 @@
       function open() { openProject(card.dataset.id); }
       on(card, "click", open);
       on(card, "keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
+    });
+    observeReveal(grid);
+  }
+
+  // ---- Products & licenses (sell finished products like CodeWatch) ----------
+  function productArt(p) {
+    var motif = PORTFOLIO_ART[p.art] || SVC_ART[p.category] || SVC_ART_GENERIC;
+    var grad = CAT_GRAD[p.category] || "linear-gradient(135deg,#7c5cff,#22d3ee)";
+    return '<div class="product-media" style="background:' + grad + '">' +
+      '<svg class="svc-art" viewBox="0 0 320 160" preserveAspectRatio="xMidYMid meet" aria-hidden="true">' + motif + '</svg>' +
+      (p.badge ? '<span class="product-badge">' + esc(p.badge) + '</span>' : '') + '</div>';
+  }
+
+  function renderProducts() {
+    var grid = qs("#productsGrid"); if (!grid || !D.products) return;
+    grid.innerHTML = D.products.map(function (p, i) {
+      var lic = (p.licenses || []).map(function (l) {
+        var priceLbl = l.contact ? "from " + money(l.price) : money(l.price);
+        var btn = l.contact
+          ? '<a class="btn btn-outline btn-sm" href="index.html#contact">Request a quote</a>'
+          : '<button class="btn ' + (l.popular ? "btn-primary" : "btn-outline") + ' btn-sm js-buy-license" ' +
+            'data-id="' + esc(p.id) + '" data-title="' + esc(p.title) + '" data-tier="' + esc(l.tier) + '" data-price="' + l.price + '">' +
+            icon("cart") + " Buy license</button>";
+        return '<div class="lic' + (l.popular ? " popular" : "") + '">' +
+          '<div class="lic-top"><b>' + esc(l.tier) + '</b><span class="lic-price">' + priceLbl + "</span></div>" +
+          '<p class="lic-note">' + esc(l.note || "") + "</p>" + btn + "</div>";
+      }).join("");
+      return '<article class="card product-card reveal" style="--d:' + (i * 80) + 'ms">' +
+        productArt(p) +
+        '<div class="product-body">' +
+          '<span class="eyebrow">' + esc(p.category) + "</span>" +
+          "<h3>" + esc(p.title) + ' <span class="pf-sub">— ' + esc(p.subtitle) + "</span></h3>" +
+          '<p class="lead">' + esc(p.desc) + "</p>" +
+          (p.includes ? '<ul class="feat-list">' + p.includes.map(function (h) { return "<li>" + icon("check") + "<span>" + esc(h) + "</span></li>"; }).join("") + "</ul>" : "") +
+          '<div class="lic-row">' + lic + "</div>" +
+        "</div></article>";
+    }).join("");
+    qsa(".js-buy-license", grid).forEach(function (b) {
+      on(b, "click", function () {
+        S.addItem({ serviceId: b.dataset.id, service: b.dataset.title + " (license)", tier: b.dataset.tier, price: +b.dataset.price, delivery: "License" });
+        toast(icon("check"), b.dataset.tier + " added to cart");
+        openPanel(cartDrawer);
+      });
     });
     observeReveal(grid);
   }
@@ -278,11 +467,16 @@
 
   function renderFooterServices() {
     var el = qs("#footerServices"); if (!el) return;
+    var hasPricing = !!qs("#pricing");
     el.innerHTML = D.services.map(function (s) {
-      return '<li><a href="#pricing" data-service="' + s.id + '" class="js-foot-service">' + esc(shortTitle(s.title)) + "</a></li>";
+      var href = hasPricing ? "#pricing" : "store.html#svc-" + s.id;
+      return '<li><a href="' + href + '" data-service="' + s.id + '" class="js-foot-service">' + esc(shortTitle(s.title)) + "</a></li>";
     }).join("");
     qsa(".js-foot-service", el).forEach(function (a) {
-      on(a, "click", function (e) { e.preventDefault(); selectService(a.dataset.service, true); });
+      on(a, "click", function (e) {
+        if (!hasPricing) return;           // let the link navigate to the store page
+        e.preventDefault(); selectService(a.dataset.service, true);
+      });
     });
   }
 
@@ -306,6 +500,7 @@
     fillServiceSelect();
     buildHeroStats();
     animateCounters(); // re-run so "Services offered" reflects the new total
+    applyHashService(); // store page: jump to a service requested via #svc-<id>
   }
 
   function mapDbService(s) {
@@ -936,7 +1131,10 @@
           '<p class="lead">' + esc(p.desc) + "</p>" +
           '<ul class="feat-list">' + p.highlights.map(function (h) { return "<li>" + icon("check") + "<span>" + esc(h) + "</span></li>"; }).join("") + "</ul>" +
           '<div class="tag-row">' + p.tags.map(function (t) { return '<span class="tag">' + esc(t) + "</span>"; }).join("") + "</div>" +
-          '<a class="btn btn-primary mt-4" href="' + esc(p.link) + '" target="_blank" rel="noopener">' + icon("github") + " " + esc(p.linkLabel || "View project") + "</a>" +
+          '<div class="hero-cta mt-4">' +
+            '<a class="btn btn-primary" href="' + esc(p.link) + '" target="_blank" rel="noopener">' + icon("github") + " " + esc(p.linkLabel || "View project") + "</a>" +
+            (p.licenseLink ? '<a class="btn btn-outline" href="' + esc(p.licenseLink) + '">' + icon("cart") + " " + esc(p.licenseLabel || "License this product") + "</a>" : "") +
+          "</div>" +
         "</div>" +
       "</article>";
     }).join("");
@@ -980,8 +1178,8 @@
     fillConfig();
     buildHeroStats();
     renderServices();
-    renderPriceTabs(); renderPricing(D.services[0].id);
-    renderFilters(); renderPortfolio("All");
+    renderPriceTabs(); renderPricing(D.services[0].id); applyHashService();
+    renderFilters(); renderPortfolio("All"); renderProducts();
     renderProcess(); renderPerks(); renderSkills();
     renderTestimonials(); renderFAQ(); renderMarquee(); renderFooterServices();
     renderPersonalProjects(); renderExperience(); renderPayments();

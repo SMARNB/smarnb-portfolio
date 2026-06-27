@@ -267,3 +267,30 @@ class ConversationSummary(BaseModel):
 class DevSendIn(BaseModel):
     body: str = Field(min_length=1, max_length=2000)
     let_bot_resume: bool = False
+
+
+# --- Bot training (curated knowledge base) ------------------------------------
+class BotKnowledgeIn(BaseModel):
+    question: str = Field(min_length=1, max_length=500)
+    answer: str = Field(min_length=1, max_length=2000)
+    keywords: str = Field(default="", max_length=500)
+    enabled: bool = True
+
+
+class BotKnowledgeOut(BaseModel):
+    id: int
+    question: str
+    answer: str
+    keywords: str = ""
+    enabled: bool = True
+    hits: int = 0
+    created_at: dt.datetime
+
+
+class BotUnansweredOut(BaseModel):
+    id: int
+    question: str
+    count: int = 1
+    resolved: bool = False
+    created_at: dt.datetime
+    last_seen: dt.datetime

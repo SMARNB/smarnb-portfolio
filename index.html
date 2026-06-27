@@ -23,15 +23,15 @@
 
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="assets/css/styles.css?v=4">
-  <link rel="stylesheet" href="assets/css/chat.css?v=4">
+  <link rel="stylesheet" href="assets/css/styles.css?v=6">
+  <link rel="stylesheet" href="assets/css/chat.css?v=6">
 
   <!-- Scripts: load order matters. Defer keeps the page instant. -->
-  <script defer src="assets/js/config.js?v=4"></script>
-  <script defer src="assets/js/data.js?v=4"></script>
-  <script defer src="assets/js/store.js?v=4"></script>
-  <script defer src="assets/js/app.js?v=4"></script>
-  <script defer src="assets/js/chat.js?v=4"></script>
+  <script defer src="assets/js/config.js?v=6"></script>
+  <script defer src="assets/js/data.js?v=6"></script>
+  <script defer src="assets/js/store.js?v=6"></script>
+  <script defer src="assets/js/app.js?v=6"></script>
+  <script defer src="assets/js/chat.js?v=6"></script>
 
   <!-- Structured data for search engines -->
   <script type="application/ld+json">
@@ -64,7 +64,7 @@
 
       <nav class="nav-links" aria-label="Primary">
         <a href="#services">Services</a>
-        <a href="#pricing">Pricing</a>
+        <a href="store.html">Store</a>
         <a href="#work">Work</a>
         <a href="#projects">Projects</a>
         <a href="#about">About</a>
@@ -94,7 +94,7 @@
   <!-- mobile menu -->
   <nav class="mobile-menu" id="mobileMenu" aria-label="Mobile">
     <a href="#services">Services</a>
-    <a href="#pricing">Pricing</a>
+    <a href="store.html">Store</a>
     <a href="#work">Work</a>
     <a href="#projects">Projects</a>
     <a href="#process">Process</a>
@@ -117,7 +117,7 @@
           <h1 class="reveal" style="--d:80ms">I <span class="text-grad">build, automate &amp; design</span> the products that grow your business.</h1>
           <p class="lead reveal" style="--d:160ms" data-bio>I'm a multidisciplinary freelancer helping startups and founders ship fast.</p>
           <div class="hero-cta reveal" style="--d:240ms">
-            <a class="btn btn-primary" href="#pricing">Order a service
+            <a class="btn btn-primary" href="store.html">Order a service
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </a>
             <a class="btn btn-ghost" href="#contact">Request custom work</a>
@@ -158,35 +158,24 @@
       <div class="marquee-track" id="marqueeTrack"></div>
     </div>
 
-    <!-- ============================ SERVICES ============================ -->
+    <!-- ============================ SERVICES (teaser → full store) ============================ -->
     <section id="services">
       <div class="container">
-        <div class="section-head reveal">
+        <div class="section-head center reveal">
           <span class="eyebrow">What I do</span>
           <h2 class="section-title">Services built to move your project forward</h2>
-          <p class="lead">Four core services, each delivered to a professional standard — pick a ready-made package or ask for something custom.</p>
+          <p class="lead" style="margin-inline:auto">A snapshot of what I offer — see the full catalogue, packages and transparent pricing in the store, then order in two clicks.</p>
         </div>
-        <div class="grid cols-2" id="servicesGrid"></div>
-      </div>
-    </section>
-
-    <!-- ============================ PRICING ============================ -->
-    <section id="pricing">
-      <div class="container">
-        <div class="section-head center reveal">
-          <span class="eyebrow">Packages &amp; pricing</span>
-          <h2 class="section-title">Transparent pricing. Order in two clicks.</h2>
-          <p class="lead" style="margin-inline:auto">Choose a service, pick a tier, and add it to your cart. Every package is a starting point — bigger jobs get a custom quote.</p>
-        </div>
-        <div class="price-tabs" id="priceTabs" role="tablist" aria-label="Choose a service"></div>
-        <div class="price-grid" id="priceGrid" role="tabpanel"></div>
-
+        <!-- data-limit makes this a teaser; the full list + pricing + cart live on store.html -->
+        <div class="grid cols-2" id="servicesGrid" data-limit="6"></div>
         <div class="custom-banner reveal">
           <div>
-            <h3>Have a bigger or custom project?</h3>
-            <p>Tell me what you need and I'll send a tailored quote and timeline — no obligation.</p>
+            <h3>See every service &amp; transparent pricing</h3>
+            <p>Browse all packages, compare tiers and order directly in the store.</p>
           </div>
-          <a class="btn btn-primary" href="#contact">Get a custom quote</a>
+          <a class="btn btn-primary" href="store.html">Visit the store
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
         </div>
       </div>
     </section>
@@ -322,7 +311,7 @@
           <h2>Have a project in mind?</h2>
           <p>Let's turn your idea into something real — fast, polished, and on time.</p>
           <div class="hero-cta" style="justify-content:center">
-            <a class="btn btn-ghost" href="#pricing">Browse packages</a>
+            <a class="btn btn-ghost" href="store.html">Browse packages</a>
             <a class="btn btn-outline" href="#contact">Start a conversation</a>
           </div>
         </div>
@@ -335,7 +324,7 @@
         <div class="section-head reveal">
           <span class="eyebrow">Let's talk</span>
           <h2 class="section-title">Start your project or request a custom quote</h2>
-          <p class="lead">Order standard services directly from the pricing section. For custom work, send the details here or reach out directly — I usually reply within a day.</p>
+          <p class="lead">Order standard services directly from the <a href="store.html" style="color:var(--accent-2);font-weight:600">store</a>. For custom work, send the details here or reach out directly — I usually reply within a day.</p>
         </div>
 
         <div class="contact-grid">
@@ -354,7 +343,7 @@
             </div>
             <div class="card" style="margin-top:.4rem">
               <b>Prefer to order directly?</b>
-              <p style="color:var(--muted);font-size:.92rem;margin-top:.4rem">Pick a package in the <a href="#pricing" style="color:var(--accent-2);font-weight:600">pricing section</a>, add it to your cart and check out. You'll get an order ID to track progress right here on the site.</p>
+              <p style="color:var(--muted);font-size:.92rem;margin-top:.4rem">Pick a package in the <a href="store.html" style="color:var(--accent-2);font-weight:600">store</a>, add it to your cart and check out. You'll get an order ID to track progress right here on the site.</p>
             </div>
           </div>
 

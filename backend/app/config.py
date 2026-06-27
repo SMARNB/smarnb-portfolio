@@ -49,6 +49,11 @@ ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "shahjee975@gmail.com")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin12345")   # ⚠️ change via env in production
 ADMIN_NAME = os.environ.get("ADMIN_NAME", "Muhammad Ali Raza")
 
+# --- Contact (used by the chat assistant for common-language answers) ---------
+CONTACT_EMAIL = os.environ.get("CONTACT_EMAIL", ADMIN_EMAIL)
+CONTACT_WHATSAPP = os.environ.get("CONTACT_WHATSAPP", "")   # e.g. +92 324 2225073
+LOCATION = os.environ.get("LOCATION", "Pakistan · working with clients worldwide (remote)")
+
 # --- Misc ---------------------------------------------------------------------
 CURRENCY = os.environ.get("CURRENCY", "$")
 CURRENCY_CODE = os.environ.get("CURRENCY_CODE", "usd").lower()   # ISO code for Stripe

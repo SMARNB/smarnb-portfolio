@@ -104,12 +104,18 @@ def _authed_conv(db, public_id, secret, user):
 def _run_bot(db, conv, text):
     state = conv.state()
     services = crud.catalog_for_bot(db)
+    knowledge = crud.knowledge_for_bot(db)
     name = conv.customer_name or ""
     email = conv.customer_email or ""
-    res = bot.respond(state, text, services, logged_in_name=name, logged_in_email=email)
+    res = bot.respond(state, text, services, knowledge=knowledge,
+                      logged_in_name=name, logged_in_email=email)
     for line in res.get("messages", []):
         if line and line.strip():
             crud.add_message(db, conv, "bot", line)
+    if res.get("matched_knowledge_id"):
+        crud.bump_knowledge_hit(db, res["matched_knowledge_id"])
+    if res.get("unanswered"):
+        crud.log_unanswered(db, text)
     action = res.get("action")
     if action and action.get("type") == "create_order":
         _order_from_chat(db, conv, action)
@@ -290,3 +296,63 @@ def admin_toggle_bot(public_id: str, db: Session = Depends(get_db)):
     conv.human_takeover = not conv.human_takeover
     db.commit()
     return {"ok": True, "human_takeover": conv.human_takeover}
+
+
+# ---- Bot training: curated knowledge base + unanswered log -------------------
+def _kn_out(k):
+    return {"id": k.id, "question": k.question or "", "answer": k.answer or "",
+            "keywords": k.keywords or "", "enabled": k.enabled, "hits": k.hits or 0,
+            "created_at": k.created_at}
+
+
+@admin_router.get("/knowledge", response_model=List[schemas.BotKnowledgeOut])
+def list_knowledge(db: Session = Depends(get_db)):
+    return [_kn_out(k) for k in crud.list_bot_knowledge(db)]
+
+
+@admin_router.post("/knowledge", response_model=schemas.BotKnowledgeOut)
+def add_knowledge(data: schemas.BotKnowledgeIn, db: Session = Depends(get_db)):
+    k = crud.create_bot_knowledge(db, data.question, data.answer, data.keywords, data.enabled)
+    return _kn_out(k)
+
+
+@admin_router.patch("/knowledge/{kid}", response_model=schemas.BotKnowledgeOut)
+def edit_knowledge(kid: int, data: schemas.BotKnowledgeIn, db: Session = Depends(get_db)):
+    k = db.get(models.BotKnowledge, kid)
+    if not k:
+        raise HTTPException(404, "Not found.")
+    k = crud.update_bot_knowledge(db, k, data.question, data.answer, data.keywords, data.enabled)
+    return _kn_out(k)
+
+
+@admin_router.delete("/knowledge/{kid}")
+def remove_knowledge(kid: int, db: Session = Depends(get_db)):
+    k = db.get(models.BotKnowledge, kid)
+    if not k:
+        raise HTTPException(404, "Not found.")
+    crud.delete_bot_knowledge(db, k)
+    return {"ok": True}
+
+
+@admin_router.get("/unanswered", response_model=List[schemas.BotUnansweredOut])
+def list_unanswered(include_resolved: bool = False, db: Session = Depends(get_db)):
+    return [{"id": u.id, "question": u.question or "", "count": u.count or 1,
+             "resolved": u.resolved, "created_at": u.created_at, "last_seen": u.last_seen}
+            for u in crud.list_unanswered(db, include_resolved=include_resolved)]
+
+
+@admin_router.post("/unanswered/{uid}/resolve")
+def resolve_unanswered(uid: int, db: Session = Depends(get_db)):
+    if not db.get(models.BotUnanswered, uid):
+        raise HTTPException(404, "Not found.")
+    crud.resolve_unanswered(db, uid)
+    return {"ok": True}
+
+
+@admin_router.delete("/unanswered/{uid}")
+def delete_unanswered(uid: int, db: Session = Depends(get_db)):
+    u = db.get(models.BotUnanswered, uid)
+    if not u:
+        raise HTTPException(404, "Not found.")
+    crud.delete_unanswered(db, u)
+    return {"ok": True}

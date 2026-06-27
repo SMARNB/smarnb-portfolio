@@ -211,6 +211,33 @@ class ChatMessage(Base):
                               uselist=False, cascade="all, delete-orphan")
 
 
+class BotKnowledge(Base):
+    """A curated Q&A the assistant can answer from. The developer adds these in the
+    dashboard (often by 'teaching' the bot an answer to a previously unanswered
+    question) — this is how the bot 'learns' without any third-party/LLM service."""
+    __tablename__ = "bot_knowledge"
+    id = Column(Integer, primary_key=True)
+    question = Column(Text, default="")      # the canonical question / trigger phrase
+    answer = Column(Text, default="")        # what the bot replies
+    keywords = Column(Text, default="")      # optional extra comma-separated triggers
+    enabled = Column(Boolean, default=True)
+    hits = Column(Integer, default=0)        # how often it has matched (popularity)
+    created_at = Column(DateTime, default=utcnow)
+
+
+class BotUnanswered(Base):
+    """Questions the bot couldn't confidently answer, deduped by normalized text.
+    The developer reviews these and teaches the bot a reply (→ BotKnowledge)."""
+    __tablename__ = "bot_unanswered"
+    id = Column(Integer, primary_key=True)
+    norm = Column(String(300), index=True, default="")   # normalized text for dedup
+    question = Column(Text, default="")                   # the last raw phrasing seen
+    count = Column(Integer, default=1)
+    resolved = Column(Boolean, default=False, index=True)
+    created_at = Column(DateTime, default=utcnow)
+    last_seen = Column(DateTime, default=utcnow)
+
+
 class ChatAttachment(Base):
     """A file (image or PDF) shared in a chat. Bytes live in the DB so they persist
     on free Postgres tiers; served only to the thread's participants + admin."""

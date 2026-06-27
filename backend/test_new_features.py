@@ -155,6 +155,45 @@ with TestClient(app) as c:
     # auth: anonymous cannot read admin inbox
     check("admin inbox requires auth", c.get("/api/admin/chat/conversations").status_code == 401)
 
+    print("== Chat: smarter bot + curated learning ==")
+    # common-language question answered from the built-in knowledge base
+    r = c.post("/api/chat/start", json={})
+    cid2, sec2 = r.json()["public_id"], r.json()["secret"]
+    SH2 = {"X-Chat-Secret": sec2}
+    msgs = c.post("/api/chat/%s/messages" % cid2, headers=SH2,
+                  json={"body": "how do i pay you?"}).json()["messages"]
+    last = msgs[-1]["body"].lower()
+    check("bot answers a common-language question", "payment" in last or "raast" in last)
+
+    # an unknown question is flagged unanswered + logged for the developer
+    c.post("/api/chat/%s/messages" % cid2, headers=SH2,
+           json={"body": "do you sell vintage typewriters from 1920"})
+    unans = c.get("/api/admin/chat/unanswered", headers=AH).json()
+    check("unanswered question logged", any("typewriter" in u["question"].lower() for u in unans))
+
+    # admin teaches the bot an answer (curated knowledge)
+    kn = c.post("/api/admin/chat/knowledge", headers=AH,
+                json={"question": "do you sell typewriters",
+                      "answer": "I focus on software, not typewriters — but I can build you a typewriter-themed app!",
+                      "keywords": "typewriter, typewriters"}).json()
+    check("knowledge created", "id" in kn)
+
+    # the bot now answers from the taught knowledge (typo-tolerant)
+    msgs = c.post("/api/chat/%s/messages" % cid2, headers=SH2,
+                  json={"body": "do you sel typewritters"}).json()["messages"]
+    check("bot answers from taught knowledge", "typewriter" in msgs[-1]["body"].lower())
+
+    # the hit counter incremented
+    klist = c.get("/api/admin/chat/knowledge", headers=AH).json()
+    check("knowledge hit recorded", any(k["id"] == kn["id"] and k["hits"] >= 1 for k in klist))
+
+    # knowledge base is admin-only
+    check("knowledge requires auth", c.get("/api/admin/chat/knowledge").status_code == 401)
+
+    # cleanup
+    check("knowledge deletable",
+          c.delete("/api/admin/chat/knowledge/%s" % kn["id"], headers=AH).status_code == 200)
+
 print("\n==== RESULT: %d passed, %d failed ====" % (ok, fail))
 if os.path.exists(_DB):
     try:
