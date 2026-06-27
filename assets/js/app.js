@@ -994,7 +994,8 @@
     }).join("");
   }
 
-  function initObservers() {
+  var spyObs = null;
+  function mountObservers() {
     observeReveal(document);
     // counters when hero stats visible
     var hs = qs("#heroStats");
@@ -1014,11 +1015,12 @@
       }, { threshold: 0.3 });
       so.observe(sk);
     }
-    // scrollspy
+    // scrollspy — disconnect a previous one so re-mounts don't stack observers
+    if (spyObs) { spyObs.disconnect(); spyObs = null; }
     var sections = qsa("section[id]");
     var navlinks = qsa(".nav-links a");
     if (sections.length && navlinks.length) {
-      var spy = new IntersectionObserver(function (entries) {
+      spyObs = new IntersectionObserver(function (entries) {
         entries.forEach(function (en) {
           if (en.isIntersecting) {
             navlinks.forEach(function (a) {
@@ -1029,7 +1031,7 @@
           }
         });
       }, { rootMargin: "-45% 0px -50% 0px" });
-      sections.forEach(function (s) { spy.observe(s); });
+      sections.forEach(function (s) { spyObs.observe(s); });
     }
   }
 
@@ -1101,8 +1103,10 @@
   }
 
   /* ---- smooth anchor scrolling ------------------------------------------ */
-  function initAnchors() {
+  function bindAnchors() {
     qsa('a[href^="#"]').forEach(function (a) {
+      if (a.__anchorBound) return;   // idempotent: don't double-bind on re-mount
+      a.__anchorBound = true;
       on(a, "click", function (e) {
         var id = a.getAttribute("href");
         if (id.length < 2) return;
@@ -1178,8 +1182,11 @@
   /* =========================================================================
      INIT
   ========================================================================= */
-  function init() {
-    if ("scrollRestoration" in history) { try { history.scrollRestoration = "manual"; } catch (e) {} }
+  // Everything that renders/binds the <main> content. Safe to re-run — the SPA
+  // router calls this after swapping <main> so we DON'T reload the whole page or
+  // rebuild the persistent shell (header, footer, chat, overlays).
+  function mountMain() {
+    _hashApplied = false;    // honour the current page's #svc- hash on each mount
     fillConfig();
     buildHeroStats();
     renderServices();
@@ -1192,20 +1199,28 @@
     fetchAndMergeServices(); // pull any services added from the dashboard
     fetchTestimonials();     // pull approved client reviews from the backend
     initReviewForm();        // "leave a review" submission
-
     initContactForm();
     renderCart();
-    S.onChange(renderCart);
+    bindAnchors();           // in-page smooth scrolling (idempotent)
+    mountObservers();        // reveal / counters / skills / scrollspy (re-runnable)
+  }
 
-    // open cart / track buttons
+  function init() {
+    if ("scrollRestoration" in history) { try { history.scrollRestoration = "manual"; } catch (e) {} }
+    mountMain();
+
+    // --- shell: bound ONCE (header/footer/overlays persist across SPA swaps) ---
+    S.onChange(renderCart);
     qsa("[data-open-cart]").forEach(function (b) { on(b, "click", function () { openPanel(cartDrawer); }); });
     qsa("[data-open-track]").forEach(function (b) { on(b, "click", function () { openTrack(); }); });
     on(qs("#trackBtn"), "click", doTrack);
     var ti = qs("#trackInput");
     if (ti) on(ti, "keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); doTrack(); } });
-
-    initHeader(); initMobileMenu(); initResponsiveNav(); initTheme(); initAnchors(); initObservers();
+    initHeader(); initMobileMenu(); initResponsiveNav(); initTheme();
   }
+
+  // Expose the re-mount hook for the SPA router (spa.js).
+  window.PortfolioApp = { mountMain: mountMain };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
