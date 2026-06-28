@@ -1,0 +1,195 @@
+/* Checkout modal — order summary + customer form → places the order via the API
+   (falls back to local + Formspree), then shows a success screen with the order
+   ID, a WhatsApp confirm link and a "track this order" jump. Port of the checkout
+   flow in app.js. */
+import { useEffect, useMemo, useState } from "react";
+import { Icon } from "../../lib/icons";
+import { CONFIG } from "../../lib/config";
+import { money, validEmail, whatsappLink } from "../../lib/format";
+import { placeOrder, placeOrderViaApi, orderSummaryText } from "../../lib/cart";
+import type { Customer, LocalOrder } from "../../lib/cart";
+import { useCart } from "../../context/CartContext";
+import { useUI } from "../../context/UIContext";
+
+function PaymentOptions() {
+  const groups: Record<string, typeof CONFIG.payments> = {};
+  CONFIG.payments.forEach((p) => {
+    (groups[p.group] = groups[p.group] || []).push(p);
+  });
+  return (
+    <>
+      <option value="">Select how you'd like to pay…</option>
+      {Object.keys(groups).map((g) => (
+        <optgroup key={g} label={g}>
+          {groups[g].map((p) => (
+            <option key={p.id} value={p.label}>
+              {p.label}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </>
+  );
+}
+
+export function CheckoutModal() {
+  const { items, total, refresh } = useCart();
+  const { isOpen, close, openTrack } = useUI();
+  const open = isOpen("checkout");
+
+  const [order, setOrder] = useState<LocalOrder | null>(null);
+  const [status, setStatus] = useState<{ type: string; msg: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  // Reset to the form whenever the modal re-opens.
+  useEffect(() => {
+    if (open) {
+      setOrder(null);
+      setStatus(null);
+      setBusy(false);
+    }
+  }, [open]);
+
+  const summary = useMemo(() => items, [items]);
+
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = e.currentTarget;
+    if ((f.elements.namedItem("_gotcha") as HTMLInputElement)?.value) return; // honeypot
+    const name = (f.elements.namedItem("name") as HTMLInputElement).value.trim();
+    const email = (f.elements.namedItem("email") as HTMLInputElement).value.trim();
+    if (!name || !validEmail(email)) {
+      setStatus({ type: "err", msg: "Please add your name and a valid email." });
+      return;
+    }
+    const customer: Customer = {
+      name,
+      email,
+      whatsapp: (f.elements.namedItem("whatsapp") as HTMLInputElement).value.trim(),
+      notes: (f.elements.namedItem("notes") as HTMLTextAreaElement).value.trim(),
+      payment_method: (f.elements.namedItem("payment") as HTMLSelectElement).value,
+    };
+    setBusy(true);
+    setStatus({ type: "ok", msg: "Placing your order…" });
+    try {
+      const o = await placeOrderViaApi(customer);
+      setOrder(o);
+    } catch {
+      setOrder(placeOrder(customer));
+    } finally {
+      setBusy(false);
+      refresh();
+    }
+  }
+
+  const title = order ? "Order received" : "Checkout";
+
+  return (
+    <div
+      className={`modal${open ? " open" : ""}`}
+      id="checkoutModal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="checkoutTitle"
+      aria-hidden={!open}
+    >
+      <div className="modal-head">
+        <h3 id="checkoutTitle">{title}</h3>
+        <button className="close-btn" aria-label="Close checkout" onClick={() => close("checkout")}>
+          <Icon name="close" size={20} />
+        </button>
+      </div>
+      <div className="modal-body" id="checkoutBody">
+        {order ? (
+          <Success order={order} onTrack={() => { close("checkout"); openTrack(order.id); }} onDone={() => close("checkout")} />
+        ) : (
+          <>
+            <div className="order-summary">
+              {summary.map((i) => (
+                <div className="row" key={i.key}>
+                  <span>{i.service} · {i.tier} ×{i.qty}</span>
+                  <span>{money(i.price * i.qty)}</span>
+                </div>
+              ))}
+              <div className="row total">
+                <span>Total</span>
+                <span>{money(total)}</span>
+              </div>
+            </div>
+            <form className="form" onSubmit={onSubmit} noValidate>
+              <div className="two">
+                <div className="field">
+                  <label htmlFor="co-name">Name <span className="req">*</span></label>
+                  <input className="input" id="co-name" name="name" required autoComplete="name" />
+                </div>
+                <div className="field">
+                  <label htmlFor="co-email">Email <span className="req">*</span></label>
+                  <input className="input" id="co-email" name="email" type="email" required autoComplete="email" />
+                </div>
+              </div>
+              <div className="field">
+                <label htmlFor="co-wa">WhatsApp <span style={{ color: "var(--muted)", fontWeight: 400 }}>(optional)</span></label>
+                <input className="input" id="co-wa" name="whatsapp" autoComplete="tel" />
+              </div>
+              <div className="field">
+                <label htmlFor="co-notes">Project details</label>
+                <textarea className="textarea" id="co-notes" name="notes" placeholder="Anything I should know — links, references, deadlines…" />
+              </div>
+              <div className="field">
+                <label htmlFor="co-pay">Preferred payment method</label>
+                <select className="select" id="co-pay" name="payment">
+                  <PaymentOptions />
+                </select>
+              </div>
+              <input className="hp" tabIndex={-1} autoComplete="off" name="_gotcha" aria-hidden="true" />
+              {status && <div className={`form-status show ${status.type}`}>{status.msg}</div>}
+              <button className="btn btn-primary btn-block" type="submit" disabled={busy}>
+                <Icon name="check" size={18} /> Place order
+              </button>
+              <p className="form-note">
+                By placing this order you're sending me a request — I'll confirm the details and payment with you before
+                starting. No payment is taken on this site.
+              </p>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Success({ order, onTrack, onDone }: { order: LocalOrder; onTrack: () => void; onDone: () => void }) {
+  const waLink = whatsappLink(orderSummaryText(order));
+  const emailNote = CONFIG.formspreeId
+    ? "A copy has been emailed to me — I'll reply soon."
+    : "Tap below to send me the order on WhatsApp so I can confirm.";
+  return (
+    <>
+      <div style={{ textAlign: "center" }}>
+        <div className="success-icon">
+          <Icon name="check" />
+        </div>
+        <h3>Thank you!</h3>
+        <p className="lead" style={{ margin: ".5rem auto 0" }}>Your order request is in. {emailNote}</p>
+        <div className="order-id-box">
+          <small>Your order ID — save it to track</small>
+          <div className="id">{order.id}</div>
+        </div>
+        {order.payment_method && (
+          <p className="form-note" style={{ margin: ".2rem auto 0" }}>
+            Payment via <b>{order.payment_method}</b> — I'll send you the details to complete it.
+          </p>
+        )}
+      </div>
+      <a className="btn btn-primary btn-block" href={waLink} target="_blank" rel="noopener">
+        <Icon name="whatsapp" size={18} /> Confirm on WhatsApp
+      </a>
+      <button className="btn btn-ghost btn-block mt-2" onClick={onTrack}>
+        <Icon name="doc" size={18} /> Track this order
+      </button>
+      <button className="btn btn-outline btn-block mt-2" onClick={onDone}>
+        Done
+      </button>
+    </>
+  );
+}
