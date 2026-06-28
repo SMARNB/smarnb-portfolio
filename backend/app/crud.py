@@ -86,9 +86,140 @@ def create_order(db, data, client=None):
     db.add(order)
     db.commit()
     db.refresh(order)
+    seed_milestones(db, order)
     add_update(db, order, "Order received. I'll confirm the details with you shortly.",
                status="received", progress=0)
     return order
+
+
+# --- Milestones (automatic project tracking) ----------------------------------
+def seed_milestones(db, order, commit=True):
+    """Give a fresh order the default pipeline so tracking works out of the box.
+    Returns the created rows (don't rely on order.milestones here — the relationship
+    may already be cached as empty and won't reflect the inserts until a refresh)."""
+    created = []
+    for i, (status_key, title) in enumerate(models.DEFAULT_MILESTONES):
+        m = models.OrderMilestone(order_id=order.id, title=title,
+                                  status_key=status_key, sort_order=i)
+        db.add(m)
+        created.append(m)
+    if commit:
+        db.commit()
+        db.refresh(order)
+    else:
+        db.flush()
+    return created
+
+
+def recompute_order(db, order, commit=True):
+    """Derive status + progress from completed milestones. Cancelled orders are
+    left untouched. This is what makes tracking automatic: nobody sets a % by hand."""
+    if order.status == "cancelled":
+        if commit:
+            db.commit()
+        return order
+    ms = list(order.milestones)
+    total = len(ms)
+    done = [m for m in ms if m.done]
+    order.progress = round(len(done) / total * 100) if total else 0
+    reached = 0  # index of "received"
+    for m in done:
+        if m.status_key in models.STATUS_FLOW:
+            reached = max(reached, models.STATUS_FLOW.index(m.status_key))
+    order.status = models.STATUS_FLOW[reached]
+    if total and len(done) == total:
+        order.status = "delivered"
+        order.progress = 100
+    if commit:
+        db.commit()
+        db.refresh(order)
+    return order
+
+
+def next_step(order):
+    """The next not-yet-done milestone title (what the client is waiting on)."""
+    if order.status == "cancelled":
+        return None
+    for m in order.milestones:
+        if not m.done:
+            return m.title
+    return None
+
+
+def get_milestone(db, mid):
+    return db.get(models.OrderMilestone, mid)
+
+
+def add_milestone(db, order, title, status_key=""):
+    nxt = max([m.sort_order for m in order.milestones], default=-1) + 1
+    m = models.OrderMilestone(order_id=order.id, title=(title or "").strip()[:200],
+                              status_key=status_key, sort_order=nxt)
+    db.add(m)
+    db.commit()
+    recompute_order(db, order)
+    return m
+
+
+def set_milestone(db, order, m, done):
+    """Mark a milestone done/undone, then auto-update status, progress and the
+    client-visible timeline in one go."""
+    done = bool(done)
+    if m.done == done:
+        return m
+    m.done = done
+    m.done_at = models.utcnow() if done else None
+    db.commit()
+    recompute_order(db, order)
+    msg = ("✓ " + m.title) if done else ("Reopened: " + m.title)
+    add_update(db, order, msg, status=order.status, progress=order.progress)
+    db.refresh(order)
+    return m
+
+
+def rename_milestone(db, m, title):
+    m.title = (title or "").strip()[:200]
+    db.commit()
+    return m
+
+
+def delete_milestone(db, order, m):
+    db.delete(m)
+    db.commit()
+    db.refresh(order)
+    recompute_order(db, order)
+    return order
+
+
+def complete_milestone_by_status(db, order, status_key, note=None):
+    """Auto-complete the pipeline milestone for a given stage (e.g. mark 'confirmed'
+    done when payment lands). No-op if already done or missing."""
+    for m in order.milestones:
+        if m.status_key == status_key and not m.done:
+            m.done = True
+            m.done_at = models.utcnow()
+            db.commit()
+            recompute_order(db, order)
+            add_update(db, order, note or ("✓ " + m.title),
+                       status=order.status, progress=order.progress)
+            db.refresh(order)
+            return m
+    return None
+
+
+def backfill_milestones(db):
+    """Give pre-existing orders (created before tracking shipped) a pipeline, with
+    milestones up to their current stage already ticked. Run once at startup."""
+    for order in db.query(models.Order).all():
+        if order.milestones:
+            continue
+        created = seed_milestones(db, order, commit=False)
+        if order.status in models.STATUS_FLOW:
+            idx = models.STATUS_FLOW.index(order.status)
+            for m in created:
+                if m.status_key in models.STATUS_FLOW and models.STATUS_FLOW.index(m.status_key) <= idx:
+                    m.done = True
+                    m.done_at = order.updated_at or models.utcnow()
+        db.commit()
 
 
 def get_order(db, public_id):
@@ -102,6 +233,9 @@ def mark_paid(db, order, note="Payment received."):
         add_update(db, order, note, status=order.status, progress=order.progress)
         db.commit()
         db.refresh(order)
+        # Paying confirms the brief — auto-advance the tracker so the client sees it move.
+        complete_milestone_by_status(db, order, "confirmed",
+                                     note="✓ Requirements confirmed (payment received)")
     return order
 
 
@@ -152,6 +286,12 @@ def serialize_order(order, reveal_final=False):
             for u in order.updates
         ],
         "deliverables": deliverables,
+        "milestones": [
+            {"id": m.id, "title": m.title, "status_key": m.status_key,
+             "done": m.done, "done_at": m.done_at, "sort_order": m.sort_order}
+            for m in order.milestones
+        ],
+        "next_step": next_step(order),
     }
 
 

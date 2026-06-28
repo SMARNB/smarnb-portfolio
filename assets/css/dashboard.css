@@ -170,3 +170,37 @@ main.dash-main { flex: 1; padding: clamp(1.5rem, 4vw, 2.5rem) 0 4rem; }
 .pay-method .pm-val { font-weight: 700; font-size: 1.05rem; letter-spacing: .02em; color: var(--accent-2); }
 .pay-method small { color: var(--muted); display: block; margin-top: .15rem; }
 .paid-badge { margin-top: 1rem; color: var(--ok); font-weight: 700; }
+
+/* ---- Automatic project tracking ----------------------------------------- */
+/* Client-facing tracker (read-only checklist on each project card). */
+.tracker { margin: 1rem 0 .2rem; display: grid; gap: .55rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface-2); }
+.tk-step { display: flex; align-items: center; gap: .6rem; font-size: .9rem; color: var(--muted); }
+.tk-step.done { color: var(--text); }
+.tk-step.current { color: var(--text); font-weight: 650; }
+.tk-label small { color: var(--accent-2); font-weight: 600; }
+.tk-dot { width: 18px; height: 18px; border-radius: 50%; flex: none; border: 2px solid var(--border); display: grid; place-items: center; }
+.tk-dot.current { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(124,92,255,.15); }
+.tk-dot.done { border-color: transparent; background: var(--grad); color: #fff; }
+.tk-dot.done svg { width: 11px; height: 11px; }
+.tk-next { margin-top: .3rem; padding-top: .6rem; border-top: 1px dashed var(--border); font-size: .85rem; color: var(--muted); }
+.tk-next.done { color: var(--ok); font-weight: 650; }
+
+/* Developer-facing auto status + milestone checklist (clickable). */
+.auto-track { margin-bottom: 1.1rem; }
+.at-head { display: flex; align-items: center; gap: .6rem; margin-bottom: .5rem; }
+.at-auto { color: var(--muted-2); font-size: .74rem; font-style: italic; }
+.ms-list { display: grid; gap: .4rem; margin: .4rem 0 .7rem; }
+.ms-row { display: flex; align-items: center; gap: .6rem; padding: .45rem .55rem; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); }
+.ms-row.current { border-color: var(--accent); background: rgba(124,92,255,.08); }
+.ms-row.done { opacity: .85; }
+.ms-check { width: 22px; height: 22px; flex: none; border-radius: 6px; border: 2px solid var(--border); display: grid; place-items: center; cursor: pointer; color: #fff; }
+.ms-row.done .ms-check { background: var(--grad); border-color: transparent; }
+.ms-check svg { width: 13px; height: 13px; }
+.ms-main { flex: 1; display: flex; flex-direction: column; line-height: 1.2; }
+.ms-main .ms-title { font-size: .88rem; font-weight: 600; }
+.ms-row.done .ms-title { text-decoration: line-through; color: var(--muted); }
+.ms-main small { color: var(--muted-2); font-size: .72rem; }
+.ms-del { color: var(--muted-2); font-size: 1.15rem; line-height: 1; padding: 0 .3rem; cursor: pointer; }
+.ms-del:hover { color: var(--accent-3); }
+.ms-add { display: flex; gap: .5rem; }
+.ms-add .input { flex: 1; }

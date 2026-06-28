@@ -16,6 +16,16 @@ STATUS_LABELS = {
     "in_review": "In Review", "delivered": "Delivered", "cancelled": "Cancelled",
 }
 
+# The automatic project pipeline. Every new order is seeded with these milestones;
+# ticking them off auto-derives the order's status + progress (see crud.recompute_order).
+# Each entry maps a milestone to the STATUS_FLOW stage it represents.
+DEFAULT_MILESTONES = [
+    ("confirmed", "Requirements confirmed"),
+    ("in_progress", "Build in progress"),
+    ("in_review", "Ready for your review"),
+    ("delivered", "Delivered"),
+]
+
 
 def utcnow():
     return dt.datetime.utcnow()
@@ -64,6 +74,9 @@ class Order(Base):
                            cascade="all, delete-orphan", order_by="OrderUpdate.created_at")
     deliverables = relationship("Deliverable", back_populates="order",
                                 cascade="all, delete-orphan", order_by="Deliverable.created_at")
+    milestones = relationship("OrderMilestone", back_populates="order",
+                              cascade="all, delete-orphan",
+                              order_by="OrderMilestone.sort_order, OrderMilestone.id")
 
     @property
     def items(self):
@@ -75,6 +88,25 @@ class Order(Base):
     @property
     def status_label(self):
         return STATUS_LABELS.get(self.status, self.status)
+
+
+class OrderMilestone(Base):
+    """A single step in an order's automatic tracking pipeline. Completing the
+    milestones drives the order's status + progress, so the developer never has to
+    set a percentage by hand and the client always sees an accurate, live tracker.
+    `status_key` links pipeline milestones to a STATUS_FLOW stage; custom milestones
+    added by the developer leave it blank and only contribute to progress."""
+    __tablename__ = "order_milestones"
+    id = Column(Integer, primary_key=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
+    title = Column(String(200), default="")
+    status_key = Column(String(20), default="")   # one of STATUS_FLOW, or "" for custom steps
+    done = Column(Boolean, default=False)
+    done_at = Column(DateTime, nullable=True)
+    sort_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=utcnow)
+
+    order = relationship("Order", back_populates="milestones")
 
 
 class OrderUpdate(Base):

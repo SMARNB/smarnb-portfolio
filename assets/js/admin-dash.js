@@ -170,26 +170,53 @@
     });
   }
 
+  function milestoneRowsHtml(o) {
+    var ms = o.milestones || [];
+    if (!ms.length) return '<p class="form-note">No milestones yet — add one below.</p>';
+    var firstOpen = true;
+    return ms.map(function (m) {
+      var current = !m.done && firstOpen; if (current) firstOpen = false;
+      return '<div class="ms-row' + (m.done ? " done" : "") + (current ? " current" : "") + '">' +
+        '<button type="button" class="ms-check" data-mstoggle="' + m.id + '" data-on="' + (m.done ? "1" : "0") + '" title="' + (m.done ? "Mark not done" : "Mark done") + '">' +
+          (m.done ? SVG.check : "") + "</button>" +
+        '<div class="ms-main"><span class="ms-title">' + esc(m.title) + "</span>" +
+          (m.done && m.done_at ? '<small>' + esc(fmtDate(m.done_at)) + "</small>" : (current ? '<small>in progress</small>' : "")) + "</div>" +
+        '<button type="button" class="ms-del" data-msdel="' + m.id + '" title="Remove milestone">&times;</button>' +
+      "</div>";
+    }).join("");
+  }
+
   function renderManage(o) {
     var items = (o.items || []).map(function (i) { return esc(i.service) + " (" + esc(i.tier) + (i.qty > 1 ? " ×" + i.qty : "") + ")"; }).join(", ");
     var updates = (o.updates || []).slice().reverse();
     var dels = o.deliverables || [];
+    var prog = (typeof o.progress === "number") ? o.progress : 0;
+    var cancelled = o.status === "cancelled";
     qs("#manage").innerHTML = '<div class="card manage">' +
       "<h3>" + esc(o.public_id) + "</h3>" +
       '<p class="sub">' + esc(o.customer_name) + " &lt;" + esc(o.customer_email) + "&gt;" + (o.customer_whatsapp ? " · " + esc(o.customer_whatsapp) : "") +
         "<br>" + items + " · <b>" + money(o.total) + "</b>" + (o.payment_method ? " · " + esc(o.payment_method) : "") + "</p>" +
       '<div class="dash-status" id="m-status"></div>' +
-      '<div class="field"><label>Status</label><div class="status-grid" id="m-statuses">' +
-        STATUSES.map(function (s) { return '<button type="button" data-s="' + s[0] + '" class="' + (o.status === s[0] ? "sel" : "") + '">' + esc(s[1]) + "</button>"; }).join("") + "</div></div>" +
-      '<div class="field"><label>Progress</label><div class="range-row"><input type="range" id="m-prog" min="0" max="100" step="5" value="' + (o.progress || 0) + '"><output id="m-progOut">' + (o.progress || 0) + "%</output></div></div>" +
+      '<div class="auto-track">' +
+        '<div class="at-head"><span class="status-chip st-' + esc(o.status) + '">' + esc(o.status_label || o.status) + "</span>" +
+          '<span class="at-auto">auto · updates the client live</span></div>' +
+        '<div class="progress-row"><div class="progress"><span style="width:' + prog + '%"></span></div><span class="pct">' + prog + "%</span></div>" +
+      "</div>" +
+      (cancelled
+        ? '<div class="form-note" style="margin:.4rem 0">This order is cancelled. <button class="btn btn-outline btn-sm" id="m-reopen">Reopen</button></div>'
+        : '<div class="field"><label>Milestones <span style="color:var(--muted);font-weight:400">(tick them off — status &amp; progress update automatically)</span></label>' +
+            '<div class="ms-list" id="m-milestones">' + milestoneRowsHtml(o) + "</div>" +
+            '<div class="ms-add"><input class="input" id="m-newms" placeholder="Add a custom step…" maxlength="200">' +
+              '<button class="btn btn-outline btn-sm" id="m-addms">' + SVG.plus + " Add</button></div></div>") +
       '<div class="two"><div class="field"><label for="m-due">Due date</label><input class="input" type="date" id="m-due" value="' + (o.due_date || "") + '"></div>' +
       '<div class="field"><label for="m-pay">Payment</label><select class="select" id="m-pay">' +
         ["unpaid", "paid", "refunded"].map(function (p) { return '<option value="' + p + '"' + (o.payment_status === p ? " selected" : "") + ">" + p.charAt(0).toUpperCase() + p.slice(1) + "</option>"; }).join("") +
       "</select></div></div>" +
-      '<button class="btn btn-primary btn-block" id="m-save">Save changes</button>' +
+      '<button class="btn btn-primary btn-block" id="m-save">Save date &amp; payment</button>' +
+      (cancelled ? "" : '<button class="btn btn-ghost btn-block btn-sm" id="m-cancel" style="margin-top:.5rem">Cancel this order</button>') +
       '<hr class="divider" style="margin:1.3rem 0">' +
-      '<div class="field"><label for="m-msg">Post an update to the client</label><textarea class="textarea" id="m-msg" placeholder="e.g. Wireframes done, building the API now…"></textarea></div>' +
-      '<button class="btn btn-ghost btn-block" id="m-post">Post update</button>' +
+      '<div class="field"><label for="m-msg">Post a note to the client</label><textarea class="textarea" id="m-msg" placeholder="e.g. Wireframes done, building the API now…"></textarea></div>' +
+      '<button class="btn btn-ghost btn-block" id="m-post">Post note</button>' +
       (updates.length ? '<div class="admin-updates">' + updates.map(function (u) { return '<div class="u">' + esc(u.message) + "<small>" + esc(fmtDate(u.created_at)) + (u.status ? " · " + esc(u.status) : "") + "</small></div>"; }).join("") + "</div>" : "") +
       '<hr class="divider" style="margin:1.3rem 0">' +
       '<label style="font-weight:600;font-size:.88rem">Deliverables <span style="color:var(--muted);font-weight:400">(preview always visible · final unlocks when Paid)</span></label>' +
@@ -204,25 +231,59 @@
       '<button class="btn btn-ghost btn-block" id="d-add">Add deliverable</button>' +
       "</div>";
 
-    var sel = o.status;
-    qsa("#m-statuses button").forEach(function (b) { b.addEventListener("click", function () { sel = b.dataset.s; qsa("#m-statuses button").forEach(function (x) { x.classList.toggle("sel", x.dataset.s === sel); }); }); });
-    var prog = qs("#m-prog"), progOut = qs("#m-progOut");
-    prog.addEventListener("input", function () { progOut.textContent = prog.value + "%"; });
+    function applyOrder(u, msg) { mergeOrder(u); state.selected = u.public_id; renderRows(); renderManage(u); refreshStats(); if (msg) mStatus("ok", msg); }
+
+    // Milestone toggles — status & progress recompute on the server automatically.
+    qsa("[data-mstoggle]", qs("#manage")).forEach(function (b) {
+      b.addEventListener("click", function () {
+        mStatus("ok", "Updating…");
+        API.patch("/api/admin/milestones/" + b.dataset.mstoggle, { done: b.dataset.on !== "1" })
+          .then(function (u) { applyOrder(u, "Tracker updated."); })
+          .catch(function (err) { mStatus("err", err.message || "Failed."); });
+      });
+    });
+    qsa("[data-msdel]", qs("#manage")).forEach(function (b) {
+      b.addEventListener("click", function () {
+        if (!window.confirm("Remove this milestone?")) return;
+        API.del("/api/admin/milestones/" + b.dataset.msdel)
+          .then(function (u) { applyOrder(u, "Milestone removed."); })
+          .catch(function (err) { mStatus("err", err.message || "Failed."); });
+      });
+    });
+    if (qs("#m-addms")) qs("#m-addms").addEventListener("click", function () {
+      var t = qs("#m-newms").value.trim();
+      if (!t) { mStatus("err", "Name the step first."); return; }
+      mStatus("ok", "Adding…");
+      API.post("/api/admin/orders/" + encodeURIComponent(o.public_id) + "/milestones", { title: t })
+        .then(function (u) { applyOrder(u, "Milestone added."); })
+        .catch(function (err) { mStatus("err", err.message || "Failed."); });
+    });
+    if (qs("#m-cancel")) qs("#m-cancel").addEventListener("click", function () {
+      if (!window.confirm("Cancel order " + o.public_id + "?")) return;
+      API.patch("/api/admin/orders/" + encodeURIComponent(o.public_id), { status: "cancelled" })
+        .then(function (u) { applyOrder(u, "Order cancelled."); })
+        .catch(function (err) { mStatus("err", err.message || "Failed."); });
+    });
+    if (qs("#m-reopen")) qs("#m-reopen").addEventListener("click", function () {
+      API.patch("/api/admin/orders/" + encodeURIComponent(o.public_id), { status: "received" })
+        .then(function (u) { applyOrder(u, "Order reopened."); })
+        .catch(function (err) { mStatus("err", err.message || "Failed."); });
+    });
 
     qs("#m-save").addEventListener("click", function () {
-      var payload = { status: sel, progress: parseInt(prog.value, 10), payment_status: qs("#m-pay").value };
+      var payload = { payment_status: qs("#m-pay").value };
       var due = qs("#m-due").value; if (due) payload.due_date = due;
       mStatus("ok", "Saving…");
-      API.patch("/api/admin/orders/" + encodeURIComponent(o.public_id), payload).then(function (u) {
-        mergeOrder(u); state.selected = u.public_id; renderRows(); renderManage(u); refreshStats(); mStatus("ok", "Saved.");
-      }).catch(function (err) { mStatus("err", err.message || "Save failed."); });
+      API.patch("/api/admin/orders/" + encodeURIComponent(o.public_id), payload)
+        .then(function (u) { applyOrder(u, "Saved."); })
+        .catch(function (err) { mStatus("err", err.message || "Save failed."); });
     });
     qs("#m-post").addEventListener("click", function () {
       var msg = qs("#m-msg").value.trim();
-      if (!msg) { mStatus("err", "Write a message first."); return; }
+      if (!msg) { mStatus("err", "Write a note first."); return; }
       mStatus("ok", "Posting…");
-      API.post("/api/admin/orders/" + encodeURIComponent(o.public_id) + "/updates", { message: msg, progress: parseInt(prog.value, 10), status: sel })
-        .then(function (u) { mergeOrder(u); renderRows(); renderManage(u); mStatus("ok", "Update posted."); })
+      API.post("/api/admin/orders/" + encodeURIComponent(o.public_id) + "/updates", { message: msg })
+        .then(function (u) { mergeOrder(u); renderRows(); renderManage(u); mStatus("ok", "Note posted."); })
         .catch(function (err) { mStatus("err", err.message || "Failed."); });
     });
     qs("#d-add").addEventListener("click", function () {

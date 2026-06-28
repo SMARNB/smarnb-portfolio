@@ -43,16 +43,55 @@ def patch_order(public_id: str, data: schemas.OrderAdminPatch, db: Session = Dep
         order.due_date = data.due_date
     if data.notes is not None:
         order.notes = data.notes
+    now_paid = False
     if data.payment_status and data.payment_status != order.payment_status:
         if data.payment_status not in ("unpaid", "paid", "refunded"):
             raise HTTPException(400, "Unknown payment status.")
         order.payment_status = data.payment_status
+        now_paid = data.payment_status == "paid"
         changes.append("payment → " + data.payment_status)
     db.commit()
     db.refresh(order)
     if changes:
         crud.add_update(db, order, "Updated " + ", ".join(changes) + ".",
                         status=order.status, progress=order.progress)
+    if now_paid:
+        # Marking an order paid confirms the brief — auto-advance the tracker.
+        crud.complete_milestone_by_status(db, order, "confirmed",
+                                          note="✓ Requirements confirmed (payment received)")
+    return crud.serialize_order(order, reveal_final=True)
+
+
+# ---- Milestones (automatic tracking) -----------------------------------------
+@router.post("/orders/{public_id}/milestones", response_model=schemas.OrderOut)
+def add_milestone(public_id: str, data: schemas.MilestoneIn, db: Session = Depends(get_db)):
+    order = crud.get_order(db, public_id.strip().upper())
+    if not order:
+        raise HTTPException(404, "Order not found.")
+    crud.add_milestone(db, order, data.title)
+    return crud.serialize_order(order, reveal_final=True)
+
+
+@router.patch("/milestones/{mid}", response_model=schemas.OrderOut)
+def patch_milestone(mid: int, data: schemas.MilestonePatch, db: Session = Depends(get_db)):
+    m = crud.get_milestone(db, mid)
+    if not m:
+        raise HTTPException(404, "Milestone not found.")
+    order = m.order
+    if data.title is not None:
+        crud.rename_milestone(db, m, data.title)
+    if data.done is not None:
+        crud.set_milestone(db, order, m, data.done)
+    return crud.serialize_order(order, reveal_final=True)
+
+
+@router.delete("/milestones/{mid}", response_model=schemas.OrderOut)
+def remove_milestone(mid: int, db: Session = Depends(get_db)):
+    m = crud.get_milestone(db, mid)
+    if not m:
+        raise HTTPException(404, "Milestone not found.")
+    order = m.order
+    crud.delete_milestone(db, order, m)
     return crud.serialize_order(order, reveal_final=True)
 
 

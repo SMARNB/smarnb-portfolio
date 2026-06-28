@@ -80,6 +80,24 @@ class DeliverableOut(BaseModel):
     created_at: dt.datetime
 
 
+class MilestoneOut(BaseModel):
+    id: int
+    title: str = ""
+    status_key: str = ""
+    done: bool = False
+    done_at: Optional[dt.datetime] = None
+    sort_order: int = 0
+
+
+class MilestoneIn(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+
+
+class MilestonePatch(BaseModel):
+    done: Optional[bool] = None
+    title: Optional[str] = Field(default=None, max_length=200)
+
+
 class OrderOut(BaseModel):
     public_id: str
     customer_name: str
@@ -98,6 +116,8 @@ class OrderOut(BaseModel):
     updated_at: dt.datetime
     updates: List[UpdateOut] = []
     deliverables: List[DeliverableOut] = []
+    milestones: List[MilestoneOut] = []
+    next_step: Optional[str] = None
 
     class Config:
         from_attributes = True

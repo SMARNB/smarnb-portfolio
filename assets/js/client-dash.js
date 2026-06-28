@@ -157,6 +157,22 @@
     }).join("") + "</div>";
   }
 
+  function milestonesHtml(o) {
+    var ms = o.milestones || [];
+    if (!ms.length || o.status === "cancelled") return "";
+    var firstOpen = true;
+    var rows = ms.map(function (m) {
+      var current = !m.done && firstOpen; if (current) firstOpen = false;
+      var dot = m.done ? '<span class="tk-dot done">' + SVG.check + "</span>"
+        : (current ? '<span class="tk-dot current"></span>' : '<span class="tk-dot"></span>');
+      return '<div class="tk-step' + (m.done ? " done" : "") + (current ? " current" : "") + '">' + dot +
+        '<span class="tk-label">' + esc(m.title) + (current ? ' <small>· in progress</small>' : "") + "</span></div>";
+    }).join("");
+    var next = o.next_step ? '<div class="tk-next">Next up: <b>' + esc(o.next_step) + "</b></div>"
+      : '<div class="tk-next done">✓ All steps complete</div>';
+    return '<div class="tracker">' + rows + next + "</div>";
+  }
+
   function projectCard(o) {
     var idx = stageIndex(o.status);
     var prog = (typeof o.progress === "number") ? o.progress : Math.round(idx / (STAGES.length - 1) * 100);
@@ -169,6 +185,7 @@
         '<span class="status-chip st-' + esc(o.status) + '">' + esc(o.status_label || o.status) + "</span></div>" +
       '<div class="items">' + items + " · <b>" + money(o.total) + "</b></div>" +
       '<div class="progress-row"><div class="progress"><span style="width:' + prog + '%"></span></div><span class="pct">' + prog + "%</span></div>" +
+      milestonesHtml(o) +
       '<div class="meta-row">' +
         (o.due_date ? "<span>Due: <b>" + esc(o.due_date) + "</b></span>" : "") +
         (o.payment_method ? "<span>Payment: <b>" + esc(o.payment_method) + "</b> (" + esc(o.payment_status || "unpaid") + ")</span>" : "") +

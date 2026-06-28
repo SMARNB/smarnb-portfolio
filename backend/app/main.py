@@ -56,6 +56,7 @@ async def lifespan(app: FastAPI):
             crud.create_user(db, config.ADMIN_EMAIL, config.ADMIN_PASSWORD,
                              config.ADMIN_NAME, role="admin")
             print("[seed] created admin account:", config.ADMIN_EMAIL)
+        crud.backfill_milestones(db)   # give pre-tracking orders a pipeline
     finally:
         db.close()
     yield
