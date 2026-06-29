@@ -162,8 +162,24 @@ export function PortfolioArt({ p }: { p: PortfolioItem }) {
   );
 }
 
-/** Product media header (gradient + line-art + badge). */
+/** Product media header. Uses a real product screenshot (with a logo overlay)
+ *  when provided; otherwise falls back to the gradient + line-art motif. */
 export function ProductArt({ p }: { p: Product }) {
+  if (p.image) {
+    return (
+      <div className="product-media has-shot" style={{ background: gradFor(p.category) }}>
+        <img className="product-shot" src={p.image} alt={`${p.title} — product preview`} loading="lazy" />
+        <span className="product-scrim" aria-hidden="true" />
+        {p.logo ? (
+          <span className="product-logo">
+            <img src={p.logo} alt={`${p.title} logo`} />
+            <b>{p.title}</b>
+          </span>
+        ) : null}
+        {p.badge ? <span className="product-badge">{p.badge}</span> : null}
+      </div>
+    );
+  }
   const motif = PORTFOLIO_ART[p.art] || SVC_ART[p.category] || SVC_ART_GENERIC;
   return (
     <div className="product-media" style={{ background: gradFor(p.category) }}>

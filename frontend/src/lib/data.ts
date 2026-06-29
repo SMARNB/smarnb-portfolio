@@ -37,6 +37,10 @@ export interface Product {
   badge?: string;
   category: string;
   art: string;
+  /** Optional real product screenshot used as the card's media background. */
+  image?: string;
+  /** Optional logo overlaid on the media (first-party asset path). */
+  logo?: string;
   desc: string;
   includes: string[];
   licenses: License[];
@@ -535,6 +539,8 @@ export const products: Product[] = [
     badge: "Flagship product",
     category: "AI / Computer Vision",
     art: "codewatch",
+    image: "/assets/img/codewatch-admin.jpg",
+    logo: "/assets/img/codewatch-logo.svg",
     desc:
       "A complete, production-ready computer-vision platform — real-time face " +
       "recognition gated by anti-spoofing liveness detection, YOLO person & " +

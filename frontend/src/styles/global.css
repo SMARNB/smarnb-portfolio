@@ -298,6 +298,25 @@ h2.section-title { font-size: clamp(1.8rem, 4.4vw, 2.8rem); }
 .product-media { position: relative; height: 170px; overflow: hidden; border-bottom: 1px solid var(--border); }
 .product-media .svc-art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; transition: transform .45s var(--ease); }
 .product-card:hover .product-media .svc-art { transform: scale(1.04); }
+/* Real-screenshot media (e.g. CodeWatch admin dashboard) with a logo overlay. */
+.product-media.has-shot { height: 200px; }
+.product-shot {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  object-position: top center; display: block; transition: transform .5s var(--ease);
+}
+.product-card:hover .product-shot { transform: scale(1.05); }
+.product-scrim {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, rgba(10,13,20,.12) 0%, rgba(10,13,20,.04) 42%, rgba(10,13,20,.78) 100%);
+}
+.product-logo {
+  position: absolute; left: 1rem; bottom: 1rem; z-index: 2;
+  display: inline-flex; align-items: center; gap: .55rem;
+  background: rgba(10,13,20,.46); border: 1px solid rgba(255,255,255,.26);
+  padding: .42rem .8rem .42rem .55rem; border-radius: var(--r-pill); backdrop-filter: blur(7px);
+}
+.product-logo img { width: 30px; height: 28px; display: block; filter: drop-shadow(0 1px 3px rgba(0,0,0,.45)); }
+.product-logo b { color: #fff; font-size: .98rem; font-weight: 800; letter-spacing: .01em; }
 .product-badge {
   position: absolute; left: 1rem; top: 1rem; z-index: 2; font-size: .72rem; font-weight: 700;
   letter-spacing: .04em; text-transform: uppercase; color: #fff;
