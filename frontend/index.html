@@ -22,16 +22,8 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="manifest" href="/manifest.webmanifest" />
 
-  <!-- Apply the saved theme before paint to avoid a flash of the wrong theme. -->
-  <script>
-    (function () {
-      try {
-        var t = localStorage.getItem("alira_theme") ||
-          (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
-        document.documentElement.setAttribute("data-theme", t);
-      } catch (e) {}
-    })();
-  </script>
+  <!-- Theme is applied by src/main.tsx before render (an external module, so it
+       satisfies the strict CSP script-src 'self'). <html> defaults to dark. -->
 
   <script type="application/ld+json">
   {
