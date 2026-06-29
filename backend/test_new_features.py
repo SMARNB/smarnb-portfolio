@@ -180,6 +180,29 @@ with TestClient(app) as c:
     last = msgs[-1]["body"].lower()
     check("bot answers a common-language question", "payment" in last or "raast" in last)
 
+    # intent priority: a service/pricing question must NOT get hijacked by a
+    # small-talk fuzzy match. Regression: "...how much for a dashboard" used to hit
+    # the "how are you" reply because how/do/you appear scattered in it.
+    blob = " ".join(m["body"] for m in c.post(
+        "/api/chat/%s/messages" % cid2, headers=SH2,
+        json={"body": "what services do you offer and how much for a dashboard?"}
+    ).json()["messages"]).lower()
+    check("service+price question lists services (not small talk)",
+          ("saas" in blob or "logo" in blob or "from $" in blob) and "doing great" not in blob)
+
+    # a purely-social opener yields when a real business ask rides along
+    blob = " ".join(m["body"] for m in c.post(
+        "/api/chat/%s/messages" % cid2, headers=SH2,
+        json={"body": "hey, how are you? what is your pricing?"}
+    ).json()["messages"]).lower()
+    check("social opener yields to a pricing ask",
+          "doing great" not in blob and ("saas" in blob or "logo" in blob or "package" in blob or "from $" in blob))
+
+    # plain small talk still gets the friendly answer (not over-corrected)
+    last = c.post("/api/chat/%s/messages" % cid2, headers=SH2,
+                  json={"body": "how are you?"}).json()["messages"][-1]["body"].lower()
+    check("plain small talk still answered", "doing great" in last or "help with your project" in last)
+
     # an unknown question is flagged unanswered + logged for the developer
     c.post("/api/chat/%s/messages" % cid2, headers=SH2,
            json={"body": "do you sell vintage typewriters from 1920"})

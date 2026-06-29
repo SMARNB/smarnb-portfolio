@@ -92,20 +92,30 @@ def _content(s):
 
 def _phrase_match(text, phrase):
     """Score 0..1 for how well a trigger `phrase` matches the user's `text`.
-    Tolerates word order and typos so "how mch is it" still finds "how much"."""
+    Tolerates word order and typos so "how mch is it" still finds "how much" — but
+    a short all-filler trigger ("how do you do") must NOT hijack a longer,
+    content-rich question ("what services do you offer and how much for a
+    dashboard") just because how/do/you happen to appear scattered in it."""
     t = _norm(text)
     p = _norm(phrase)
     if not p or not t:
         return 0.0
-    if p in t:
+    if p in t:                       # whole phrase appears verbatim → certain
         return 1.0
     ptoks = _tok(p)
     ttoks = set(_tok(t))
-    if ptoks and all(w in ttoks for w in ptoks):
-        return 0.95  # every trigger word present, any order
+    pc = set(_content(p))            # trigger's meaningful (non-stop) words
+    tc = set(_content(t))            # message's meaningful words
+    # Every CONTENT word of the trigger is present (any order) → strong match.
+    # Keyed on content words so an all-stop-word trigger can't match this way.
+    if pc and pc <= tc:
+        return 0.95
+    # Trigger is made ONLY of stop-words (e.g. "how are you", "how do you do").
+    # Those are real small-talk phrases, but only when the message is itself
+    # small-talk — not a longer question that merely contains the filler words.
+    if ptoks and not pc and all(w in ttoks for w in ptoks):
+        return 0.9 if len(tc) == 0 else 0.3
     ratio = difflib.SequenceMatcher(None, t, p).ratio()
-    pc = set(_content(p))
-    tc = set(_content(t))
     overlap = (len(pc & tc) / len(pc)) if pc else 0.0
     # typo tolerance: best fuzzy match between content words
     fuzz = 0.0
@@ -266,6 +276,14 @@ def _contact_answer(ctx):
 
 
 DEFAULT_QUICK = ["See services", "Get a quote", "Talk to a human"]
+
+# Purely-social built-in answers (keyed by their first trigger). These should
+# politely YIELD when the visitor is, in the same message, clearly asking about
+# the business — so "hi, how are you — what's your pricing?" routes to pricing, not
+# small talk. Topical entries (payments, delivery, contact, NDA, …) are NOT here:
+# they stay authoritative even alongside service/price words.
+_SOCIAL_LEADS = {"how are you", "who are you", "where are you", "what languages",
+                 "good job", "bye"}
 
 # Each entry: (triggers, answer, quick).  answer is a template string (formatted
 # with ctx) or a callable(ctx) -> str.  quick=None falls back to DEFAULT_QUICK.
@@ -531,10 +549,16 @@ def respond(state, text, services, *, knowledge=None, logged_in_name="", logged_
                           knowledge_id=e.get("id"))
 
     # 2) Built-in common-language Q&A (small talk, hours, payments, contact, …).
+    #    A purely-social reply yields to a clear business intent in the same
+    #    message (services / pricing / ordering), so chit-chat never buries a real
+    #    question.
     e, score = _best_entry(text, BUILTIN_KB, lambda x: x[0])
     if e and score >= 0.8:
-        ctx = _ctx()
-        return finish(_render(e[1], ctx), e[2] or DEFAULT_QUICK)
+        social = e[0][0] in _SOCIAL_LEADS
+        business = _has(t, SERVICE_WORDS) or _has(t, PRICE_WORDS) or _has(t, ORDER_WORDS)
+        if not (social and business):
+            ctx = _ctx()
+            return finish(_render(e[1], ctx), e[2] or DEFAULT_QUICK)
 
     # 3) A clearly-named service → explain it.
     strong = _strong_service(text, services)
