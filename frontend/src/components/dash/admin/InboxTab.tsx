@@ -3,10 +3,9 @@
    bot pause toggle and attachment rendering. Port of the Inbox tab in
    admin-dash.js. Polls the open thread every 5s.
 
-   NOTE: admin attachment blobs are fetched from /api/admin/chat/attachments/{id}
-   exactly as the original did. That route doesn't exist on the backend, so the
-   fetch fails silently (image stays blank) — preserved as-is rather than adding a
-   backend route (backend is out of scope for this migration). */
+   Admin attachment blobs are fetched (with the admin bearer token) from
+   /api/admin/chat/attachments/{id}, which serves the bytes to the developer for
+   any conversation — this is what renders the image/PDF previews below. */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CONFIG } from "../../../lib/config";
 import { fmtDate } from "../../../lib/format";

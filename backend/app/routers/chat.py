@@ -339,6 +339,24 @@ def admin_toggle_bot(public_id: str, db: Session = Depends(get_db)):
     return {"ok": True, "human_takeover": conv.human_takeover}
 
 
+@admin_router.get("/attachments/{att_id}")
+def admin_get_attachment(att_id: int, db: Session = Depends(get_db)):
+    """Serve a chat attachment's bytes to the developer. Mirrors the public
+    /api/chat/{public_id}/attachments/{att_id} handler, but without the per-thread
+    secret/owner check — this router is admin-gated, so the developer may view any
+    file shared in any conversation (this is what powers the Inbox image/PDF
+    previews)."""
+    att = db.get(models.ChatAttachment, att_id)
+    if not att:
+        raise HTTPException(404, "Not found.")
+    disp = "inline" if att.content_type.startswith("image/") else "attachment"
+    return Response(content=att.data, media_type=att.content_type, headers={
+        "Content-Disposition": '{}; filename="{}"'.format(disp, att.filename),
+        "Cache-Control": "private, max-age=3600",
+        "X-Content-Type-Options": "nosniff",
+    })
+
+
 # ---- Bot training: curated knowledge base + unanswered log -------------------
 def _kn_out(k):
     return {"id": k.id, "question": k.question or "", "answer": k.answer or "",

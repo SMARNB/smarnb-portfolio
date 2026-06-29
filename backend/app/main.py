@@ -73,9 +73,12 @@ app.add_middleware(
 
 _CSP = (
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
-    "img-src 'self' data:; font-src 'self'; connect-src 'self' https://formspree.io; "
+    "img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://formspree.io; "
     "form-action 'self' https://formspree.io; base-uri 'self'; object-src 'none'; frame-ancestors 'none'"
 )
+# Note: `blob:` in img-src is first-party (in-memory, same-origin object URLs). The
+# admin Inbox fetches chat attachments with the bearer token and renders them from
+# URL.createObjectURL(blob), so image/PDF previews need blob: to be allowed.
 
 
 import re as _re

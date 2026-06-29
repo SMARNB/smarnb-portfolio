@@ -155,6 +155,21 @@ with TestClient(app) as c:
     # auth: anonymous cannot read admin inbox
     check("admin inbox requires auth", c.get("/api/admin/chat/conversations").status_code == 401)
 
+    print("== Chat: admin attachment previews ==")
+    # admin can fetch any attachment's bytes (no per-thread secret needed) — this
+    # powers the Inbox image/PDF previews.
+    r = c.get("/api/admin/chat/attachments/%d" % att["id"], headers=AH)
+    check("admin attachment served", r.status_code == 200 and r.content[:4] == b"\x89PNG")
+    check("admin attachment inline disposition",
+          r.headers.get("content-disposition", "").startswith("inline"))
+    check("admin attachment content-type", r.headers.get("content-type") == "image/png")
+    # the route is admin-gated — anonymous is rejected
+    check("admin attachment requires auth",
+          c.get("/api/admin/chat/attachments/%d" % att["id"]).status_code == 401)
+    # unknown id → 404 (not a 500)
+    check("admin attachment 404 for unknown id",
+          c.get("/api/admin/chat/attachments/999999", headers=AH).status_code == 404)
+
     print("== Chat: smarter bot + curated learning ==")
     # common-language question answered from the built-in knowledge base
     r = c.post("/api/chat/start", json={})
