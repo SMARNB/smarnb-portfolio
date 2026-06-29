@@ -533,5 +533,5 @@ def build_robots(db, base_url=None, doc=None):
             "Allow: /\n"
             "Disallow: /admin\n"
             "Disallow: /app\n"
-            "Disallow: /api/\n\n"
+            "Allow: /api/\n\n"
             + sitemap_line + "\n")
