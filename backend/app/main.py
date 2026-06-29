@@ -3,13 +3,15 @@ import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
+from sqlalchemy.orm import Session
 
-from . import config, crud
-from .database import Base, SessionLocal, engine
+from . import config, crud, seo
+from .database import Base, SessionLocal, engine, get_db
 from .routers import admin, auth, chat, orders, payments, services, testimonials
+from .routers import seo as seo_router
 
 
 def _detect_commit():
@@ -128,6 +130,7 @@ app.include_router(testimonials.router)
 app.include_router(chat.router)
 app.include_router(chat.admin_router)
 app.include_router(payments.router)
+app.include_router(seo_router.router)   # /api/seo, /api/admin/seo, /sitemap.xml, /robots.txt
 
 
 @app.get("/api/health")
@@ -156,9 +159,43 @@ def version():
 _DIST_DIR = os.path.join(config.SITE_DIR, "frontend", "dist")
 _INDEX = os.path.join(_DIST_DIR, "index.html")
 
+# Known client-side routes — used to pick the right SEO meta/JSON-LD per page.
+_SPA_ROUTES = {"/", "/store", "/app", "/admin"}
+# Dev-fallback tags we strip from the shell before injecting the managed ones, so
+# the page never ends up with two <title>s / descriptions / icons.
+_STRIP_SHELL = _re.compile(
+    r'\s*(?:<title>.*?</title>|<meta\s+name="description"[^>]*>|<link\s+rel="icon"[^>]*>)',
+    _re.IGNORECASE | _re.DOTALL)
+
+
+def _route_for(full_path: str) -> str:
+    """Map a request path to one of the known SPA routes (or 'default')."""
+    seg = full_path.strip("/").split("/", 1)[0] if full_path else ""
+    path = "/" + seg if seg else "/"
+    return path if path in _SPA_ROUTES else "default"
+
+
+def _render_shell(db: Session, full_path: str) -> HTMLResponse:
+    """The SPA shell with the route's SEO <head> injected, so crawlers get correct
+    title/meta/Open Graph/Twitter/canonical/robots + JSON-LD without running JS."""
+    try:
+        with open(_INDEX, "r", encoding="utf-8") as fh:
+            shell = fh.read()
+    except OSError:
+        raise HTTPException(status_code=404, detail="Not found")
+    try:
+        head = seo.cached_head(db, _route_for(full_path))
+        shell = _STRIP_SHELL.sub("", shell)
+        shell = shell.replace("</head>", "  " + head + "\n</head>", 1)
+    except Exception:
+        # Never let an SEO error take down the site — fall back to the raw shell.
+        pass
+    # The shell must always revalidate (content-hashed assets handle caching).
+    return HTMLResponse(shell, headers={"Cache-Control": "no-cache"})
+
 
 @app.get("/{full_path:path}")
-def spa(full_path: str):
+def spa(full_path: str, db: Session = Depends(get_db)):
     # Never let the SPA shell shadow the JSON API.
     if full_path.startswith("api/"):
         raise HTTPException(status_code=404, detail="Not found")
@@ -168,5 +205,5 @@ def spa(full_path: str):
         candidate = os.path.normpath(os.path.join(_DIST_DIR, full_path))
         if candidate.startswith(_DIST_DIR) and os.path.isfile(candidate):
             return FileResponse(candidate)
-    # Otherwise hand back the SPA shell for client-side routing.
-    return FileResponse(_INDEX)
+    # Otherwise hand back the SPA shell (with route-aware SEO) for client routing.
+    return _render_shell(db, full_path)

@@ -180,6 +180,18 @@ class Setting(Base):
     value = Column(Text, default="")
 
 
+class SeoSetting(Base):
+    """Key/value store for the SEO control centre. The whole SEO document (global
+    settings + per-route meta + editable FAQ) is persisted here as JSON so the
+    developer can manage every search-engine-facing tag from the dashboard without
+    ever editing the codebase. The SPA-serving handler reads this to inject the
+    correct <head> + JSON-LD per route before sending HTML to crawlers."""
+    __tablename__ = "seo_settings"
+    key = Column(String(60), primary_key=True)
+    value = Column(Text, default="")
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+
 class Testimonial(Base):
     """Client reviews. Submitted from the site as 'pending' and shown publicly
     only once the developer approves them in the dashboard."""

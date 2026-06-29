@@ -1,6 +1,6 @@
 """Pydantic request/response schemas."""
 import datetime as dt
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -314,3 +314,85 @@ class BotUnansweredOut(BaseModel):
     resolved: bool = False
     created_at: dt.datetime
     last_seen: dt.datetime
+
+
+# --- SEO control centre -------------------------------------------------------
+class SeoCrumb(BaseModel):
+    name: str = ""
+    path: str = "/"
+
+
+class SeoRouteMeta(BaseModel):
+    title: str = Field(default="", max_length=300)
+    description: str = Field(default="", max_length=500)
+    canonical: str = Field(default="", max_length=500)
+    robots: str = Field(default="", max_length=120)
+    keywords: str = Field(default="", max_length=600)
+    og_title: str = Field(default="", max_length=300)
+    og_description: str = Field(default="", max_length=500)
+    og_image: str = Field(default="", max_length=500)
+    twitter_title: str = Field(default="", max_length=300)
+    twitter_description: str = Field(default="", max_length=500)
+    twitter_image: str = Field(default="", max_length=500)
+    breadcrumb: List[SeoCrumb] = []
+
+
+class SeoJsonLd(BaseModel):
+    person: bool = True
+    services: bool = True
+    reviews: bool = True
+    faq: bool = True
+    breadcrumb: bool = True
+    website: bool = True
+    search_action: bool = False
+
+
+class SeoGeneral(BaseModel):
+    site_name: str = Field(default="", max_length=120)
+    brand_name: str = Field(default="", max_length=120)
+    base_url: str = Field(default="", max_length=300)
+    title_template: str = Field(default="%s", max_length=160)
+    default_title: str = Field(default="", max_length=300)
+    default_description: str = Field(default="", max_length=500)
+    default_keywords: str = Field(default="", max_length=600)
+    author: str = Field(default="", max_length=120)
+    locale: str = Field(default="en_US", max_length=20)
+    language: str = Field(default="en", max_length=20)
+    default_og_image: str = Field(default="", max_length=500)
+    og_type: str = Field(default="website", max_length=40)
+    twitter_card: str = Field(default="summary_large_image", max_length=40)
+    twitter_site: str = Field(default="", max_length=60)
+    twitter_creator: str = Field(default="", max_length=60)
+    theme_color: str = Field(default="#0a0d14", max_length=40)
+    robots_default: str = Field(default="index, follow", max_length=120)
+    google_verification: str = Field(default="", max_length=200)
+    bing_verification: str = Field(default="", max_length=200)
+    yandex_verification: str = Field(default="", max_length=200)
+    person_name: str = Field(default="", max_length=120)
+    job_title: str = Field(default="", max_length=160)
+    org_type: str = Field(default="ProfessionalService", max_length=60)
+    email: str = Field(default="", max_length=200)
+    telephone: str = Field(default="", max_length=60)
+    whatsapp: str = Field(default="", max_length=60)
+    area_served: str = Field(default="", max_length=160)
+    price_range: str = Field(default="", max_length=20)
+    logo: str = Field(default="", max_length=500)
+    image: str = Field(default="", max_length=500)
+    same_as: List[str] = []
+    favicon: str = Field(default="", max_length=300)
+    manifest: str = Field(default="", max_length=300)
+    jsonld: SeoJsonLd = SeoJsonLd()
+    robots_txt: str = Field(default="", max_length=4000)
+    sitemap_changefreq: str = Field(default="weekly", max_length=20)
+    target_keywords: str = Field(default="", max_length=1000)
+
+
+class SeoFaqItem(BaseModel):
+    q: str = Field(default="", max_length=300)
+    a: str = Field(default="", max_length=1500)
+
+
+class SeoDoc(BaseModel):
+    general: SeoGeneral = SeoGeneral()
+    routes: Dict[str, SeoRouteMeta] = {}
+    faq: List[SeoFaqItem] = []
