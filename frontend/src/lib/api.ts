@@ -42,7 +42,7 @@ export function setUser(u: User | null): void {
   else s.removeItem(USER_KEY);
 }
 
-type Method = "GET" | "POST" | "PATCH" | "DELETE";
+type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 async function req<T = unknown>(method: Method, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json" };
@@ -100,6 +100,7 @@ export const API = {
   },
   get: <T = unknown>(p: string) => req<T>("GET", p),
   post: <T = unknown>(p: string, b?: unknown) => req<T>("POST", p, b === undefined ? {} : b),
+  put: <T = unknown>(p: string, b?: unknown) => req<T>("PUT", p, b === undefined ? {} : b),
   patch: <T = unknown>(p: string, b?: unknown) => req<T>("PATCH", p, b === undefined ? {} : b),
   del: <T = unknown>(p: string) => req<T>("DELETE", p),
   register: (d: { email: string; password: string; name?: string; whatsapp?: string }) =>

@@ -207,6 +207,88 @@ export interface PaymentConfig {
   stripe_enabled: boolean;
 }
 
+/* --- SEO control centre (mirrors backend app/seo.py document) --------------- */
+export interface SeoCrumb {
+  name: string;
+  path: string;
+}
+
+export interface SeoRouteMeta {
+  title: string;
+  description: string;
+  canonical: string;
+  robots: string;
+  keywords: string;
+  og_title: string;
+  og_description: string;
+  og_image: string;
+  twitter_title: string;
+  twitter_description: string;
+  twitter_image: string;
+  breadcrumb: SeoCrumb[];
+}
+
+export interface SeoJsonLd {
+  person: boolean;
+  services: boolean;
+  reviews: boolean;
+  faq: boolean;
+  breadcrumb: boolean;
+  website: boolean;
+  search_action: boolean;
+}
+
+export interface SeoGeneral {
+  site_name: string;
+  brand_name: string;
+  base_url: string;
+  title_template: string;
+  default_title: string;
+  default_description: string;
+  default_keywords: string;
+  author: string;
+  locale: string;
+  language: string;
+  default_og_image: string;
+  og_type: string;
+  twitter_card: string;
+  twitter_site: string;
+  twitter_creator: string;
+  theme_color: string;
+  robots_default: string;
+  google_verification: string;
+  bing_verification: string;
+  yandex_verification: string;
+  person_name: string;
+  job_title: string;
+  org_type: string;
+  email: string;
+  telephone: string;
+  whatsapp: string;
+  area_served: string;
+  price_range: string;
+  logo: string;
+  image: string;
+  same_as: string[];
+  favicon: string;
+  manifest: string;
+  jsonld: SeoJsonLd;
+  robots_txt: string;
+  sitemap_changefreq: string;
+  target_keywords: string;
+}
+
+export interface SeoFaqItem {
+  q: string;
+  a: string;
+}
+
+export interface SeoDoc {
+  general: SeoGeneral;
+  routes: Record<string, SeoRouteMeta>;
+  faq: SeoFaqItem[];
+}
+
 /** Error thrown by the API client; carries the HTTP status. */
 export interface ApiError extends Error {
   status?: number;

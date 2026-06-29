@@ -35,11 +35,10 @@ DEFAULT_DOC = {
         "base_url": _BASE_URL,
         # %s is replaced by the page title. Keep the brand on the right for SERP.
         "title_template": "%s · SMARNB",
-        "default_title": "Muhammad Ali Raza — Full-Stack Developer, Automation & Design",
+        "default_title": "Full-Stack Developer, Automation & Design",
         "default_description": (
-            "Muhammad Ali Raza (SMARNB) — freelance full-stack developer & designer. "
-            "Python SaaS dashboards, Selenium & OCR automation, computer vision, "
-            "Figma UI/UX and premium product packaging. Delivered fast, on time."),
+            "Freelance full-stack developer & designer — Python SaaS dashboards, "
+            "Selenium & OCR automation, computer vision, Figma UI/UX and packaging."),
         "default_keywords": (
             "full-stack developer, python developer, saas dashboard, selenium automation, "
             "ocr, computer vision, figma ui ux, packaging design, freelance developer"),
@@ -94,11 +93,10 @@ DEFAULT_DOC = {
             "breadcrumb": [],
         },
         "/": {
-            "title": "Muhammad Ali Raza — Full-Stack Developer, Automation & Design",
+            "title": "Muhammad Ali Raza — Full-Stack Dev, Automation & Design",
             "description": (
                 "Hire a multidisciplinary freelancer: Python SaaS dashboards, Selenium & "
-                "OCR automation, computer vision, Figma UI/UX and premium packaging. "
-                "Idea to delivery, on time and production-ready."),
+                "OCR automation, computer vision, Figma UI/UX & packaging — on time."),
             "canonical": "", "robots": "", "keywords": "",
             "og_title": "", "og_description": "", "og_image": "",
             "twitter_title": "", "twitter_description": "", "twitter_image": "",
@@ -107,9 +105,8 @@ DEFAULT_DOC = {
         "/store": {
             "title": "Store — Services, Packages & Pricing",
             "description": (
-                "Browse services, fixed packages and transparent pricing — Python "
-                "dashboards, automation bots, computer vision, UI/UX and packaging. "
-                "Order in two clicks and track progress live."),
+                "Browse services, fixed packages & transparent pricing — Python dashboards, "
+                "automation bots, computer vision, UI/UX & packaging. Order in two clicks."),
             "canonical": "", "robots": "", "keywords": "",
             "og_title": "", "og_description": "", "og_image": "",
             "twitter_title": "", "twitter_description": "", "twitter_image": "",
