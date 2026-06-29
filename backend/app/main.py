@@ -3,10 +3,9 @@ import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 
 from . import config, crud
 from .database import Base, SessionLocal, engine
@@ -105,10 +104,13 @@ async def security_headers(request, call_next):
         h.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()")
         h.setdefault("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
         h.setdefault("Content-Security-Policy", _CSP)
-        # Caching: revalidate code/markup (no build hashing), cache images a while.
+        # Caching: Vite content-hashes everything under /assets/, so those are
+        # immutable; revalidate the SPA shell + other markup; cache loose images.
         last = p.rsplit("/", 1)[-1].lower()
         if p.startswith("/api/"):
             h.setdefault("Cache-Control", "no-store")
+        elif p.startswith("/assets/"):
+            h.setdefault("Cache-Control", "public, max-age=31536000, immutable")
         elif last.endswith((".jpg", ".jpeg", ".png", ".webp", ".svg", ".ico", ".woff", ".woff2")):
             h.setdefault("Cache-Control", "public, max-age=604800")
         else:
@@ -143,16 +145,25 @@ def version():
     }
 
 
-# Clean URLs for the two dashboards (the HTML lives in the site root).
-@app.get("/app")
-def client_dashboard():
-    return FileResponse(os.path.join(config.SITE_DIR, "app.html"))
+# --- Serve the built React app (single origin) --------------------------------
+# The frontend is a Vite SPA built to frontend/dist. We serve its real files when
+# they exist and fall back to index.html for any other path so client-side routes
+# (/, /store, /app, /admin, …) all work on direct load / refresh. Registered LAST
+# so /api/* and the routes above keep priority.
+_DIST_DIR = os.path.join(config.SITE_DIR, "frontend", "dist")
+_INDEX = os.path.join(_DIST_DIR, "index.html")
 
 
-@app.get("/admin")
-def admin_dashboard():
-    return FileResponse(os.path.join(config.SITE_DIR, "admin.html"))
-
-
-# Mount the whole static site LAST so /api/* and the routes above take priority.
-app.mount("/", StaticFiles(directory=config.SITE_DIR, html=True), name="site")
+@app.get("/{full_path:path}")
+def spa(full_path: str):
+    # Never let the SPA shell shadow the JSON API.
+    if full_path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="Not found")
+    # Serve a real built file if it exists (assets, favicon, manifest, images…),
+    # guarding against path traversal outside dist.
+    if full_path:
+        candidate = os.path.normpath(os.path.join(_DIST_DIR, full_path))
+        if candidate.startswith(_DIST_DIR) and os.path.isfile(candidate):
+            return FileResponse(candidate)
+    # Otherwise hand back the SPA shell for client-side routing.
+    return FileResponse(_INDEX)

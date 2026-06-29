@@ -16,7 +16,14 @@ services:
     rootDir: backend
     plan: free
     autoDeploy: true            # every push to `main` auto-redeploys — no manual deploy needed
-    buildCommand: pip install -r requirements.txt
+    # Two-step build: build the React frontend (Vite → frontend/dist, which FastAPI
+    # serves), then install the Python deps. buildCommand runs from rootDir (backend),
+    # so we hop up to ../frontend for the Node build. Render's native Python runtime
+    # ships Node + npm, so `npm` is available here.
+    # FALLBACK: if a future Render image lacks Node and this build step fails, commit
+    # the built frontend/dist to the repo and change this back to just the pip line —
+    # FastAPI will serve the committed build unchanged.
+    buildCommand: cd ../frontend && npm ci && npm run build && cd ../backend && pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     # rootDir would otherwise limit autodeploys to backend/ changes only. This filter
