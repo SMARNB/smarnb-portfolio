@@ -6,10 +6,10 @@ import { useCatalog } from "../../context/CatalogContext";
 import { ServiceCard } from "../ui/ServiceCard";
 import { Reveal } from "../ui/Reveal";
 
-export function ServicesTeaser() {
+export function ServicesTeaser({ all = false }: { all?: boolean }) {
   const { services } = useCatalog();
   const navigate = useNavigate();
-  const list = services.slice(0, 6);
+  const list = all ? services : services.slice(0, 6);
 
   return (
     <section id="services">

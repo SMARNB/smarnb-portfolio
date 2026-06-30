@@ -362,7 +362,7 @@ function ChatWidgetInner() {
                   ✉️ Email
                 </a>
               )}
-              <a className="chat-chip" href="/#contact">
+              <a className="chat-chip" href="/contact">
                 📝 Custom request
               </a>
             </>

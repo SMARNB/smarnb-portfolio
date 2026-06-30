@@ -172,7 +172,7 @@ export function CtaBand() {
           <p>Let's turn your idea into something real — fast, polished, and on time.</p>
           <div className="hero-cta" style={{ justifyContent: "center" }}>
             <Link className="btn btn-ghost" to="/store">Browse packages</Link>
-            <Link className="btn btn-outline" to="/#contact">Start a conversation</Link>
+            <Link className="btn btn-outline" to="/contact">Start a conversation</Link>
           </div>
         </Reveal>
       </div>

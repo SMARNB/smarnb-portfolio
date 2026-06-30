@@ -28,7 +28,7 @@ export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => vo
       <Link to="/app" onClick={onClose}>
         My Projects (Client login)
       </Link>
-      <Link className="btn btn-primary" to="/#contact" onClick={onClose}>
+      <Link className="btn btn-primary" to="/contact" onClick={onClose}>
         Start a project
       </Link>
     </nav>

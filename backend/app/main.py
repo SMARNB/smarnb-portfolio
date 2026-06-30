@@ -160,7 +160,7 @@ _DIST_DIR = os.path.join(config.SITE_DIR, "frontend", "dist")
 _INDEX = os.path.join(_DIST_DIR, "index.html")
 
 # Known client-side routes — used to pick the right SEO meta/JSON-LD per page.
-_SPA_ROUTES = {"/", "/store", "/app", "/admin"}
+_SPA_ROUTES = {"/", "/store", "/services", "/work", "/projects", "/about", "/contact", "/app", "/admin"}
 # Dev-fallback tags we strip from the shell before injecting the managed ones, so
 # the page never ends up with two <title>s / descriptions / icons.
 _STRIP_SHELL = _re.compile(

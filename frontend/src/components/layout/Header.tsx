@@ -8,15 +8,11 @@ import { Icon } from "../../lib/icons";
 import { useTheme } from "../../context/ThemeContext";
 import { useCart } from "../../context/CartContext";
 import { useUI } from "../../context/UIContext";
-import { useScrollSpy } from "../../lib/useScrollSpy";
 import { PRIMARY_NAV } from "./nav";
 
-function navMatchesActive(to: string, pathname: string, activeId: string): boolean {
-  const [path, frag] = to.split("#");
-  const target = path || "/";
-  if (frag) return pathname === target && activeId === frag;
-  // plain links (Home/Store): active when on that page and no section is spied
-  return pathname === target && !activeId;
+function navActive(to: string, pathname: string): boolean {
+  if (to === "/") return pathname === "/";
+  return pathname === to || pathname.startsWith(to + "/");
 }
 
 export function Header({ onMenu, menuOpen }: { onMenu: () => void; menuOpen: boolean }) {
@@ -24,7 +20,6 @@ export function Header({ onMenu, menuOpen }: { onMenu: () => void; menuOpen: boo
   const { count } = useCart();
   const { openCart, openTrack } = useUI();
   const { pathname } = useLocation();
-  const activeId = useScrollSpy([pathname]);
   const reduce = useReducedMotion();
 
   const headerRef = useRef<HTMLElement>(null);
@@ -74,7 +69,7 @@ export function Header({ onMenu, menuOpen }: { onMenu: () => void; menuOpen: boo
             <Link
               key={item.to}
               to={item.to}
-              className={navMatchesActive(item.to, pathname, activeId) ? "active" : ""}
+              className={navActive(item.to, pathname) ? "active" : ""}
             >
               {item.label}
             </Link>

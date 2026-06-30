@@ -56,7 +56,7 @@ export function Products() {
                       </div>
                       <p className="lic-note">{l.note || ""}</p>
                       {l.contact ? (
-                        <Link className="btn btn-outline btn-sm" to="/#contact">
+                        <Link className="btn btn-outline btn-sm" to="/contact">
                           Request a quote
                         </Link>
                       ) : (

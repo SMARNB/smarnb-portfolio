@@ -112,6 +112,57 @@ DEFAULT_DOC = {
             "twitter_title": "", "twitter_description": "", "twitter_image": "",
             "breadcrumb": [{"name": "Home", "path": "/"}, {"name": "Store", "path": "/store"}],
         },
+        "/services": {
+            "title": "Services — Development, Automation & Design",
+            "description": (
+                "Full-service catalogue: Python SaaS dashboards, Selenium & OCR automation, "
+                "computer vision, Figma UI/UX and packaging — with a clear, transparent "
+                "process from brief to on-time delivery."),
+            "canonical": "", "robots": "", "keywords": "",
+            "og_title": "", "og_description": "", "og_image": "",
+            "twitter_title": "", "twitter_description": "", "twitter_image": "",
+            "breadcrumb": [{"name": "Home", "path": "/"}, {"name": "Services", "path": "/services"}],
+        },
+        "/work": {
+            "title": "Selected Work & Client Results",
+            "description": (
+                "Recent client projects across development, design, automation and packaging "
+                "— and what clients say about working with me."),
+            "canonical": "", "robots": "", "keywords": "",
+            "og_title": "", "og_description": "", "og_image": "",
+            "twitter_title": "", "twitter_description": "", "twitter_image": "",
+            "breadcrumb": [{"name": "Home", "path": "/"}, {"name": "Work", "path": "/work"}],
+        },
+        "/projects": {
+            "title": "Projects — CodeWatch & Open-Source",
+            "description": (
+                "Personal & open-source engineering, including CodeWatch — a real-time "
+                "multi-camera computer-vision surveillance & access-control system."),
+            "canonical": "", "robots": "", "keywords": "",
+            "og_title": "", "og_description": "", "og_image": "",
+            "twitter_title": "", "twitter_description": "", "twitter_image": "",
+            "breadcrumb": [{"name": "Home", "path": "/"}, {"name": "Projects", "path": "/projects"}],
+        },
+        "/about": {
+            "title": "About — Muhammad Ali Raza",
+            "description": (
+                "Computer-vision & full-stack engineer based in Lahore, Pakistan — the "
+                "background, experience and skills behind the work."),
+            "canonical": "", "robots": "", "keywords": "",
+            "og_title": "", "og_description": "", "og_image": "",
+            "twitter_title": "", "twitter_description": "", "twitter_image": "",
+            "breadcrumb": [{"name": "Home", "path": "/"}, {"name": "About", "path": "/about"}],
+        },
+        "/contact": {
+            "title": "Contact & Custom Requests",
+            "description": (
+                "Start a project or ask a question — custom-request form, FAQ, and flexible "
+                "local (Raast/SadaPay/JazzCash) & international payment options."),
+            "canonical": "", "robots": "", "keywords": "",
+            "og_title": "", "og_description": "", "og_image": "",
+            "twitter_title": "", "twitter_description": "", "twitter_image": "",
+            "breadcrumb": [{"name": "Home", "path": "/"}, {"name": "Contact", "path": "/contact"}],
+        },
         # App + admin are tools, not content — keep them out of the index.
         "/app": {
             "title": "Client Area", "description": "Track your projects and orders.",
@@ -373,11 +424,11 @@ def build_jsonld(db, path, doc=None):
         bc = _ld_breadcrumb(meta, base_url)
         if bc:
             graph.append(bc)
-    # Service catalogue belongs on the home + store pages.
-    if toggles.get("services", True) and path in ("/", "/store"):
+    # Service catalogue belongs on the home + services + store pages.
+    if toggles.get("services", True) and path in ("/", "/services", "/store"):
         graph.extend(_ld_services(g, base_url, db))
-    # FAQ lives on the home page.
-    if toggles.get("faq", True) and path == "/":
+    # FAQ lives on the contact page (where the FAQ section now renders).
+    if toggles.get("faq", True) and path == "/contact":
         faq = _ld_faq(doc)
         if faq:
             graph.append(faq)
@@ -535,6 +586,5 @@ def build_robots(db, base_url=None, doc=None):
     return ("User-agent: *\n"
             "Allow: /\n"
             "Disallow: /admin\n"
-            "Disallow: /app\n"
-            "Disallow: /api/\n\n"
+            "Disallow: /app\n\n"
             + sitemap_line + "\n")

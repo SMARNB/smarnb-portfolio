@@ -88,7 +88,7 @@ export function Store() {
               <h3>Have a bigger or custom project?</h3>
               <p>Tell me what you need and I'll send a tailored quote and timeline — no obligation.</p>
             </div>
-            <Link className="btn btn-primary" to="/#contact">
+            <Link className="btn btn-primary" to="/contact">
               Get a custom quote
             </Link>
           </Reveal>

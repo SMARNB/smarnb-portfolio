@@ -66,10 +66,10 @@ export function Footer() {
           <div>
             <h4>Explore</h4>
             <ul>
-              <li><Link to="/#projects">Projects</Link></li>
-              <li><Link to="/#work">Work</Link></li>
-              <li><Link to="/#experience">Experience</Link></li>
-              <li><Link to="/#about">About</Link></li>
+              <li><Link to="/projects">Projects</Link></li>
+              <li><Link to="/work">Work</Link></li>
+              <li><Link to="/about">Experience</Link></li>
+              <li><Link to="/about">About</Link></li>
               <li><Link to="/app">Client login</Link></li>
               <li>
                 <a href="#" onClick={(e) => { e.preventDefault(); openTrack(); }}>
@@ -83,7 +83,7 @@ export function Footer() {
             <ul>
               <li><a href={`mailto:${CONFIG.email}`}>{CONFIG.email}</a></li>
               <li><a href={`https://wa.me/${wa}`} target="_blank" rel="noopener">WhatsApp</a></li>
-              <li><Link to="/#contact">Custom request</Link></li>
+              <li><Link to="/contact">Custom request</Link></li>
             </ul>
           </div>
         </div>

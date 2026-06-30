@@ -58,7 +58,7 @@ export function Hero() {
               Order a service
               <Icon name="arrow" size={18} />
             </Link>
-            <Link className="btn btn-ghost" to="/#contact">
+            <Link className="btn btn-ghost" to="/contact">
               Request custom work
             </Link>
           </motion.div>

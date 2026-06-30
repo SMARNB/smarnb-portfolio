@@ -18,7 +18,7 @@ export function ProjectModal() {
   function startSimilar() {
     if (p) setContactPrefill(`I'm interested in a project similar to “${p.title}”. `);
     close("project");
-    navigate("/#contact");
+    navigate("/contact");
   }
 
   return (
