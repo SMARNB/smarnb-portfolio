@@ -529,9 +529,12 @@ def build_robots(db, base_url=None, doc=None):
         if "sitemap:" not in custom.lower():
             custom = custom + "\n\n" + sitemap_line
         return custom + "\n"
+    # NB: Disallowing /api only tells *crawlers* not to index the JSON endpoints —
+    # the website itself (browser fetch) is unaffected by robots.txt. Keeping it
+    # disallowed avoids Google wasting crawl budget on / indexing raw API responses.
     return ("User-agent: *\n"
             "Allow: /\n"
             "Disallow: /admin\n"
             "Disallow: /app\n"
-            "Allow: /api/\n\n"
+            "Disallow: /api/\n\n"
             + sitemap_line + "\n")

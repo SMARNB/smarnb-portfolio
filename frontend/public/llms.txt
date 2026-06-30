@@ -1,0 +1,39 @@
+# Muhammad Ali Raza — Portfolio & Services (SMARNB)
+
+> Freelance full-stack developer & designer. Python SaaS dashboards, Selenium &
+> OCR automation, computer vision, Figma UI/UX, and product packaging — delivered
+> on time, with full source files and clear pricing. Based in Pakistan, working
+> worldwide. Live at https://smarnb.onrender.com
+
+This site is a single-origin React (Vite) front end served by a FastAPI backend.
+All marketing pages are server-rendered with structured data (JSON-LD), so the
+content below is the canonical map of what the site offers.
+
+## Pages
+
+- [Home](https://smarnb.onrender.com/): intro, selected work, personal projects, process, about, experience, client reviews, FAQ, and the custom-request contact form.
+- [Store](https://smarnb.onrender.com/store): full service catalogue, fixed packages with transparent pricing, products & licenses, cart and checkout, and order tracking.
+
+## Services
+
+- [SaaS dashboards](https://smarnb.onrender.com/store#svc-saas-dashboard): Python web apps and admin dashboards (FastAPI/Flask + modern front ends).
+- [Selenium & automation bots](https://smarnb.onrender.com/store#svc-selenium-bots): browser automation, scraping, and repetitive-task bots.
+- [Computer vision & AI](https://smarnb.onrender.com/store#svc-ai-cv): OCR, image/document processing, and applied computer-vision features.
+- [Figma UI/UX design](https://smarnb.onrender.com/store#svc-figma-uiux): product and web interface design, prototypes, and design systems.
+- [Packaging design](https://smarnb.onrender.com/store#svc-packaging-design): print-ready product packaging and brand collateral.
+
+## Products
+
+- [CodeWatch (licensed product)](https://smarnb.onrender.com/store#products): a finished computer-vision liveness/proctoring product, licensed per deployment (source code is never shared).
+
+## Contact
+
+- Email: shahjee975@gmail.com
+- WhatsApp: +92 341 4527256
+- [Custom request form](https://smarnb.onrender.com/#contact): describe your scope for a tailored quote and timeline.
+
+## Notes for agents
+
+- Pricing and the live service catalogue are also available as JSON at /api/services.
+- The client area (/app) and developer dashboard (/admin) are private tools and are intentionally excluded from indexing.
+- See https://smarnb.onrender.com/sitemap.xml for the full URL list.
