@@ -5,10 +5,10 @@
    built-in list is kept so the page never blanks. */
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { CONFIG } from "../lib/config";
 import { services as builtinServices } from "../lib/data";
 import type { Service } from "../lib/data";
 import type { PublicCatalog, ServiceOut } from "../lib/types";
+import { servicesPromise } from "../lib/prefetch";
 
 interface CatalogCtx {
   services: Service[];
@@ -33,13 +33,10 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch((CONFIG.apiBase || "") + "/api/services", { headers: { Accept: "application/json" } })
-      .then((r) => {
-        if (!r.ok) throw new Error("no api");
-        return r.json();
-      })
-      .then((res: PublicCatalog | ServiceOut[]) => {
-        if (cancelled) return;
+    servicesPromise
+      .then((raw) => {
+        if (cancelled || raw == null) return;
+        const res = raw as PublicCatalog | ServiceOut[];
         const list = Array.isArray(res) ? res : res.services || [];
         if (!Array.isArray(list)) return;
         const managed = !Array.isArray(res) && res.managed;

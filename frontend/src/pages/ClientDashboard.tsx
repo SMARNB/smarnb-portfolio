@@ -3,6 +3,7 @@
    The floating chat widget is available here too (as on the old app.html). */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import "../styles/dashboard.css"; // dashboard-only styles, loaded with this lazy chunk
 import { Icon } from "../lib/icons";
 import { API } from "../lib/api";
 import type { ApiError, Order, PaymentConfig } from "../lib/types";

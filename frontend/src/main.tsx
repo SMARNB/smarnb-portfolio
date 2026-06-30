@@ -4,9 +4,11 @@ import { RouterProvider } from "react-router-dom";
 import { router } from "./router";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
+import "./lib/prefetch"; // fire /api/services + /api/testimonials in parallel, ASAP
 import "./styles/global.css";
-import "./styles/dashboard.css";
 import "./styles/chat.css";
+// dashboard.css is imported by the lazy /app + /admin chunks (not on the landing
+// pages), so it no longer adds render-blocking CSS to the marketing pages.
 
 // Apply the saved theme before first render to minimise a flash of the wrong
 // theme. Runs here (an external module) so it satisfies the strict CSP

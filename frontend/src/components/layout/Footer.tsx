@@ -38,15 +38,17 @@ export function Footer() {
                     <Icon name={key} size={18} />
                   </a>
                 ) : (
-                  <a
+                  /* Not configured yet: a decorative placeholder, hidden from the
+                     a11y tree (no destination → not a link; aria-disabled on a
+                     non-interactive element is invalid and was flagged by Lighthouse). */
+                  <span
                     key={key}
                     className="social-empty"
-                    aria-disabled="true"
-                    aria-label={label}
+                    aria-hidden="true"
                     title={`Add your ${key} link in config`}
                   >
                     <Icon name={key} size={18} />
-                  </a>
+                  </span>
                 );
               })}
             </div>

@@ -44,7 +44,7 @@ export function Work() {
 
         <div className="work-grid" id="workGrid">
           {items.map((p, i) => (
-            <motion.article
+            <motion.div
               key={p.id}
               className="card work-card"
               tabIndex={0}
@@ -79,7 +79,7 @@ export function Work() {
                   ))}
                 </div>
               </div>
-            </motion.article>
+            </motion.div>
           ))}
         </div>
       </div>

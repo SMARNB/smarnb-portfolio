@@ -3,6 +3,7 @@
    polling (unread chats, pending reviews, unanswered questions). Port of
    admin-dash.js. */
 import { useCallback, useEffect, useRef, useState } from "react";
+import "../styles/dashboard.css"; // dashboard-only styles, loaded with this lazy chunk
 import { API } from "../lib/api";
 import type { ConversationSummary, TestimonialAdmin, BotUnanswered } from "../lib/types";
 import { useAuth } from "../context/AuthContext";
