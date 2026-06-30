@@ -17,9 +17,10 @@ import { ServicesTab } from "../components/dash/admin/ServicesTab";
 import { BotTab } from "../components/dash/admin/BotTab";
 import { SeoTab } from "../components/dash/admin/SeoTab";
 import { BlogTab } from "../components/dash/admin/BlogTab";
+import { ResumeTab } from "../components/dash/admin/ResumeTab";
 
-type Tab = "orders" | "inbox" | "reviews" | "services" | "blog" | "bot" | "seo";
-const HASH_TAB: Record<string, Tab> = { "#services": "services", "#blog": "blog", "#inbox": "inbox", "#reviews": "reviews", "#bot": "bot", "#seo": "seo" };
+type Tab = "orders" | "inbox" | "reviews" | "services" | "blog" | "bot" | "seo" | "resume";
+const HASH_TAB: Record<string, Tab> = { "#services": "services", "#blog": "blog", "#inbox": "inbox", "#reviews": "reviews", "#bot": "bot", "#seo": "seo", "#resume": "resume" };
 
 export function AdminDashboard() {
   useDashBody();
@@ -104,6 +105,7 @@ function AdminShell({ onUnauth }: { onUnauth: () => void }) {
     { id: "blog", label: "Blog" },
     { id: "bot", label: "Bot training", badge: botBadge },
     { id: "seo", label: "SEO" },
+    { id: "resume", label: "Résumé" },
   ];
 
   return (
@@ -134,6 +136,7 @@ function AdminShell({ onUnauth }: { onUnauth: () => void }) {
         {tab === "blog" && <BlogTab onUnauth={onUnauth} />}
         {tab === "bot" && <BotTab onUnauth={onUnauth} onChanged={pollBadges} />}
         {tab === "seo" && <SeoTab onUnauth={onUnauth} />}
+        {tab === "resume" && <ResumeTab />}
       </div>
     </>
   );

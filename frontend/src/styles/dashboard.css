@@ -321,3 +321,66 @@ main.dash-main { flex: 1; padding: clamp(1.5rem, 4vw, 2.5rem) 0 4rem; }
 }
 .blog-preview:empty::before { content: "Start typing to see a live preview…"; color: var(--muted-2); font-size: .9rem; }
 .blog-delete { color: var(--danger, #ef4444); justify-self: start; }
+
+/* ---- Résumé (one-page A4 CV; print-to-PDF) ------------------------------ */
+.resume-tab-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.resume-tab-head .btn svg { margin-right: .1rem; }
+.resume-preview {
+  margin-top: 1.2rem; padding: 1.4rem; border-radius: var(--r); background: #cbd5e1;
+  overflow: auto; display: flex; justify-content: center;
+}
+/* On screen the A4 sheet is zoomed to fit the column (zoom shrinks layout box too,
+   so no empty space). The print copy below is NOT zoomed. */
+.resume-preview .resume-sheet { zoom: 0.74; }
+.resume-print-root { display: none; } /* hidden on screen; revealed only when printing */
+
+/* The A4 sheet — fixed metrics (mm/px) so the preview matches the printed PDF.
+   Uses its own fixed palette (teal/ink) independent of the dashboard theme. */
+.resume-sheet {
+  --rz-teal: #0d9488; --rz-ink: #0f172a; --rz-body: #334155; --rz-muted: #64748b; --rz-line: #e2e8f0;
+  width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 14mm 14mm 13mm;
+  background: #fff; color: var(--rz-body);
+  font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 11px; line-height: 1.5; box-shadow: 0 8px 26px rgba(15,23,42,.22);
+}
+.resume-head { border-bottom: 2px solid var(--rz-teal); padding-bottom: 13px; margin-bottom: 16px; }
+.resume-name { color: var(--rz-ink); font-size: 29px; font-weight: 800; letter-spacing: -.01em; line-height: 1.1; }
+.resume-title { color: var(--rz-teal); font-size: 13.5px; font-weight: 700; letter-spacing: .03em; margin-top: 3px; text-transform: uppercase; }
+.resume-contacts { display: flex; flex-wrap: wrap; gap: 7px 20px; margin-top: 13px; }
+.resume-contacts a, .resume-contacts span { display: inline-flex; align-items: center; gap: 6px; color: var(--rz-body); font-size: 10.6px; }
+.resume-contacts a { color: var(--rz-body); }
+.resume-contacts svg { width: 13.5px; height: 13.5px; color: var(--rz-teal); flex: none; }
+.resume-body { display: grid; grid-template-columns: 1.62fr 1fr; gap: 20px; }
+/* padding:0 neutralises the global bare-`section` padding so blocks sit tight. */
+.resume-block { margin-bottom: 17px; padding: 0; }
+.resume-block:last-child { margin-bottom: 0; }
+.resume-h2 {
+  color: var(--rz-ink); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em;
+  padding-bottom: 5px; margin-bottom: 10px; border-bottom: 1px solid var(--rz-line);
+}
+.resume-summary { font-size: 10.8px; line-height: 1.62; color: var(--rz-body); }
+.resume-role { margin-bottom: 14px; }
+.resume-role:last-child { margin-bottom: 0; }
+.resume-role-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.resume-role-title { color: var(--rz-ink); font-size: 11.6px; font-weight: 750; }
+.resume-role-meta { color: var(--rz-muted); font-size: 9.6px; font-weight: 600; white-space: nowrap; }
+.resume-role-org { color: var(--rz-teal); font-size: 10.6px; font-weight: 650; margin-top: 2px; }
+.resume-stack { color: var(--rz-muted); font-size: 9.6px; font-style: italic; margin-top: 2px; }
+.resume-bullets { margin: 7px 0 0; padding-left: 14px; list-style: none; }
+.resume-bullets li { position: relative; font-size: 10.4px; line-height: 1.55; margin-bottom: 5px; }
+.resume-bullets li::before { content: ""; position: absolute; left: -12px; top: 7px; width: 4px; height: 4px; border-radius: 50%; background: var(--rz-teal); }
+.resume-pills { display: flex; flex-wrap: wrap; gap: 5px; }
+.resume-pill { font-size: 9.4px; font-weight: 600; color: #0f766e; background: #ccfbf1; border: 1px solid #99f6e4; border-radius: 999px; padding: 3.5px 9px; }
+.resume-skill { margin-bottom: 9px; }
+.resume-skill-label { color: var(--rz-ink); font-size: 10.4px; font-weight: 750; margin-bottom: 2px; }
+.resume-skill-items { color: var(--rz-body); font-size: 10px; line-height: 1.5; }
+.resume-edu .resume-role-meta { display: inline-block; margin-top: 2px; }
+.resume-course { color: var(--rz-muted); margin-top: 4px; font-size: 9.6px; }
+
+@media print {
+  @page { size: A4; margin: 0; }
+  body.resume-printing #root { display: none !important; }
+  body.resume-printing .resume-print-root { display: block !important; }
+  body.resume-printing, html:has(body.resume-printing) { background: #fff !important; }
+  body.resume-printing .resume-sheet { box-shadow: none !important; width: 210mm; min-height: 297mm; }
+}
