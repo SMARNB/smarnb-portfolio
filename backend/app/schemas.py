@@ -316,6 +316,23 @@ class BotUnansweredOut(BaseModel):
     last_seen: dt.datetime
 
 
+# --- Blog ---------------------------------------------------------------------
+class BlogPostIn(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    slug: str = Field(default="", max_length=200)
+    excerpt: str = Field(default="", max_length=400)
+    body_md: str = Field(default="", max_length=200000)
+    cover_image: str = Field(default="", max_length=500)
+    category: str = Field(default="Tech", max_length=60)
+    tags: List[str] = []
+    related_services: List[str] = []   # catalog service slugs to feature on the post
+    status: str = Field(default="draft", max_length=20)  # draft | published
+
+
+class BlogPreviewIn(BaseModel):
+    body_md: str = Field(default="", max_length=200000)
+
+
 # --- SEO control centre -------------------------------------------------------
 class SeoCrumb(BaseModel):
     name: str = ""

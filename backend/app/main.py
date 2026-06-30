@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from . import config, crud, seo
 from .database import Base, SessionLocal, engine, get_db
-from .routers import admin, auth, chat, orders, payments, services, testimonials
+from .routers import admin, auth, blog, chat, orders, payments, services, testimonials
 from .routers import seo as seo_router
 
 
@@ -44,6 +44,11 @@ def _ensure_columns():
         if "deliverables_json" not in cols:
             with engine.begin() as conn:
                 conn.execute(text("ALTER TABLE services ADD COLUMN deliverables_json TEXT DEFAULT '[]'"))
+    if "blog_posts" in insp.get_table_names():
+        cols = {c["name"] for c in insp.get_columns("blog_posts")}
+        if "related_services_json" not in cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE blog_posts ADD COLUMN related_services_json TEXT DEFAULT '[]'"))
 
 
 @asynccontextmanager
@@ -133,6 +138,8 @@ app.include_router(chat.router)
 app.include_router(chat.admin_router)
 app.include_router(payments.router)
 app.include_router(seo_router.router)   # /api/seo, /api/admin/seo, /sitemap.xml, /robots.txt
+app.include_router(blog.router)         # /api/blog, /api/blog/{slug}, /api/blog/images/{id}
+app.include_router(blog.admin_router)   # /api/admin/blog CRUD + image upload + preview
 
 
 @app.get("/api/health")
@@ -162,7 +169,8 @@ _DIST_DIR = os.path.join(config.SITE_DIR, "frontend", "dist")
 _INDEX = os.path.join(_DIST_DIR, "index.html")
 
 # Known client-side routes — used to pick the right SEO meta/JSON-LD per page.
-_SPA_ROUTES = {"/", "/store", "/services", "/work", "/projects", "/about", "/contact", "/app", "/admin"}
+_SPA_ROUTES = {"/", "/store", "/services", "/work", "/projects", "/about", "/contact",
+               "/blog", "/app", "/admin"}
 # Dev-fallback tags we strip from the shell before injecting the managed ones, so
 # the page never ends up with two <title>s / descriptions / icons.
 _STRIP_SHELL = _re.compile(
@@ -177,18 +185,40 @@ def _route_for(full_path: str) -> str:
     return path if path in _SPA_ROUTES else "default"
 
 
+def _blog_slug(full_path: str):
+    """The post slug for a /blog/<slug> request, else None."""
+    parts = full_path.strip("/").split("/")
+    if len(parts) >= 2 and parts[0] == "blog" and parts[1]:
+        return parts[1]
+    return None
+
+
 def _render_shell(db: Session, full_path: str) -> HTMLResponse:
     """The SPA shell with the route's SEO <head> injected, so crawlers get correct
-    title/meta/Open Graph/Twitter/canonical/robots + JSON-LD without running JS."""
+    title/meta/Open Graph/Twitter/canonical/robots + JSON-LD without running JS. For
+    a blog post the full article HTML is also injected into #root (React replaces it
+    on mount) so crawlers see the whole post."""
     try:
         with open(_INDEX, "r", encoding="utf-8") as fh:
             shell = fh.read()
     except OSError:
         raise HTTPException(status_code=404, detail="Not found")
     try:
-        head = seo.cached_head(db, _route_for(full_path))
+        route = _route_for(full_path)
+        slug = _blog_slug(full_path) if route == "/blog" else None
+        article = ""
+        head = None
+        if slug:
+            head = seo.cached_blog_post_head(db, slug)  # None for unknown/draft slug
+            if head is not None:
+                article = seo.blog_article_html(db, slug)
+        if head is None:
+            head = seo.cached_head(db, route)
         shell = _STRIP_SHELL.sub("", shell)
         shell = shell.replace("</head>", "  " + head + "\n</head>", 1)
+        if article:
+            shell = shell.replace('<div id="root"></div>',
+                                  '<div id="root">' + article + "</div>", 1)
     except Exception:
         # Never let an SEO error take down the site — fall back to the raw shell.
         pass

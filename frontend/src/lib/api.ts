@@ -79,6 +79,34 @@ async function req<T = unknown>(method: Method, path: string, body?: unknown): P
   return data as T;
 }
 
+/** Multipart upload (a File under the "file" field). Mirrors req()'s error shape;
+    the browser sets the multipart Content-Type/boundary, so we don't. */
+async function uploadReq<T = unknown>(path: string, file: File): Promise<T> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const headers: Record<string, string> = {};
+  const t = getToken();
+  if (t) headers["Authorization"] = "Bearer " + t;
+  const r = await fetch(BASE + path, { method: "POST", headers, body: fd });
+  const txt = await r.text();
+  let data: unknown = null;
+  if (txt) {
+    try {
+      data = JSON.parse(txt);
+    } catch {
+      data = txt;
+    }
+  }
+  if (!r.ok) {
+    const d = (data as { detail?: unknown })?.detail;
+    const msg = typeof d === "string" ? d : "Upload failed (" + r.status + ")";
+    const err = new Error(msg) as ApiError;
+    err.status = r.status;
+    throw err;
+  }
+  return data as T;
+}
+
 function saveAuth(res: Token): Token {
   if (res && res.access_token) {
     setToken(res.access_token);
@@ -103,6 +131,7 @@ export const API = {
   put: <T = unknown>(p: string, b?: unknown) => req<T>("PUT", p, b === undefined ? {} : b),
   patch: <T = unknown>(p: string, b?: unknown) => req<T>("PATCH", p, b === undefined ? {} : b),
   del: <T = unknown>(p: string) => req<T>("DELETE", p),
+  upload: <T = unknown>(p: string, file: File) => uploadReq<T>(p, file),
   register: (d: { email: string; password: string; name?: string; whatsapp?: string }) =>
     req<Token>("POST", "/api/auth/register", d).then(saveAuth),
   login: (d: { email: string; password: string }) =>

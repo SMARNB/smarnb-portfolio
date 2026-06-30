@@ -207,6 +207,54 @@ export interface PaymentConfig {
   stripe_enabled: boolean;
 }
 
+/* --- Blog ------------------------------------------------------------------- */
+export interface BlogRelatedService {
+  slug: string;
+  title: string;
+  short: string;
+  category: string;
+  icon: string;
+  min_price: number | null;
+}
+
+export interface BlogPost {
+  id: number;
+  slug: string;
+  title: string;
+  excerpt: string;
+  body_md?: string; // only on full (single/admin) responses
+  body_html?: string; // only on full responses
+  cover_image: string;
+  category: string;
+  tags: string[];
+  related_services: string[]; // service slugs attached to the post
+  related?: BlogRelatedService[]; // resolved services (single/admin full responses)
+  status: string; // draft | published
+  reading_minutes: number;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BlogListResponse {
+  categories: string[];
+  posts: BlogPost[];
+}
+
+export interface BlogImageUpload {
+  id: number;
+  url: string;
+  filename: string;
+  content_type: string;
+  size: number;
+}
+
+export interface BlogPreview {
+  body_html: string;
+  reading_minutes: number;
+  excerpt: string;
+}
+
 /* --- SEO control centre (mirrors backend app/seo.py document) --------------- */
 export interface SeoCrumb {
   name: string;

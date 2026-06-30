@@ -7,7 +7,7 @@ import secrets
 
 from sqlalchemy import func
 
-from . import crypto, models, security
+from . import blog_render, crypto, models, security
 
 
 # --- Users --------------------------------------------------------------------
@@ -608,3 +608,133 @@ def resolve_unanswered(db, uid):
 def delete_unanswered(db, row):
     db.delete(row)
     db.commit()
+
+
+# --- Blog ---------------------------------------------------------------------
+def _blog_slugify(text):
+    s = re.sub(r"[^a-z0-9]+", "-", (text or "").lower()).strip("-")
+    return (s or "post")[:200]
+
+
+def gen_blog_slug(db, title, slug=None, exclude_id=None):
+    base = _blog_slugify(slug or title)
+    cand, n = base, 2
+    while True:
+        row = db.query(models.BlogPost).filter_by(slug=cand).first()
+        if not row or row.id == exclude_id:
+            return cand
+        cand = "{}-{}".format(base, n)
+        n += 1
+
+
+def _apply_blog_fields(db, post, data):
+    """Populate a post from a BlogPostIn: (re)render markdown to cached HTML, derive
+    the read-time + a fallback excerpt, and manage published_at on publish."""
+    post.title = (data.title or "").strip()
+    post.category = data.category if data.category in models.BLOG_CATEGORIES else "Tech"
+    post.tags_json = json.dumps([t.strip() for t in (data.tags or []) if t.strip()][:12])
+    post.related_services_json = json.dumps(
+        [s.strip() for s in (getattr(data, "related_services", None) or []) if s.strip()][:6])
+    post.cover_image = (data.cover_image or "").strip()
+    post.body_md = data.body_md or ""
+    post.body_html = blog_render.render_markdown(post.body_md)
+    post.reading_minutes = blog_render.reading_minutes(post.body_md)
+    post.excerpt = (data.excerpt or "").strip() or blog_render.plain_excerpt(post.body_md)
+    new_status = "published" if data.status == "published" else "draft"
+    if new_status == "published" and not post.published_at:
+        post.published_at = models.utcnow()
+    post.status = new_status
+    return post
+
+
+def create_blog_post(db, data):
+    post = models.BlogPost(slug=gen_blog_slug(db, data.title, data.slug))
+    _apply_blog_fields(db, post, data)
+    db.add(post)
+    db.commit()
+    db.refresh(post)
+    return post
+
+
+def update_blog_post(db, post, data):
+    desired = data.slug or post.slug or data.title
+    post.slug = gen_blog_slug(db, data.title, desired, exclude_id=post.id)
+    _apply_blog_fields(db, post, data)
+    db.commit()
+    db.refresh(post)
+    return post
+
+
+def get_blog_post(db, slug):
+    return db.query(models.BlogPost).filter_by(slug=slug).first()
+
+
+def get_blog_post_by_id(db, pid):
+    return db.get(models.BlogPost, pid)
+
+
+def list_blog_posts(db, published_only=True, category=None):
+    q = db.query(models.BlogPost)
+    if published_only:
+        q = q.filter(models.BlogPost.status == "published")
+    if category:
+        q = q.filter(models.BlogPost.category == category)
+    if published_only:
+        return q.order_by(models.BlogPost.published_at.desc(),
+                          models.BlogPost.id.desc()).all()
+    return q.order_by(models.BlogPost.created_at.desc()).all()
+
+
+def delete_blog_post(db, post):
+    db.delete(post)
+    db.commit()
+
+
+def serialize_blog_post(post, full=True):
+    d = {
+        "id": post.id, "slug": post.slug, "title": post.title or "",
+        "excerpt": post.excerpt or "", "cover_image": post.cover_image or "",
+        "category": post.category or "Tech", "tags": post.tags,
+        "related_services": post.related_services,
+        "status": post.status, "reading_minutes": post.reading_minutes or 1,
+        "published_at": post.published_at, "created_at": post.created_at,
+        "updated_at": post.updated_at,
+    }
+    if full:
+        d["body_md"] = post.body_md or ""
+        d["body_html"] = post.body_html or ""
+    return d
+
+
+def blog_related_services(db, post):
+    """Resolve a post's attached service slugs to lightweight cards for the post's
+    'Related services' sidebar (active services only, preserving the saved order)."""
+    slugs = post.related_services
+    if not slugs:
+        return []
+    by_slug = {s.slug: s for s in list_services(db, active_only=True)}
+    out = []
+    for slug in slugs:
+        s = by_slug.get(slug)
+        if not s:
+            continue
+        prices = [p.get("price") for p in (s.packages or [])
+                  if isinstance(p, dict) and p.get("price")]
+        out.append({
+            "slug": s.slug, "title": s.title, "short": s.short or "",
+            "category": s.category or "", "icon": s.icon or "spark",
+            "min_price": min(prices) if prices else None,
+        })
+    return out
+
+
+def add_blog_image(db, filename, content_type, size, data):
+    img = models.BlogImage(filename=filename, content_type=content_type, size=size, data=data)
+    db.add(img)
+    db.commit()
+    db.refresh(img)
+    return img
+
+
+def get_blog_image(db, iid):
+    return db.get(models.BlogImage, iid)

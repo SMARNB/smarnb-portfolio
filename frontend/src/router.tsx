@@ -8,6 +8,8 @@ import { WorkPage } from "./pages/WorkPage";
 import { ProjectsPage } from "./pages/ProjectsPage";
 import { AboutPage } from "./pages/AboutPage";
 import { ContactPage } from "./pages/ContactPage";
+import { BlogList } from "./pages/BlogList";
+import { BlogPost } from "./pages/BlogPost";
 import { NotFound } from "./pages/NotFound";
 
 // Public pages are imported eagerly: they live inside the animated <AnimatePresence
@@ -41,6 +43,8 @@ export const router = createBrowserRouter(
         { path: "/projects", element: <ProjectsPage /> },
         { path: "/about", element: <AboutPage /> },
         { path: "/contact", element: <ContactPage /> },
+        { path: "/blog", element: <BlogList /> },
+        { path: "/blog/:slug", element: <BlogPost /> },
       ],
     },
     {

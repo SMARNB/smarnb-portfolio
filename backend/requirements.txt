@@ -5,6 +5,9 @@ PyJWT>=2.8
 pydantic[email]>=2.7
 cryptography>=42.0
 python-multipart>=0.0.9
+# Server-side markdown -> HTML for the blog (rendered once on save, cached in the
+# DB). escape=True is used so an author's markdown can never inject live HTML.
+mistune>=3.0
 # Pure-python Postgres driver (used automatically when DATABASE_URL is Postgres,
 # e.g. a free Neon DB). Harmless for SQLite-only local dev.
 pg8000>=1.31

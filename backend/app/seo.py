@@ -176,6 +176,16 @@ DEFAULT_DOC = {
             "twitter_title": "", "twitter_description": "", "twitter_image": "",
             "breadcrumb": [{"name": "Home", "path": "/"}, {"name": "Contact", "path": "/contact"}],
         },
+        "/blog": {
+            "title": "Blog — Notes on Code, Automation & Design",
+            "description": (
+                "Practical articles on full-stack development, Python automation, computer "
+                "vision and design — written from real client and product work."),
+            "canonical": "", "robots": "", "keywords": "",
+            "og_title": "", "og_description": "", "og_image": "",
+            "twitter_title": "", "twitter_description": "", "twitter_image": "",
+            "breadcrumb": [{"name": "Home", "path": "/"}, {"name": "Blog", "path": "/blog"}],
+        },
         # App + admin are tools, not content — keep them out of the index.
         "/app": {
             "title": "Client Area", "description": "Track your projects and orders.",
@@ -445,6 +455,23 @@ def build_jsonld(db, path, doc=None):
         faq = _ld_faq(doc)
         if faq:
             graph.append(faq)
+    # Blog index gets a Blog node listing recent published posts.
+    if path == "/blog":
+        posts = crud.list_blog_posts(db, published_only=True)
+        if posts:
+            graph.append({
+                "@type": "Blog",
+                "@id": base_url + "/blog#blog",
+                "name": (g.get("site_name") or g.get("brand_name") or "") + " — Blog",
+                "url": base_url + "/blog",
+                "publisher": {"@id": base_url + "/#identity"},
+                "blogPost": [{
+                    "@type": "BlogPosting",
+                    "headline": p.title or "",
+                    "url": base_url + "/blog/" + p.slug,
+                    **({"datePublished": p.published_at.isoformat()} if p.published_at else {}),
+                } for p in posts[:20]],
+            })
     return graph
 
 
@@ -597,55 +624,57 @@ def build_marketing_js(doc=None, db=None):
 
 
 # --- Head rendering (per route) ----------------------------------------------
-def render_head(db, path, doc=None):
-    """The managed ``<head>`` HTML fragment for ``path``: title, description,
-    canonical, robots, Open Graph, Twitter cards, verification tags, theme-color,
-    icons, manifest and a JSON-LD ``@graph`` script — all from the DB."""
-    doc = doc or get_doc(db)
-    g = doc["general"]
-    base_url = (g.get("base_url") or _BASE_URL).rstrip("/")
-    meta = _effective(doc, path)
-
+def _resolve_meta(g, base_url, path, meta):
+    """Resolve the final per-page values (title, description, canonical, robots,
+    Open Graph + Twitter) from a route/post meta dict overlaid on the defaults."""
     page_title = meta.get("title") or g.get("default_title")
     tmpl = g.get("title_template") or "%s"
     full_title = tmpl.replace("%s", page_title) if "%s" in tmpl else page_title
     # The home page title is usually already the full brand title.
     if path == "/" and meta.get("title"):
         full_title = meta["title"]
-
     desc = meta.get("description") or g.get("default_description")
-    keywords = meta.get("keywords") or g.get("default_keywords")
-    robots = meta.get("robots") or g.get("robots_default") or "index, follow"
-    canonical = meta.get("canonical") or (base_url + (path if path != "default" else "/"))
-
-    og_title = meta.get("og_title") or page_title
-    og_desc = meta.get("og_description") or desc
     og_image = _abs(base_url, meta.get("og_image") or g.get("default_og_image"))
-    tw_title = meta.get("twitter_title") or og_title
-    tw_desc = meta.get("twitter_description") or og_desc
-    tw_image = _abs(base_url, meta.get("twitter_image") or meta.get("og_image") or g.get("default_og_image"))
+    return {
+        "full_title": full_title,
+        "desc": desc,
+        "keywords": meta.get("keywords") or g.get("default_keywords"),
+        "robots": meta.get("robots") or g.get("robots_default") or "index, follow",
+        "canonical": meta.get("canonical") or (base_url + (path if path != "default" else "/")),
+        "og_type": meta.get("og_type") or g.get("og_type") or "website",
+        "og_title": meta.get("og_title") or page_title,
+        "og_desc": meta.get("og_description") or desc,
+        "og_image": og_image,
+        "tw_title": meta.get("twitter_title") or meta.get("og_title") or page_title,
+        "tw_desc": meta.get("twitter_description") or meta.get("og_description") or desc,
+        "tw_image": _abs(base_url, meta.get("twitter_image") or meta.get("og_image") or g.get("default_og_image")),
+    }
 
+
+def _emit_head(g, r, graph):
+    """Build the managed <head> fragment from resolved values ``r`` + a JSON-LD
+    ``graph`` list. Shared by the per-route and per-blog-post renderers."""
     parts = [
-        "<title>{}</title>".format(_esc(full_title)),
-        _meta("description", desc),
-        _meta("keywords", keywords),
+        "<title>{}</title>".format(_esc(r["full_title"])),
+        _meta("description", r["desc"]),
+        _meta("keywords", r["keywords"]),
         _meta("author", g.get("author")),
-        _meta("robots", robots),
-        '<link rel="canonical" href="{}">'.format(_esc(canonical)),
+        _meta("robots", r["robots"]),
+        '<link rel="canonical" href="{}">'.format(_esc(r["canonical"])),
         _meta("theme-color", g.get("theme_color")),
         # Open Graph
-        _meta("og:type", g.get("og_type") or "website", prop=True),
+        _meta("og:type", r["og_type"], prop=True),
         _meta("og:site_name", g.get("site_name") or g.get("brand_name"), prop=True),
-        _meta("og:title", og_title, prop=True),
-        _meta("og:description", og_desc, prop=True),
-        _meta("og:url", canonical, prop=True),
-        _meta("og:image", og_image, prop=True),
+        _meta("og:title", r["og_title"], prop=True),
+        _meta("og:description", r["og_desc"], prop=True),
+        _meta("og:url", r["canonical"], prop=True),
+        _meta("og:image", r["og_image"], prop=True),
         _meta("og:locale", g.get("locale") or "en_US", prop=True),
         # Twitter
         _meta("twitter:card", g.get("twitter_card") or "summary_large_image"),
-        _meta("twitter:title", tw_title),
-        _meta("twitter:description", tw_desc),
-        _meta("twitter:image", tw_image),
+        _meta("twitter:title", r["tw_title"]),
+        _meta("twitter:description", r["tw_desc"]),
+        _meta("twitter:image", r["tw_image"]),
         _meta("twitter:site", g.get("twitter_site")),
         _meta("twitter:creator", g.get("twitter_creator")),
         # Search-engine verification
@@ -656,18 +685,117 @@ def render_head(db, path, doc=None):
         '<link rel="icon" href="{}" type="image/svg+xml">'.format(_esc(g.get("favicon"))) if g.get("favicon") else "",
         '<link rel="manifest" href="{}">'.format(_esc(g.get("manifest"))) if g.get("manifest") else "",
     ]
-
     # Marketing/analytics loader + verification meta — only when ids are set.
     parts.extend(_marketing_head(g))
-
-    graph = build_jsonld(db, path, doc=doc)
     if graph:
         ld = {"@context": "https://schema.org", "@graph": graph}
         # </ is escaped so the JSON can never close the <script> element early.
         payload = json.dumps(ld, ensure_ascii=False).replace("</", "<\\/")
         parts.append('<script type="application/ld+json">{}</script>'.format(payload))
-
     return "\n  ".join(p for p in parts if p)
+
+
+def render_head(db, path, doc=None):
+    """The managed ``<head>`` HTML fragment for ``path``: title, description,
+    canonical, robots, Open Graph, Twitter cards, verification tags, theme-color,
+    icons, manifest and a JSON-LD ``@graph`` script — all from the DB."""
+    doc = doc or get_doc(db)
+    g = doc["general"]
+    base_url = (g.get("base_url") or _BASE_URL).rstrip("/")
+    r = _resolve_meta(g, base_url, path, _effective(doc, path))
+    return _emit_head(g, r, build_jsonld(db, path, doc=doc))
+
+
+# --- Blog posts (per-slug head + crawlable article) ---------------------------
+def _ld_blogposting(post, g, base_url):
+    url = base_url + "/blog/" + post.slug
+    node = {
+        "@type": "BlogPosting",
+        "headline": post.title or "",
+        "description": post.excerpt or "",
+        "url": url,
+        "mainEntityOfPage": url,
+        "author": {"@id": base_url + "/#identity"},
+        "publisher": {"@id": base_url + "/#identity"},
+        "inLanguage": g.get("language") or "en",
+        "dateModified": (post.updated_at or post.published_at or models.utcnow()).isoformat(),
+    }
+    if post.published_at:
+        node["datePublished"] = post.published_at.isoformat()
+    if post.cover_image:
+        node["image"] = _abs(base_url, post.cover_image)
+    if post.category:
+        node["articleSection"] = post.category
+    if post.tags:
+        node["keywords"] = ", ".join(post.tags)
+    return node
+
+
+def render_blog_post_head(db, slug, doc=None):
+    """The managed <head> for a published post at /blog/<slug>, or None if the slug
+    is unknown / still a draft (caller falls back to the blog-index head)."""
+    post = crud.get_blog_post(db, slug)
+    if not post or post.status != "published":
+        return None
+    doc = doc or get_doc(db)
+    g = doc["general"]
+    base_url = (g.get("base_url") or _BASE_URL).rstrip("/")
+    url = base_url + "/blog/" + post.slug
+    cover = post.cover_image or g.get("default_og_image")
+    meta = {
+        "title": post.title, "description": post.excerpt or g.get("default_description"),
+        "canonical": url, "robots": "index, follow",
+        "keywords": ", ".join(post.tags) if post.tags else "",
+        "og_title": post.title, "og_description": post.excerpt or "", "og_image": cover,
+        "twitter_title": post.title, "twitter_description": post.excerpt or "", "twitter_image": cover,
+        "og_type": "article",
+        "breadcrumb": [{"name": "Home", "path": "/"}, {"name": "Blog", "path": "/blog"},
+                       {"name": post.title, "path": "/blog/" + post.slug}],
+    }
+    r = _resolve_meta(g, base_url, "/blog/" + slug, meta)
+    toggles = g.get("jsonld", {})
+    graph = []
+    if toggles.get("website", True):
+        graph.append(_ld_website(g, base_url))
+    if toggles.get("person", True):
+        graph.append(_ld_identity(g, base_url, db))
+    if toggles.get("breadcrumb", True):
+        bc = _ld_breadcrumb(meta, base_url)
+        if bc:
+            graph.append(bc)
+    graph.append(_ld_blogposting(post, g, base_url))
+    return _emit_head(g, r, graph)
+
+
+def blog_article_html(db, slug):
+    """Server-rendered article HTML for a published post, injected into the SPA
+    shell's #root so crawlers see the full post (React replaces it on mount).
+    Returns "" for an unknown / draft slug."""
+    post = crud.get_blog_post(db, slug)
+    if not post or post.status != "published":
+        return ""
+    g = get_doc(db)["general"]
+    base_url = (g.get("base_url") or _BASE_URL).rstrip("/")
+    out = ['<article class="post-article">',
+           '<p class="post-cat">{}</p>'.format(_esc(post.category)),
+           "<h1>{}</h1>".format(_esc(post.title))]
+    if post.excerpt:
+        out.append('<p class="post-excerpt">{}</p>'.format(_esc(post.excerpt)))
+    if post.cover_image:
+        out.append('<img class="post-cover" src="{}" alt="{}">'.format(
+            _esc(_abs(base_url, post.cover_image)), _esc(post.title)))
+    # post.body_html is already escaped/safe (rendered with mistune escape=True).
+    out.append('<div class="post-body">{}</div>'.format(post.body_html or ""))
+    # Related services — real internal links (crawlable, strengthen site structure).
+    related = crud.blog_related_services(db, post)
+    if related:
+        out.append('<aside class="post-related"><h2>Related services</h2><ul>')
+        for s in related:
+            out.append('<li><a href="{}">{}</a></li>'.format(
+                _esc(base_url + "/store#svc-" + s["slug"]), _esc(s["title"])))
+        out.append("</ul></aside>")
+    out.append("</article>")
+    return "".join(out)
 
 
 # --- Per-path cache (rendered head HTML) --------------------------------------
@@ -693,6 +821,21 @@ def cached_head(db, path):
     htmlfrag = render_head(db, path)
     _cache[path] = (now + _TTL, htmlfrag)
     return htmlfrag
+
+
+def cached_blog_post_head(db, slug):
+    """render_blog_post_head with the same short TTL as routes. Misses (unknown /
+    draft slugs) are not cached so a freshly-published post appears immediately."""
+    key = "blogpost:" + slug
+    now = time.time()
+    hit = _cache.get(key)
+    if hit and hit[0] > now:
+        return hit[1]
+    frag = render_blog_post_head(db, slug)
+    if frag is None:
+        return None
+    _cache[key] = (now + _TTL, frag)
+    return frag
 
 
 def cached_marketing_js(db):
@@ -752,6 +895,12 @@ def build_sitemap(db, base_url=None, doc=None):
         lm = s.created_at.date().isoformat() if getattr(s, "created_at", None) else now
         add(base_url + "/store#svc-" + s.slug, lastmod=lm, freq="monthly", priority="0.6")
     add(base_url + "/store#products", freq="monthly", priority="0.6")
+
+    # Every published blog post (real, indexable URLs with a server-rendered article).
+    for p in crud.list_blog_posts(db, published_only=True):
+        lm_dt = p.published_at or p.updated_at
+        lm = lm_dt.date().isoformat() if lm_dt else now
+        add(base_url + "/blog/" + p.slug, lastmod=lm, priority="0.7")
 
     rows = "\n".join(
         "  <url>\n"

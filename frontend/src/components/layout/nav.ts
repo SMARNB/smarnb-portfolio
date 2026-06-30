@@ -10,6 +10,7 @@ export const PRIMARY_NAV: NavItem[] = [
   { label: "Services", to: "/services" },
   { label: "Work", to: "/work" },
   { label: "Projects", to: "/projects" },
+  { label: "Blog", to: "/blog" },
   { label: "About", to: "/about" },
   { label: "Store", to: "/store" },
   { label: "Contact", to: "/contact" },

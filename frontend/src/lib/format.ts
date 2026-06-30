@@ -14,6 +14,16 @@ export function fmtDate(iso?: string | null): string {
   }
 }
 
+/** Date only (no time) — used for blog post dates. */
+export function fmtDay(iso?: string | null): string {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" });
+  } catch {
+    return iso;
+  }
+}
+
 export function validEmail(v: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }

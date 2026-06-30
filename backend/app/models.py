@@ -296,3 +296,59 @@ class ChatAttachment(Base):
     created_at = Column(DateTime, default=utcnow)
 
     message = relationship("ChatMessage", back_populates="attachment")
+
+
+# Blog categories the developer can file a post under (kept small + on-brand).
+BLOG_CATEGORIES = ["Tech", "Tech News", "Services"]
+
+
+class BlogPost(Base):
+    """An admin-authored blog post. Authored in markdown; the HTML is rendered
+    server-side once on save (cached in ``body_html``) so crawlers get the full
+    article injected into the SPA shell for ``/blog/<slug>`` without running JS.
+    Created automatically via create_all — no migration needed."""
+    __tablename__ = "blog_posts"
+    id = Column(Integer, primary_key=True)
+    slug = Column(String(200), unique=True, index=True, nullable=False)
+    title = Column(String(200), default="")
+    excerpt = Column(Text, default="")
+    body_md = Column(Text, default="")
+    body_html = Column(Text, default="")           # cached server-rendered HTML
+    cover_image = Column(String(500), default="")  # URL or /api/blog/images/<id>
+    category = Column(String(60), default="Tech")  # one of BLOG_CATEGORIES
+    tags_json = Column(Text, default="[]")
+    # Optional catalog services the developer attaches to a post (by slug) — shown
+    # as a "Related services" sidebar on the post, a contextual cross-sell.
+    related_services_json = Column(Text, default="[]")
+    status = Column(String(20), default="draft", index=True)  # draft | published
+    reading_minutes = Column(Integer, default=1)
+    published_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    @property
+    def tags(self):
+        try:
+            return json.loads(self.tags_json or "[]")
+        except Exception:
+            return []
+
+    @property
+    def related_services(self):
+        try:
+            return json.loads(self.related_services_json or "[]")
+        except Exception:
+            return []
+
+
+class BlogImage(Base):
+    """A cover/inline image uploaded for the blog. Bytes live in the DB so they
+    persist on free Postgres tiers (mirrors ChatAttachment); served publicly since
+    they are part of published content."""
+    __tablename__ = "blog_images"
+    id = Column(Integer, primary_key=True)
+    filename = Column(String(255), default="image")
+    content_type = Column(String(100), default="application/octet-stream")
+    size = Column(Integer, default=0)
+    data = Column(LargeBinary, nullable=False)
+    created_at = Column(DateTime, default=utcnow)
