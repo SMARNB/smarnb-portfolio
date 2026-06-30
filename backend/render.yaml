@@ -58,10 +58,24 @@ services:
       # Easiest: CallMeBot — message their number once for a key, then set it here.
       # - key: CALLMEBOT_APIKEY
       #   sync: false
-      # Or the official WhatsApp Cloud API instead:
+      #
+      # --- WhatsApp Business <-> site-chat bridge (optional, OFF until all 3 set) ---
+      # Two-way: visitors message your WhatsApp number → it lands in the admin Inbox
+      # (same chat model), the bot auto-replies, and your Inbox replies go back to
+      # WhatsApp. First-party server-to-server (no page script). Setup, one time:
+      #   1) Meta Business account + a WhatsApp Business number in Meta Business Suite.
+      #   2) developers.facebook.com → create an app → add the "WhatsApp" product.
+      #   3) Copy the Phone number ID  → WHATSAPP_PHONE_ID.
+      #   4) Generate a PERMANENT access token (System User token) → WHATSAPP_TOKEN.
+      #   5) Invent any random string → WHATSAPP_VERIFY_TOKEN (used in the next step).
+      #   6) Webhooks → Callback URL: https://smarnb.onrender.com/api/whatsapp/webhook
+      #      Verify token: the WHATSAPP_VERIFY_TOKEN above → Verify and save.
+      #   7) Subscribe the webhook to the "messages" field.
       # - key: WHATSAPP_TOKEN
       #   sync: false
       # - key: WHATSAPP_PHONE_ID
+      #   sync: false
+      # - key: WHATSAPP_VERIFY_TOKEN
       #   sync: false
       # --- Stripe (optional, add later to enable card payments) ---
       # - key: STRIPE_SECRET_KEY

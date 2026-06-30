@@ -103,7 +103,10 @@ export function InboxTab({
               onClick={() => openConv(c.public_id)}
             >
               <div className="r1">
-                <span className="oid">{c.customer_name || c.customer_email || "Visitor"}</span>
+                <span className="oid">
+                  {c.channel === "whatsapp" && <span className="wa-chip" title="via WhatsApp">WhatsApp</span>}
+                  {c.customer_name || c.customer_email || "Visitor"}
+                </span>
                 {c.unread ? (
                   <span className="status-chip" style={{ background: "var(--accent-3)", color: "#fff" }}>
                     {c.unread} new

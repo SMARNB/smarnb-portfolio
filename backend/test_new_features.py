@@ -248,6 +248,55 @@ with TestClient(app) as c:
     from app import notify  # noqa: E402
     check("owner ping off by default", notify.notify_owner("test") is False)
 
+    print("== WhatsApp bridge (inert by default; two-way when configured) ==")
+    from app import config as appcfg, whatsapp  # noqa: E402
+
+    # Inert by default: GET verification rejects everyone, send is a no-op.
+    check("webhook rejects when unconfigured (403)",
+          c.get("/api/whatsapp/webhook", params={"hub.mode": "subscribe",
+                "hub.verify_token": "x", "hub.challenge": "1"}).status_code == 403)
+    check("send_text no-op when unconfigured", whatsapp.send_text("15551234567", "hi") is False)
+
+    # parse_messages is a pure helper over Meta's webhook shape.
+    sample = {"entry": [{"changes": [{"value": {
+        "contacts": [{"wa_id": "15551234567", "profile": {"name": "Sara"}}],
+        "messages": [{"from": "15551234567", "type": "text",
+                      "text": {"body": "what services do you offer?"}}],
+    }}]}]}
+    check("parse_messages extracts (wa_id, name, text)",
+          whatsapp.parse_messages(sample) == [("15551234567", "Sara", "what services do you offer?")])
+
+    # Configure the bridge at runtime and capture outbound sends (no real network).
+    appcfg.WHATSAPP_TOKEN, appcfg.WHATSAPP_PHONE_ID, appcfg.WHATSAPP_VERIFY_TOKEN = "t", "9999", "verify-secret"
+    sent = []
+    whatsapp.send_text_async = lambda to, body: (sent.append((to, body)) or True)
+
+    r = c.get("/api/whatsapp/webhook", params={"hub.mode": "subscribe",
+              "hub.verify_token": "verify-secret", "hub.challenge": "CHALLENGE42"})
+    check("webhook verify echoes challenge for right token", r.status_code == 200 and r.text == "CHALLENGE42")
+    check("webhook verify rejects wrong token",
+          c.get("/api/whatsapp/webhook", params={"hub.mode": "subscribe",
+                "hub.verify_token": "nope", "hub.challenge": "x"}).status_code == 403)
+
+    # Inbound message → a whatsapp conversation + the bot auto-reply forwarded out.
+    check("inbound webhook 200", c.post("/api/whatsapp/webhook", json=sample).status_code == 200)
+    wa = [x for x in c.get("/api/admin/chat/conversations", headers=AH).json() if x.get("channel") == "whatsapp"]
+    check("whatsapp conversation created", len(wa) == 1)
+    check("bot reply forwarded to the visitor's WhatsApp", len(sent) >= 1 and sent[0][0] == "15551234567")
+
+    # Same number reuses the one thread (not a new one each message).
+    c.post("/api/whatsapp/webhook", json=sample)
+    again = [x for x in c.get("/api/admin/chat/conversations", headers=AH).json() if x.get("channel") == "whatsapp"]
+    check("same number reuses one thread", len(again) == 1)
+
+    # Developer Inbox reply is bridged back to WhatsApp.
+    sent.clear()
+    c.post("/api/admin/chat/conversations/%s/messages" % wa[0]["public_id"], headers=AH,
+           json={"body": "Hi! Thanks for reaching out."})
+    check("dev Inbox reply bridged to WhatsApp", any(b == "Hi! Thanks for reaching out." for _, b in sent))
+
+    appcfg.WHATSAPP_TOKEN = appcfg.WHATSAPP_PHONE_ID = appcfg.WHATSAPP_VERIFY_TOKEN = ""
+
 print("\n==== RESULT: %d passed, %d failed ====" % (ok, fail))
 if os.path.exists(_DB):
     try:

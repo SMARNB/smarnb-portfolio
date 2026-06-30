@@ -475,6 +475,35 @@ def get_conversation(db, public_id):
     return db.query(models.Conversation).filter_by(public_id=public_id).first()
 
 
+def get_conversation_by_wa_id(db, wa_id):
+    """The most recent conversation bridged to a given WhatsApp number, if any."""
+    if not wa_id:
+        return None
+    return (db.query(models.Conversation)
+            .filter(models.Conversation.wa_id == wa_id)
+            .order_by(models.Conversation.id.desc()).first())
+
+
+def get_or_create_whatsapp_conversation(db, wa_id, name=""):
+    """Find (or open) the chat thread for a WhatsApp visitor. Returns (conv, created)."""
+    conv = get_conversation_by_wa_id(db, wa_id)
+    if conv:
+        if name and not conv.customer_name:
+            conv.customer_name = name
+            db.commit()
+        return conv, False
+    conv = models.Conversation(
+        public_id=gen_conversation_id(db),
+        secret=secrets.token_urlsafe(24),
+        customer_name=name or "",
+        channel="whatsapp", wa_id=wa_id, bot_state="{}",
+    )
+    db.add(conv)
+    db.commit()
+    db.refresh(conv)
+    return conv, True
+
+
 def add_message(db, conv, sender, body, commit=True):
     msg = models.ChatMessage(conversation_id=conv.id, sender=sender, body=body or "")
     db.add(msg)

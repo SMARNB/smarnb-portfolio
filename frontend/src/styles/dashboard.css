@@ -322,6 +322,13 @@ main.dash-main { flex: 1; padding: clamp(1.5rem, 4vw, 2.5rem) 0 4rem; }
 .blog-preview:empty::before { content: "Start typing to see a live preview…"; color: var(--muted-2); font-size: .9rem; }
 .blog-delete { color: var(--danger, #ef4444); justify-self: start; }
 
+/* WhatsApp-channel chip in the Inbox conversation list */
+.wa-chip {
+  display: inline-block; margin-right: .4rem; font-size: .64rem; font-weight: 800;
+  letter-spacing: .03em; text-transform: uppercase; vertical-align: middle;
+  color: #fff; background: #25d366; border-radius: var(--r-pill); padding: .12rem .45rem;
+}
+
 /* ---- Résumé (one-page A4 CV; print-to-PDF) ------------------------------ */
 .resume-tab-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
 .resume-tab-head .btn svg { margin-right: .1rem; }

@@ -282,6 +282,7 @@ class ConversationSummary(BaseModel):
     status: str = "open"
     needs_human: bool = False
     human_takeover: bool = False
+    channel: str = "web"
 
 
 class DevSendIn(BaseModel):

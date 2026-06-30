@@ -16,7 +16,7 @@ from fastapi import (APIRouter, Depends, File, Header, HTTPException, Request,
                      Response, UploadFile)
 from sqlalchemy.orm import Session
 
-from .. import bot, config, crud, crypto, models, notify, schemas
+from .. import bot, config, crud, crypto, models, notify, schemas, whatsapp
 from ..database import get_db
 from ..deps import get_current_admin, get_optional_user
 
@@ -102,6 +102,9 @@ def _authed_conv(db, public_id, secret, user):
 
 
 def _run_bot(db, conv, text):
+    """Run the assistant for one inbound message: persist its replies, handle
+    knowledge/unanswered/order side-effects, and return the reply lines (so callers
+    on other channels — e.g. the WhatsApp bridge — can forward them)."""
     state = conv.state()
     services = crud.catalog_for_bot(db)
     knowledge = crud.knowledge_for_bot(db)
@@ -109,9 +112,11 @@ def _run_bot(db, conv, text):
     email = conv.customer_email or ""
     res = bot.respond(state, text, services, knowledge=knowledge,
                       logged_in_name=name, logged_in_email=email)
+    sent = []
     for line in res.get("messages", []):
         if line and line.strip():
             crud.add_message(db, conv, "bot", line)
+            sent.append(line)
     if res.get("matched_knowledge_id"):
         crud.bump_knowledge_hit(db, res["matched_knowledge_id"])
     if res.get("unanswered"):
@@ -132,6 +137,7 @@ def _run_bot(db, conv, text):
     new_state = res.get("state", {}) or {}
     new_state["_quick"] = res.get("quick_replies", [])
     crud.save_state(db, conv, new_state)
+    return sent
 
 
 def _order_from_chat(db, conv, action):
@@ -289,6 +295,7 @@ def admin_conversations(db: Session = Depends(get_db)):
             "status": c.status,
             "needs_human": c.needs_human,
             "human_takeover": c.human_takeover,
+            "channel": c.channel or "web",
         })
     return out
 
@@ -307,6 +314,7 @@ def admin_thread(public_id: str, db: Session = Depends(get_db)):
         "status": conv.status,
         "human_takeover": conv.human_takeover,
         "needs_human": conv.needs_human,
+        "channel": conv.channel or "web",
         "messages": [_msg_out(m) for m in conv.messages],
     }
 
@@ -316,7 +324,8 @@ def admin_reply(public_id: str, data: schemas.DevSendIn, db: Session = Depends(g
     conv = crud.get_conversation(db, public_id)
     if not conv:
         raise HTTPException(404, "Conversation not found.")
-    crud.add_message(db, conv, "dev", data.body.strip())
+    body = data.body.strip()
+    crud.add_message(db, conv, "dev", body)
     conv.human_takeover = not data.let_bot_resume
     conv.needs_human = False
     conv.admin_read_at = models.utcnow()
@@ -324,6 +333,9 @@ def admin_reply(public_id: str, data: schemas.DevSendIn, db: Session = Depends(g
         st = conv.state(); st["_quick"] = []
         conv.bot_state = json.dumps(st)
     db.commit()
+    # Bridge: push the developer's reply out to the visitor's WhatsApp.
+    if conv.channel == "whatsapp" and conv.wa_id:
+        whatsapp.send_text_async(conv.wa_id, body)
     return {"ok": True, "human_takeover": conv.human_takeover,
             "messages": [_msg_out(m) for m in conv.messages]}
 

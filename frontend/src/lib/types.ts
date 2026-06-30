@@ -182,6 +182,7 @@ export interface ConversationSummary {
   status: string;
   needs_human: boolean;
   human_takeover: boolean;
+  channel?: string; // "web" | "whatsapp"
 }
 
 export interface BotKnowledge {

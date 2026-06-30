@@ -216,6 +216,10 @@ class Conversation(Base):
     public_id = Column(String(24), unique=True, index=True, nullable=False)
     secret = Column(String(64), nullable=False)        # bearer-style handle for the visitor
     client_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    # Channel the thread came in on: "web" (site chat) or "whatsapp" (Cloud API
+    # bridge). For WhatsApp threads, wa_id is the visitor's phone number (digits).
+    channel = Column(String(20), default="web", index=True)
+    wa_id = Column(String(40), default="", index=True)
 
     customer_name = Column(Encrypted, default="")
     customer_email = Column(Encrypted, default="")

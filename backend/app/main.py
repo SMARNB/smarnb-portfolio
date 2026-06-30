@@ -12,6 +12,7 @@ from . import config, crud, seo
 from .database import Base, SessionLocal, engine, get_db
 from .routers import admin, auth, blog, chat, orders, payments, services, testimonials
 from .routers import seo as seo_router
+from .routers import whatsapp as whatsapp_router
 
 
 def _detect_commit():
@@ -49,6 +50,13 @@ def _ensure_columns():
         if "related_services_json" not in cols:
             with engine.begin() as conn:
                 conn.execute(text("ALTER TABLE blog_posts ADD COLUMN related_services_json TEXT DEFAULT '[]'"))
+    if "conversations" in insp.get_table_names():
+        cols = {c["name"] for c in insp.get_columns("conversations")}
+        with engine.begin() as conn:
+            if "channel" not in cols:
+                conn.execute(text("ALTER TABLE conversations ADD COLUMN channel VARCHAR(20) DEFAULT 'web'"))
+            if "wa_id" not in cols:
+                conn.execute(text("ALTER TABLE conversations ADD COLUMN wa_id VARCHAR(40) DEFAULT ''"))
 
 
 @asynccontextmanager
@@ -138,6 +146,7 @@ app.include_router(chat.router)
 app.include_router(chat.admin_router)
 app.include_router(payments.router)
 app.include_router(seo_router.router)   # /api/seo, /api/admin/seo, /sitemap.xml, /robots.txt
+app.include_router(whatsapp_router.router)  # /api/whatsapp/webhook (WhatsApp Cloud API bridge)
 app.include_router(blog.router)         # /api/blog, /api/blog/{slug}, /api/blog/images/{id}
 app.include_router(blog.admin_router)   # /api/admin/blog CRUD + image upload + preview
 

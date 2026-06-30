@@ -66,6 +66,10 @@ CALLMEBOT_APIKEY = os.environ.get("CALLMEBOT_APIKEY", "")
 WHATSAPP_TOKEN = os.environ.get("WHATSAPP_TOKEN", "")
 WHATSAPP_PHONE_ID = os.environ.get("WHATSAPP_PHONE_ID", "")
 WHATSAPP_API_VERSION = os.environ.get("WHATSAPP_API_VERSION", "v21.0")
+# Webhook verify token you invent and paste into Meta's webhook config; gates the
+# WhatsApp <-> site chat two-way bridge (RECEIVE side). Bridge is inert until the
+# token + WHATSAPP_TOKEN + WHATSAPP_PHONE_ID are all set.
+WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
 
 # --- Misc ---------------------------------------------------------------------
 CURRENCY = os.environ.get("CURRENCY", "$")
