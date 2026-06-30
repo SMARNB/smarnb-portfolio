@@ -114,7 +114,7 @@ with TestClient(app) as c:
     check("JSON-LD has WebSite", "WebSite" in types)
     check("JSON-LD has ProfessionalService/Person", "ProfessionalService" in types or "Person" in types)
     check("JSON-LD has Service entries", types.count("Service") >= 2)
-    check("JSON-LD has FAQPage on home", "FAQPage" in types)
+    check("home has no FAQPage (now on /contact)", "FAQPage" not in types)
     check("JSON-LD has BreadcrumbList", "BreadcrumbList" in types)
     ident = next((n for n in graph if "ProfessionalService" in (n.get("@type") or []) or n.get("@type") == "Person"), {})
     check("JSON-LD AggregateRating from approved review", "aggregateRating" in ident)
@@ -124,6 +124,16 @@ with TestClient(app) as c:
     check("store route gets its own title", "Store — Buy Services Test" in store)
     # store has services but no FAQ
     check("store has no FAQPage", "FAQPage" not in store)
+
+    # New multi-page routes get their own server-rendered head + JSON-LD.
+    services_pg = c.get("/services").text
+    check("services route gets its own title", "Services —" in services_pg)
+    check("services has Service entries", '"@type": "Service"' in services_pg)
+    contact = c.get("/contact").text
+    check("contact route gets its own title", "Contact" in contact)
+    check("contact has FAQPage", "FAQPage" in contact)
+    about = c.get("/about").text
+    check("about route gets its own title + canonical", "About" in about and "/about" in about)
 
     app_shell = c.get("/app").text
     check("/app is noindex", 'content="noindex' in app_shell.replace(", ", ",").replace(" ", "") or "noindex" in app_shell)

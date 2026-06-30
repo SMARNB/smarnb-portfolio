@@ -3,7 +3,7 @@
    scrolling. The shell stays mounted across route changes; only the page swaps. */
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useOutlet } from "react-router-dom";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { CatalogProvider } from "../../context/CatalogContext";
 import { CartProvider } from "../../context/CartContext";
 import { ToastProvider } from "../../context/ToastContext";
@@ -52,17 +52,17 @@ function Shell() {
       <ScrollManager />
 
       <main id="main">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={location.pathname}
-            initial={reduce ? false : { opacity: 0, y: 12, scale: 0.995 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={reduce ? undefined : { opacity: 0, y: -8, scale: 0.995 }}
-            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-          >
-            {outlet}
-          </motion.div>
-        </AnimatePresence>
+        {/* Keyed remount per route → a clean enter-fade and a guaranteed content
+            swap on every navigation. (AnimatePresence mode="wait" could deadlock
+            when an entering page didn't complete its exit, freezing the content.) */}
+        <motion.div
+          key={location.pathname}
+          initial={reduce ? false : { opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        >
+          {outlet}
+        </motion.div>
       </main>
 
       <Footer />

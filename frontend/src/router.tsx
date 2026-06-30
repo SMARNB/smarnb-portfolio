@@ -1,32 +1,25 @@
 import { lazy, Suspense } from "react";
-import type { ReactNode } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import { PublicLayout } from "./components/layout/PublicLayout";
 import { Home } from "./pages/Home";
+import { Store } from "./pages/Store";
+import { ServicesPage } from "./pages/ServicesPage";
+import { WorkPage } from "./pages/WorkPage";
+import { ProjectsPage } from "./pages/ProjectsPage";
+import { AboutPage } from "./pages/AboutPage";
+import { ContactPage } from "./pages/ContactPage";
 import { NotFound } from "./pages/NotFound";
 
-// Public sub-pages are code-split — the landing (/) stays lean and each route
-// loads its own chunk on navigation. Dashboards are split for the same reason.
-const Store = lazy(() => import("./pages/Store").then((m) => ({ default: m.Store })));
-const ServicesPage = lazy(() => import("./pages/ServicesPage").then((m) => ({ default: m.ServicesPage })));
-const WorkPage = lazy(() => import("./pages/WorkPage").then((m) => ({ default: m.WorkPage })));
-const ProjectsPage = lazy(() => import("./pages/ProjectsPage").then((m) => ({ default: m.ProjectsPage })));
-const AboutPage = lazy(() => import("./pages/AboutPage").then((m) => ({ default: m.AboutPage })));
-const ContactPage = lazy(() => import("./pages/ContactPage").then((m) => ({ default: m.ContactPage })));
+// Public pages are imported eagerly: they live inside the animated <AnimatePresence
+// mode="wait"> shell, and a lazy/Suspense child there deadlocks the enter/exit
+// transition (the entering page suspends and the old page never unmounts). The
+// dashboards are separate top-level routes (outside the shell), so they stay split.
 const ClientDashboard = lazy(() =>
   import("./pages/ClientDashboard").then((m) => ({ default: m.ClientDashboard })),
 );
 const AdminDashboard = lazy(() =>
   import("./pages/AdminDashboard").then((m) => ({ default: m.AdminDashboard })),
 );
-
-// Reserves vertical space while a page chunk loads, so navigation doesn't jump.
-function PageFallback() {
-  return <div className="container" style={{ minHeight: "70vh" }} aria-hidden="true" />;
-}
-function P({ children }: { children: ReactNode }) {
-  return <Suspense fallback={<PageFallback />}>{children}</Suspense>;
-}
 
 function DashFallback() {
   return (
@@ -42,12 +35,12 @@ export const router = createBrowserRouter(
       element: <PublicLayout />,
       children: [
         { path: "/", element: <Home /> },
-        { path: "/store", element: <P><Store /></P> },
-        { path: "/services", element: <P><ServicesPage /></P> },
-        { path: "/work", element: <P><WorkPage /></P> },
-        { path: "/projects", element: <P><ProjectsPage /></P> },
-        { path: "/about", element: <P><AboutPage /></P> },
-        { path: "/contact", element: <P><ContactPage /></P> },
+        { path: "/store", element: <Store /> },
+        { path: "/services", element: <ServicesPage /> },
+        { path: "/work", element: <WorkPage /> },
+        { path: "/projects", element: <ProjectsPage /> },
+        { path: "/about", element: <AboutPage /> },
+        { path: "/contact", element: <ContactPage /> },
       ],
     },
     {
