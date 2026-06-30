@@ -144,6 +144,70 @@ with TestClient(app) as c:
     c.put("/api/admin/seo", headers=AH, json=doc)
     check("cache cleared on save (new title shows)", "Changed Again Title" in c.get("/").text)
 
+    print("== SEO: marketing & analytics (opt-in, CSP-safe) ==")
+    from app.main import _CSP as BASE_CSP
+
+    # OFF by default: CSP byte-identical to the strict first-party base, no loader.
+    csp_off = c.get("/").headers.get("content-security-policy")
+    check("CSP first-party (byte-identical) when no marketing ids", csp_off == BASE_CSP)
+    check("CSP has no vendor domains when off",
+          "googletagmanager" not in (csp_off or "") and "facebook" not in (csp_off or ""))
+    check("no /marketing.js loader in head when off", "/marketing.js" not in c.get("/").text)
+    mkt_off = c.get("/marketing.js")
+    check("/marketing.js served as javascript", "javascript" in mkt_off.headers.get("content-type", ""))
+    check("/marketing.js inert when off", "fbq(" not in mkt_off.text and "gtag/js" not in mkt_off.text)
+
+    # Turn on GA4 + Meta Pixel + Meta domain verification.
+    doc = c.get("/api/seo").json()
+    doc["general"]["ga4_id"] = "G-TEST12345"
+    doc["general"]["meta_pixel_id"] = "100200300400500"
+    doc["general"]["meta_domain_verification"] = "fbverify-token-xyz"
+    r = c.put("/api/admin/seo", headers=AH, json=doc)
+    check("marketing ids round-trip on save", r.json()["general"]["ga4_id"] == "G-TEST12345")
+
+    home2 = c.get("/").text
+    check("head loads first-party /marketing.js when on", '<script src="/marketing.js" defer></script>' in home2)
+    check("inert facebook-domain-verification meta injected",
+          'name="facebook-domain-verification"' in home2 and "fbverify-token-xyz" in home2)
+    mkt_on = c.get("/marketing.js").text
+    check("/marketing.js boots gtag for GA4", "gtag/js?id='+ids[0]" in mkt_on and "G-TEST12345" in mkt_on)
+    check("/marketing.js boots Meta Pixel", "fbq('init','100200300400500')" in mkt_on)
+
+    csp_on = c.get("/").headers.get("content-security-policy")
+    check("CSP adds googletagmanager to script-src", "https://www.googletagmanager.com" in csp_on)
+    check("CSP adds google-analytics to connect-src",
+          "https://www.google-analytics.com" in csp_on and "https://*.analytics.google.com" in csp_on)
+    check("CSP adds Meta Pixel domains",
+          "https://connect.facebook.net" in csp_on and "https://www.facebook.com" in csp_on)
+    check("CSP gains a frame-src for the pixel", "frame-src" in csp_on)
+    check("CSP has no Google Ads domains until that id is set", "doubleclick" not in csp_on)
+
+    # Add Google Ads → its doubleclick domains appear; both gtag ids configured.
+    doc = c.get("/api/seo").json()
+    doc["general"]["google_ads_id"] = "AW-99887766"
+    c.put("/api/admin/seo", headers=AH, json=doc)
+    csp_ads = c.get("/").headers.get("content-security-policy")
+    check("CSP adds Google Ads doubleclick domains",
+          "https://googleads.g.doubleclick.net" in csp_ads and "https://td.doubleclick.net" in csp_ads)
+    mkt_ads = c.get("/marketing.js").text
+    check("/marketing.js configures both GA4 + Ads",
+          "'G-TEST12345'" in mkt_ads and "'AW-99887766'" in mkt_ads)
+
+    # An injected id can never break the JS string / open the CSP (sanitised).
+    doc = c.get("/api/seo").json()
+    doc["general"]["ga4_id"] = "G-OK_1';evil//"
+    c.put("/api/admin/seo", headers=AH, json=doc)
+    check("marketing id is sanitised (no quote/escape leaks)", "';evil" not in c.get("/marketing.js").text)
+
+    # Reversible: clearing every id restores the byte-identical strict CSP.
+    doc = c.get("/api/seo").json()
+    for k in ("ga4_id", "gtm_id", "google_ads_id", "meta_pixel_id", "meta_domain_verification"):
+        doc["general"][k] = ""
+    c.put("/api/admin/seo", headers=AH, json=doc)
+    check("CSP reverts byte-identical when ids cleared",
+          c.get("/").headers.get("content-security-policy") == BASE_CSP)
+    check("marketing loader removed from head when cleared", "/marketing.js" not in c.get("/").text)
+
     # sensitive API still not shadowed by the SPA catch-all
     check("/api/health still json", c.get("/api/health").json().get("ok") is True)
 

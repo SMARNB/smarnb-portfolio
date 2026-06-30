@@ -558,9 +558,63 @@ export function SeoTab({ onUnauth }: { onUnauth: () => void }) {
         </div>
       </section>
 
+      {/* Marketing & analytics */}
+      <section className="card manage">
+        <h4 className="seo-h">8 · Marketing &amp; analytics</h4>
+        <Help>
+          <b>Off by default — the site stays 100% first-party until you fill these in.</b> Leave every field
+          blank and nothing third-party loads and the security policy is unchanged. Paste an ID and only that
+          one vendor switches on: a tiny same-origin loader (<code>/marketing.js</code>) starts its SDK and the
+          security policy is widened by exactly that vendor's domains — nothing else. You can paste these later,
+          when your Google / Meta accounts are ready, without any code change.
+        </Help>
+        <div className="seo-2col">
+          <Field
+            label="Google Analytics 4 (Measurement ID)"
+            help={<>From Analytics → Admin → Data Streams → your stream. Looks like <code>G-XXXXXXX</code>.</>}
+          >
+            <input className="input" value={g.ga4_id} placeholder="G-XXXXXXX"
+              onChange={(e) => setG("ga4_id", e.target.value.trim())} />
+          </Field>
+          <Field
+            label="Google Tag Manager (Container ID)"
+            help={<>From Tag Manager → your container. Looks like <code>GTM-XXXXXXX</code>. Optional — use this instead of GA4 if you prefer managing tags in GTM.</>}
+          >
+            <input className="input" value={g.gtm_id} placeholder="GTM-XXXXXXX"
+              onChange={(e) => setG("gtm_id", e.target.value.trim())} />
+          </Field>
+          <Field
+            label="Google Ads (Conversion/gtag ID)"
+            help={<>From Google Ads → Tools → Conversions → tag setup. Looks like <code>AW-XXXXXXXXX</code>. Enables remarketing &amp; conversion tracking for paid campaigns.</>}
+          >
+            <input className="input" value={g.google_ads_id} placeholder="AW-XXXXXXXXX"
+              onChange={(e) => setG("google_ads_id", e.target.value.trim())} />
+          </Field>
+          <Field
+            label="Meta (Facebook) Pixel ID"
+            help={<>From Meta Events Manager → your pixel. A long number. Powers Facebook/Instagram ad tracking &amp; audiences.</>}
+          >
+            <input className="input" value={g.meta_pixel_id} placeholder="123456789012345"
+              onChange={(e) => setG("meta_pixel_id", e.target.value.trim())} />
+          </Field>
+        </div>
+        <Field
+          label="Meta domain verification"
+          help={<>From Meta Business Settings → Brand Safety → Domains. Paste only the <b>content token</b> — it's added as an inert <code>&lt;meta&gt;</code> (no script, no tracking). This is the safe first step before running Meta ads, even with the Pixel off.</>}
+        >
+          <input className="input" value={g.meta_domain_verification} placeholder="abc123…"
+            onChange={(e) => setG("meta_domain_verification", e.target.value.trim())} />
+        </Field>
+        <Help>
+          <b>Privacy note:</b> these are advertising/analytics trackers — only add them if you've decided to run
+          paid promotion, and consider adding a cookie/consent notice for visitors in the EU/UK. With them off,
+          the site loads no cookies or third-party scripts at all.
+        </Help>
+      </section>
+
       {/* Sitemap + robots */}
       <section className="card manage">
-        <h4 className="seo-h">8 · Sitemap &amp; robots</h4>
+        <h4 className="seo-h">9 · Sitemap &amp; robots</h4>
         <Help>
           Your <a href="/sitemap.xml" target="_blank" rel="noopener">sitemap.xml</a> and{" "}
           <a href="/robots.txt" target="_blank" rel="noopener">robots.txt</a> are generated live from your routes,
@@ -587,7 +641,7 @@ export function SeoTab({ onUnauth }: { onUnauth: () => void }) {
 
       {/* Targeting + guidance */}
       <section className="card manage">
-        <h4 className="seo-h">9 · Target keywords &amp; how to rank</h4>
+        <h4 className="seo-h">10 · Target keywords &amp; how to rank</h4>
         <Field
           label="Target keywords (what you want to rank for)"
           help="A note to yourself — comma-separated phrases your buyers actually search (e.g. “python saas dashboard developer”, “selenium automation freelancer”)."

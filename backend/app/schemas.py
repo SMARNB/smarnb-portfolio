@@ -368,6 +368,12 @@ class SeoGeneral(BaseModel):
     google_verification: str = Field(default="", max_length=200)
     bing_verification: str = Field(default="", max_length=200)
     yandex_verification: str = Field(default="", max_length=200)
+    # Marketing & analytics ids (empty => off; site stays first-party).
+    ga4_id: str = Field(default="", max_length=40)
+    gtm_id: str = Field(default="", max_length=40)
+    google_ads_id: str = Field(default="", max_length=40)
+    meta_pixel_id: str = Field(default="", max_length=60)
+    meta_domain_verification: str = Field(default="", max_length=200)
     person_name: str = Field(default="", max_length=120)
     job_title: str = Field(default="", max_length=160)
     org_type: str = Field(default="ProfessionalService", max_length=60)

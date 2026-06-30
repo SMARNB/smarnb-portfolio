@@ -108,7 +108,9 @@ async def security_headers(request, call_next):
         h.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         h.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()")
         h.setdefault("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
-        h.setdefault("Content-Security-Policy", _CSP)
+        # CSP is byte-identical to _CSP until a marketing id is set in the dashboard;
+        # then exactly that vendor's domains are appended (see seo.csp_with_marketing).
+        h.setdefault("Content-Security-Policy", seo.cached_csp(_CSP))
         # Caching: Vite content-hashes everything under /assets/, so those are
         # immutable; revalidate the SPA shell + other markup; cache loose images.
         last = p.rsplit("/", 1)[-1].lower()

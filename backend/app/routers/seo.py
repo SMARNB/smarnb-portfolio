@@ -1,5 +1,6 @@
-"""SEO endpoints: public read of the SEO document, admin save, and the dynamic
-sitemap.xml + robots.txt (which replace the old static files)."""
+"""SEO endpoints: public read of the SEO document, admin save, the dynamic
+sitemap.xml + robots.txt (which replace the old static files), and the first-party
+/marketing.js analytics loader."""
 from fastapi import APIRouter, Depends
 from fastapi.responses import PlainTextResponse, Response
 from sqlalchemy.orm import Session
@@ -44,3 +45,13 @@ def robots(db: Session = Depends(get_db)):
     txt = seo.build_robots(db)
     return PlainTextResponse(content=txt,
                              headers={"Cache-Control": "public, max-age=3600"})
+
+
+@router.get("/marketing.js")
+def marketing_js(db: Session = Depends(get_db)):
+    """First-party analytics/marketing loader, generated from the dashboard SEO
+    settings. Served same-origin so script-src stays 'self' (no inline scripts).
+    Returns a harmless comment when no marketing ids are configured."""
+    js = seo.cached_marketing_js(db)
+    return Response(content=js, media_type="application/javascript",
+                    headers={"Cache-Control": "public, max-age=300"})

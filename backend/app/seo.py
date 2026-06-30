@@ -21,6 +21,7 @@ tags and JSON-LD data blocks are inert and CSP-safe.
 import copy
 import html
 import json
+import re
 import time
 
 from . import config, crud, models
@@ -56,6 +57,18 @@ DEFAULT_DOC = {
         "google_verification": "",
         "bing_verification": "",
         "yandex_verification": "",
+        # --- Marketing & analytics (OFF by default) ---------------------------
+        # Empty => nothing loads and the site stays 100% first-party (the CSP is
+        # byte-identical to the strict default). Set an ID and ONLY that vendor's
+        # first-party loader (served from /marketing.js, so script-src stays 'self'
+        # — no inline scripts) switches on, plus a minimal CSP allow-list for that
+        # vendor's own domains. Pasting these later is how Google Ads / Analytics /
+        # Meta promotion gets wired without ever weakening the baseline policy.
+        "ga4_id": "",                   # Google Analytics 4 — "G-XXXXXXX"
+        "gtm_id": "",                   # Google Tag Manager — "GTM-XXXXXXX"
+        "google_ads_id": "",            # Google Ads (gtag) — "AW-XXXXXXXXX"
+        "meta_pixel_id": "",            # Meta (Facebook) Pixel — numeric id
+        "meta_domain_verification": "",  # Meta domain-verification token (inert meta)
         # Structured-data identity (Person / ProfessionalService).
         "person_name": "Muhammad Ali Raza",
         "job_title": "Full-Stack Developer & Designer",
@@ -435,6 +448,154 @@ def build_jsonld(db, path, doc=None):
     return graph
 
 
+# --- Marketing & analytics (opt-in, first-party loader + per-vendor CSP) ------
+# Tag/pixel IDs are restricted to this safe alphabet so a value pulled from the DB
+# can never break out of the JS string literals it's interpolated into, nor open
+# the CSP for anything other than a legitimately-set id.
+_ID_SAFE = re.compile(r"[^A-Za-z0-9_-]")
+
+
+def _safe_id(v):
+    return _ID_SAFE.sub("", str(v or "")).strip()
+
+
+# Per-vendor CSP additions. When an id is set, exactly these hosts are appended to
+# the matching directives — nothing else. With every id blank the CSP is unchanged.
+_MARKETING_CSP = {
+    "gtm_id": {
+        "script-src": ["https://www.googletagmanager.com"],
+        "img-src": ["https://www.googletagmanager.com", "https://www.google-analytics.com"],
+        "connect-src": ["https://www.googletagmanager.com", "https://www.google-analytics.com",
+                        "https://*.analytics.google.com"],
+        "frame-src": ["https://www.googletagmanager.com"],
+    },
+    "ga4_id": {
+        "script-src": ["https://www.googletagmanager.com"],
+        "img-src": ["https://www.googletagmanager.com", "https://www.google-analytics.com",
+                    "https://*.analytics.google.com"],
+        "connect-src": ["https://www.googletagmanager.com", "https://www.google-analytics.com",
+                        "https://*.analytics.google.com"],
+    },
+    "google_ads_id": {
+        "script-src": ["https://www.googletagmanager.com", "https://www.googleadservices.com"],
+        "img-src": ["https://www.googleadservices.com", "https://googleads.g.doubleclick.net"],
+        "connect-src": ["https://www.google-analytics.com"],
+        "frame-src": ["https://td.doubleclick.net", "https://googleads.g.doubleclick.net"],
+    },
+    "meta_pixel_id": {
+        "script-src": ["https://connect.facebook.net"],
+        "img-src": ["https://www.facebook.com"],
+        "connect-src": ["https://www.facebook.com"],
+        "frame-src": ["https://www.facebook.com"],
+    },
+}
+_MARKETING_IDS = ("ga4_id", "gtm_id", "google_ads_id", "meta_pixel_id")
+
+
+def marketing_enabled(g):
+    """True if any analytics/marketing id is set (so a vendor loader should run)."""
+    return any(_safe_id(g.get(k)) for k in _MARKETING_IDS)
+
+
+def _marketing_head(g):
+    """Head fragments for marketing: the inert Meta domain-verification meta (if set)
+    and a single first-party <script src="/marketing.js"> loader (only when at least
+    one id is set). Returns [] when the site is fully first-party."""
+    out = []
+    fb_verify = (g.get("meta_domain_verification") or "").strip()
+    if fb_verify:
+        out.append(_meta("facebook-domain-verification", fb_verify))
+    if marketing_enabled(g):
+        # The bootstrap lives in a same-origin file so script-src stays 'self' (no
+        # inline scripts, no 'unsafe-inline'); it loads the vendor SDKs itself.
+        out.append('<script src="/marketing.js" defer></script>')
+    return out
+
+
+def marketing_csp(doc):
+    """{directive: [extra hosts]} to merge into the CSP for the set ids. Empty when
+    the site is fully first-party."""
+    g = (doc or {}).get("general", {})
+    add = {}
+    for key, groups in _MARKETING_CSP.items():
+        if not _safe_id(g.get(key)):
+            continue
+        for directive, hosts in groups.items():
+            bucket = add.setdefault(directive, [])
+            for h in hosts:
+                if h not in bucket:
+                    bucket.append(h)
+    return add
+
+
+def csp_with_marketing(base_csp, doc):
+    """The CSP for the current settings. Byte-identical to ``base_csp`` when no id is
+    set; otherwise each set vendor's domains are appended to exactly its directives
+    (script-src/img-src/connect-src/frame-src). A brand-new directive (frame-src) is
+    seeded with 'self' so same-origin framing still behaves."""
+    add = marketing_csp(doc)
+    if not add:
+        return base_csp
+    order = []
+    index = {}
+    for part in base_csp.split(";"):
+        part = part.strip()
+        if not part:
+            continue
+        name, *tokens = part.split()
+        index[name] = tokens
+        order.append(name)
+    for directive, hosts in add.items():
+        if directive in index:
+            for h in hosts:
+                if h not in index[directive]:
+                    index[directive].append(h)
+        else:
+            index[directive] = ["'self'"] + list(hosts)
+            order.append(directive)
+    return "; ".join(name + " " + " ".join(index[name]) for name in order)
+
+
+def build_marketing_js(doc=None, db=None):
+    """The first-party bootstrap JS served at /marketing.js, generated from the set
+    ids. Loads gtag (GA4 + Google Ads), GTM and the Meta Pixel via their own SDKs.
+    Returns a harmless comment when nothing is enabled."""
+    if doc is None:
+        doc = get_doc(db) if db is not None else {"general": {}}
+    g = doc.get("general", {})
+    ga4, ads = _safe_id(g.get("ga4_id")), _safe_id(g.get("google_ads_id"))
+    gtm, pixel = _safe_id(g.get("gtm_id")), _safe_id(g.get("meta_pixel_id"))
+    blocks = []
+    gtag_ids = [i for i in (ga4, ads) if i]
+    if gtag_ids:
+        ids = ",".join("'" + i + "'" for i in gtag_ids)
+        blocks.append(
+            "(function(){var ids=[" + ids + "];var s=document.createElement('script');"
+            "s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+ids[0];"
+            "document.head.appendChild(s);window.dataLayer=window.dataLayer||[];"
+            "window.gtag=function(){dataLayer.push(arguments);};gtag('js',new Date());"
+            "ids.forEach(function(i){gtag('config',i);});})();")
+    if gtm:
+        blocks.append(
+            "(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),"
+            "event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),"
+            "dl=l!='dataLayer'?'&l='+l:'';j.async=true;"
+            "j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;"
+            "f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','" + gtm + "');")
+    if pixel:
+        blocks.append(
+            "!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?"
+            "n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;"
+            "n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;"
+            "t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}"
+            "(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');"
+            "fbq('init','" + pixel + "');fbq('track','PageView');")
+    if not blocks:
+        return "/* Marketing analytics are off. Add IDs in the dashboard SEO tab to enable. */\n"
+    return ("/* First-party marketing loader — generated from dashboard SEO settings. */\n"
+            + "\n".join(blocks) + "\n")
+
+
 # --- Head rendering (per route) ----------------------------------------------
 def render_head(db, path, doc=None):
     """The managed ``<head>`` HTML fragment for ``path``: title, description,
@@ -496,6 +657,9 @@ def render_head(db, path, doc=None):
         '<link rel="manifest" href="{}">'.format(_esc(g.get("manifest"))) if g.get("manifest") else "",
     ]
 
+    # Marketing/analytics loader + verification meta — only when ids are set.
+    parts.extend(_marketing_head(g))
+
     graph = build_jsonld(db, path, doc=doc)
     if graph:
         ld = {"@context": "https://schema.org", "@graph": graph}
@@ -508,11 +672,15 @@ def render_head(db, path, doc=None):
 
 # --- Per-path cache (rendered head HTML) --------------------------------------
 _cache = {}
+_csp_cache = {}      # base_csp -> computed CSP string (changes only on save)
+_mkt_js_cache = {}   # "js" -> /marketing.js body (changes only on save)
 _TTL = 300  # seconds; JSON-LD reflects approved reviews/services, refreshed often enough
 
 
 def clear_cache():
     _cache.clear()
+    _csp_cache.clear()
+    _mkt_js_cache.clear()
 
 
 def cached_head(db, path):
@@ -525,6 +693,36 @@ def cached_head(db, path):
     htmlfrag = render_head(db, path)
     _cache[path] = (now + _TTL, htmlfrag)
     return htmlfrag
+
+
+def cached_marketing_js(db):
+    """The /marketing.js body, cached until the next SEO save."""
+    hit = _mkt_js_cache.get("js")
+    if hit is not None:
+        return hit
+    val = build_marketing_js(db=db)
+    _mkt_js_cache["js"] = val
+    return val
+
+
+def cached_csp(base_csp):
+    """The Content-Security-Policy for the current settings, cached until the next
+    save. Opens its own short-lived DB session only on a cache miss; any failure
+    falls back to the strict first-party ``base_csp`` (never weaker, never down)."""
+    hit = _csp_cache.get(base_csp)
+    if hit is not None:
+        return hit
+    try:
+        from .database import SessionLocal
+        db = SessionLocal()
+        try:
+            val = csp_with_marketing(base_csp, get_doc(db))
+        finally:
+            db.close()
+    except Exception:
+        return base_csp  # don't cache the fallback — retry next request
+    _csp_cache[base_csp] = val
+    return val
 
 
 # --- sitemap.xml --------------------------------------------------------------

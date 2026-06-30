@@ -259,6 +259,11 @@ export interface SeoGeneral {
   google_verification: string;
   bing_verification: string;
   yandex_verification: string;
+  ga4_id: string;
+  gtm_id: string;
+  google_ads_id: string;
+  meta_pixel_id: string;
+  meta_domain_verification: string;
   person_name: string;
   job_title: string;
   org_type: string;
