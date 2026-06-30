@@ -24,10 +24,29 @@ export function PersonalProjects() {
 
         {feat.map((p) => (
           <Reveal className="card project-feature" key={p.id} as="article">
-            <div className="pf-visual" style={{ background: gradFor(p.category) }}>
-              <Icon name="eye" className="pf-bigicon" />
-              <span className="pf-cat">{p.category}</span>
-              <span className="pf-name">{p.title}</span>
+            <div
+              className={`pf-visual${p.image ? " has-shot" : ""}`}
+              style={p.image ? undefined : { background: gradFor(p.category) }}
+            >
+              {p.image ? (
+                <>
+                  <img className="pf-shot" src={p.image} alt={`${p.title} — ${p.subtitle}`} loading="lazy" />
+                  <span className="pf-scrim" />
+                  {p.logo && (
+                    <span className="pf-logo">
+                      <img src={p.logo} alt="" />
+                    </span>
+                  )}
+                  <span className="pf-cat">{p.category}</span>
+                  <span className="pf-name">{p.title}</span>
+                </>
+              ) : (
+                <>
+                  <Icon name="eye" className="pf-bigicon" />
+                  <span className="pf-cat">{p.category}</span>
+                  <span className="pf-name">{p.title}</span>
+                </>
+              )}
             </div>
             <div className="pf-body">
               <span className="eyebrow">Featured project</span>

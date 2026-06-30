@@ -24,33 +24,66 @@
        the app is painted. Colours are hard-coded (no dependency on the CSS
        bundle) and inline styles are permitted by the CSP (style-src 'unsafe-inline'). -->
   <style>
-    #splash { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center;
-      background: #0a0d14; transition: opacity .5s ease, visibility .5s ease; }
+    #splash { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; overflow: hidden;
+      background:
+        radial-gradient(1100px 560px at 50% 16%, rgba(124,92,255,.16), transparent 60%),
+        radial-gradient(900px 520px at 50% 102%, rgba(34,211,238,.10), transparent 60%),
+        #0a0d14;
+      transition: opacity .5s ease, visibility .5s ease; }
     #splash.splash--hide { opacity: 0; visibility: hidden; pointer-events: none; }
-    .splash-inner { display: flex; flex-direction: column; align-items: center; gap: 1.1rem; }
+    /* Ambient service chips drifting + zooming behind the brand mark. */
+    .splash-orbit { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+    .svc-chip { position: absolute; left: var(--x); top: var(--y); white-space: nowrap;
+      padding: .42rem .82rem; border-radius: 999px;
+      font: 600 .82rem/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #d7def0; background: rgba(124,92,255,.10); border: 1px solid rgba(124,92,255,.30);
+      box-shadow: 0 10px 34px -12px rgba(124,92,255,.5);
+      opacity: 0; transform: translateY(16px) scale(.68);
+      animation: svcFloat var(--dur, 7s) ease-in-out var(--d, 0s) infinite; will-change: transform, opacity; }
+    .splash-inner { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: .9rem; }
     .splash-mark { width: 78px; height: 78px; border-radius: 20px; display: grid; place-items: center;
       font: 800 1.65rem/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       color: #fff; letter-spacing: .02em; background: linear-gradient(135deg, #7c5cff, #22d3ee);
       box-shadow: 0 14px 44px -8px rgba(124,92,255,.6); animation: splashPop .5s cubic-bezier(.22,1,.36,1); }
-    .splash-name { font: 700 1.05rem/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      color: #eef2f9; }
-    .splash-bar { width: 150px; height: 3px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .splash-name { font: 800 1.15rem/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #eef2f9; }
+    .splash-tag { font: 600 .8rem/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #8b95a8; }
+    .splash-bar { margin-top: .3rem; width: 150px; height: 3px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; }
     .splash-bar::after { content: ""; display: block; height: 100%; width: 40%; border-radius: 3px;
       background: linear-gradient(90deg, #7c5cff, #22d3ee); animation: splashLoad 1.1s ease-in-out infinite; }
     @keyframes splashPop { from { opacity: 0; transform: scale(.82); } to { opacity: 1; transform: scale(1); } }
     @keyframes splashLoad { 0% { transform: translateX(-130%); } 100% { transform: translateX(360%); } }
+    @keyframes svcFloat {
+      0%   { opacity: 0; transform: translateY(16px) scale(.68); }
+      18%  { opacity: .95; }
+      50%  { opacity: 1; transform: translateY(-10px) scale(1.08); }
+      82%  { opacity: .85; }
+      100% { opacity: 0; transform: translateY(-24px) scale(.82); }
+    }
+    @media (max-width: 640px) { .svc-chip:nth-child(n+5) { display: none; } }
     @media (prefers-reduced-motion: reduce) {
       .splash-mark { animation: none; }
       .splash-bar::after { animation: none; width: 100%; }
+      .svc-chip { animation: none; opacity: .5; transform: none; }
     }
   </style>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
   <div id="splash" aria-hidden="true">
+    <div class="splash-orbit">
+      <span class="svc-chip" style="--x:10%;--y:22%;--d:0s;--dur:7s">SaaS Dashboards</span>
+      <span class="svc-chip" style="--x:64%;--y:15%;--d:1.1s;--dur:8s">Selenium Automation</span>
+      <span class="svc-chip" style="--x:12%;--y:70%;--d:.5s;--dur:7.5s">Computer Vision</span>
+      <span class="svc-chip" style="--x:70%;--y:66%;--d:1.6s;--dur:8.5s">Figma UI/UX</span>
+      <span class="svc-chip" style="--x:42%;--y:9%;--d:2.1s;--dur:7s">Packaging Design</span>
+      <span class="svc-chip" style="--x:77%;--y:40%;--d:.9s;--dur:8s">AI Chatbots</span>
+      <span class="svc-chip" style="--x:7%;--y:46%;--d:1.8s;--dur:7.5s">OCR &amp; Data</span>
+      <span class="svc-chip" style="--x:56%;--y:84%;--d:2.6s;--dur:8s">Web Apps</span>
+    </div>
     <div class="splash-inner">
       <div class="splash-mark">MAR</div>
       <div class="splash-name">Muhammad Ali Raza</div>
+      <div class="splash-tag">Full-Stack · Automation · Design</div>
       <div class="splash-bar"></div>
     </div>
   </div>

@@ -93,6 +93,8 @@ export interface PersonalProject {
   licenseLink?: string;
   licenseLabel?: string;
   category: string;
+  image?: string; // screenshot for the featured visual (else gradient + icon)
+  logo?: string;  // product logo badge over the screenshot
 }
 export interface ExperienceItem {
   role: string;
@@ -654,6 +656,8 @@ export const personalProjects: PersonalProject[] = [
     licenseLink: "/store#products",
     licenseLabel: "License this product",
     category: "AI / Computer Vision",
+    image: "/assets/img/codewatch-admin.jpg",
+    logo: "/assets/img/codewatch-logo.svg",
   },
   {
     id: "automation-suite",
