@@ -18,9 +18,42 @@
 
   <!-- Theme is applied by src/main.tsx before render (an external module, so it
        satisfies the strict CSP script-src 'self'). <html> defaults to dark. -->
+
+  <!-- Splash screen: lives in the shell so it paints with the HTML (before the
+       JS bundle parses + React mounts + data loads). main.tsx fades it out once
+       the app is painted. Colours are hard-coded (no dependency on the CSS
+       bundle) and inline styles are permitted by the CSP (style-src 'unsafe-inline'). -->
+  <style>
+    #splash { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center;
+      background: #0a0d14; transition: opacity .5s ease, visibility .5s ease; }
+    #splash.splash--hide { opacity: 0; visibility: hidden; pointer-events: none; }
+    .splash-inner { display: flex; flex-direction: column; align-items: center; gap: 1.1rem; }
+    .splash-mark { width: 78px; height: 78px; border-radius: 20px; display: grid; place-items: center;
+      font: 800 1.65rem/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #fff; letter-spacing: .02em; background: linear-gradient(135deg, #7c5cff, #22d3ee);
+      box-shadow: 0 14px 44px -8px rgba(124,92,255,.6); animation: splashPop .5s cubic-bezier(.22,1,.36,1); }
+    .splash-name { font: 700 1.05rem/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #eef2f9; }
+    .splash-bar { width: 150px; height: 3px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .splash-bar::after { content: ""; display: block; height: 100%; width: 40%; border-radius: 3px;
+      background: linear-gradient(90deg, #7c5cff, #22d3ee); animation: splashLoad 1.1s ease-in-out infinite; }
+    @keyframes splashPop { from { opacity: 0; transform: scale(.82); } to { opacity: 1; transform: scale(1); } }
+    @keyframes splashLoad { 0% { transform: translateX(-130%); } 100% { transform: translateX(360%); } }
+    @media (prefers-reduced-motion: reduce) {
+      .splash-mark { animation: none; }
+      .splash-bar::after { animation: none; width: 100%; }
+    }
+  </style>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
+  <div id="splash" aria-hidden="true">
+    <div class="splash-inner">
+      <div class="splash-mark">MAR</div>
+      <div class="splash-name">Muhammad Ali Raza</div>
+      <div class="splash-bar"></div>
+    </div>
+  </div>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
 </body>

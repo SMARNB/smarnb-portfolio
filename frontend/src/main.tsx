@@ -33,3 +33,24 @@ createRoot(document.getElementById("root")!).render(
     </ThemeProvider>
   </StrictMode>,
 );
+
+// Dismiss the shell splash screen once the app has painted. Shown at least ~400ms
+// (so it never flashes as a glitch on fast loads) and removed after the fade; a
+// safety timeout guarantees it can never get stuck if something stalls.
+(function dismissSplash() {
+  const t0 = performance.now();
+  const hide = () => {
+    const el = document.getElementById("splash");
+    if (!el) return;
+    el.classList.add("splash--hide");
+    const done = () => el.remove();
+    el.addEventListener("transitionend", done, { once: true });
+    setTimeout(done, 700); // fallback if transitionend doesn't fire
+  };
+  const schedule = () =>
+    setTimeout(hide, Math.max(0, 400 - (performance.now() - t0)));
+  // Wait for the first React paint (two frames), then respect the minimum.
+  requestAnimationFrame(() => requestAnimationFrame(schedule));
+  // Hard safety net: never let the splash linger past 6s regardless.
+  setTimeout(hide, 6000);
+})();
