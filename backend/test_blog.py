@@ -146,7 +146,7 @@ with TestClient(app) as c:
     check("unknown slug falls back to index head", "Blog —" in unknown and "post-article" not in unknown)
 
     print("== Blog: sitemap inclusion ==")
-    sm = c.get("/sitemap.xml").text
+    sm = c.get("/sitemap_index.xml").text
     check("sitemap lists the post", "/blog/%s</loc>" % slug in sm)
     check("sitemap lists the blog index", "/blog</loc>" in sm)
 

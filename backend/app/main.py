@@ -176,7 +176,7 @@ app.include_router(testimonials.router)
 app.include_router(chat.router)
 app.include_router(chat.admin_router)
 app.include_router(payments.router)
-app.include_router(seo_router.router)   # /api/seo, /api/admin/seo, /sitemap.xml, /robots.txt
+app.include_router(seo_router.router)   # /api/seo, /api/admin/seo, /sitemap_index.xml, /robots.txt
 app.include_router(whatsapp_router.router)  # /api/whatsapp/webhook (WhatsApp Cloud API bridge)
 app.include_router(blog.router)         # /api/blog, /api/blog/{slug}, /api/blog/images/{id}
 app.include_router(blog.admin_router)   # /api/admin/blog CRUD + image upload + preview

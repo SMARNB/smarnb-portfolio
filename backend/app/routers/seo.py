@@ -2,7 +2,7 @@
 sitemap.xml + robots.txt (which replace the old static files), and the first-party
 /marketing.js analytics loader."""
 from fastapi import APIRouter, Depends
-from fastapi.responses import PlainTextResponse, Response
+from fastapi.responses import PlainTextResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
 from .. import schemas, seo
@@ -33,11 +33,19 @@ def admin_save_seo(doc: schemas.SeoDoc, db: Session = Depends(get_db)):
     return saved
 
 
-@router.get("/sitemap.xml")
+@router.get("/sitemap_index.xml")
 def sitemap(db: Session = Depends(get_db)):
     xml = seo.build_sitemap(db)
     return Response(content=xml, media_type="application/xml",
                     headers={"Cache-Control": "public, max-age=3600"})
+
+
+@router.get("/sitemap.xml")
+def sitemap_legacy_redirect():
+    """The sitemap now lives at /sitemap_index.xml. Keep this old URL alive as a
+    permanent redirect so anything that already crawled/bookmarked it (Google
+    Search Console included) isn't left with a dead link."""
+    return RedirectResponse(url="/sitemap_index.xml", status_code=301)
 
 
 @router.get("/robots.txt")

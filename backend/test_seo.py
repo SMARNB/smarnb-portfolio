@@ -75,8 +75,8 @@ with TestClient(app) as c:
     check("admin save 200", r.status_code == 200)
     check("save round-trips title", r.json()["general"]["default_title"] == "SMARNB — Custom Title For Test")
 
-    print("== SEO: sitemap.xml ==")
-    r = c.get("/sitemap.xml")
+    print("== SEO: sitemap_index.xml ==")
+    r = c.get("/sitemap_index.xml")
     check("sitemap 200 + xml", r.status_code == 200 and "xml" in r.headers.get("content-type", ""))
     body = r.text
     check("sitemap urlset", "<urlset" in body and "</urlset>" in body)
@@ -84,10 +84,15 @@ with TestClient(app) as c:
     check("sitemap includes a service deep-link", "/store#svc-saas-dashboard" in body)
     check("sitemap has lastmod/priority", "<lastmod>" in body and "<priority>" in body)
 
+    print("== SEO: old /sitemap.xml redirects to /sitemap_index.xml ==")
+    r = c.get("/sitemap.xml", follow_redirects=False)
+    check("legacy sitemap 301", r.status_code == 301)
+    check("legacy sitemap redirects to new path", r.headers.get("location") == "/sitemap_index.xml")
+
     print("== SEO: robots.txt ==")
     r = c.get("/robots.txt")
     check("robots 200", r.status_code == 200)
-    check("robots references sitemap", "Sitemap:" in r.text and "/sitemap.xml" in r.text)
+    check("robots references sitemap", "Sitemap:" in r.text and "/sitemap_index.xml" in r.text)
     check("robots disallows admin", "Disallow: /admin" in r.text)
 
     print("== SEO: per-route <head> injection ==")

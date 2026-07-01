@@ -921,7 +921,7 @@ def build_robots(db, base_url=None, doc=None):
     g = doc["general"]
     base_url = (base_url or g.get("base_url") or _BASE_URL).rstrip("/")
     custom = (g.get("robots_txt") or "").strip()
-    sitemap_line = "Sitemap: {}/sitemap.xml".format(base_url)
+    sitemap_line = "Sitemap: {}/sitemap_index.xml".format(base_url)
     if custom:
         # Honour the developer's custom robots.txt, but guarantee the sitemap line.
         if "sitemap:" not in custom.lower():
