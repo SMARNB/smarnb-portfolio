@@ -345,28 +345,29 @@ main.dash-main { flex: 1; padding: clamp(1.5rem, 4vw, 2.5rem) 0 4rem; }
    Uses its own fixed palette (teal/ink) independent of the dashboard theme. */
 .resume-sheet {
   --rz-teal: #0d9488; --rz-ink: #0f172a; --rz-body: #334155; --rz-muted: #64748b; --rz-line: #e2e8f0;
-  width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 14mm 14mm 13mm;
+  width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 12mm 13mm 11mm;
   background: #fff; color: var(--rz-body);
   font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
-  font-size: 11px; line-height: 1.5; box-shadow: 0 8px 26px rgba(15,23,42,.22);
+  font-size: 10.4px; line-height: 1.46; box-shadow: 0 8px 26px rgba(15,23,42,.22);
 }
-.resume-head { border-bottom: 2px solid var(--rz-teal); padding-bottom: 13px; margin-bottom: 16px; }
+.resume-head { border-bottom: 2px solid var(--rz-teal); padding-bottom: 11px; margin-bottom: 12px; }
 .resume-name { color: var(--rz-ink); font-size: 29px; font-weight: 800; letter-spacing: -.01em; line-height: 1.1; }
 .resume-title { color: var(--rz-teal); font-size: 13.5px; font-weight: 700; letter-spacing: .03em; margin-top: 3px; text-transform: uppercase; }
 .resume-contacts { display: flex; flex-wrap: wrap; gap: 7px 20px; margin-top: 13px; }
 .resume-contacts a, .resume-contacts span { display: inline-flex; align-items: center; gap: 6px; color: var(--rz-body); font-size: 10.6px; }
 .resume-contacts a { color: var(--rz-body); }
+.resume-contacts a.resume-site { color: var(--rz-teal); font-weight: 750; }
 .resume-contacts svg { width: 13.5px; height: 13.5px; color: var(--rz-teal); flex: none; }
 .resume-body { display: grid; grid-template-columns: 1.62fr 1fr; gap: 20px; }
 /* padding:0 neutralises the global bare-`section` padding so blocks sit tight. */
-.resume-block { margin-bottom: 17px; padding: 0; }
+.resume-block { margin-bottom: 12px; padding: 0; }
 .resume-block:last-child { margin-bottom: 0; }
 .resume-h2 {
   color: var(--rz-ink); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em;
   padding-bottom: 5px; margin-bottom: 10px; border-bottom: 1px solid var(--rz-line);
 }
-.resume-summary { font-size: 10.8px; line-height: 1.62; color: var(--rz-body); }
-.resume-role { margin-bottom: 14px; }
+.resume-summary { font-size: 10.4px; line-height: 1.52; color: var(--rz-body); }
+.resume-role { margin-bottom: 10px; }
 .resume-role:last-child { margin-bottom: 0; }
 .resume-role-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .resume-role-title { color: var(--rz-ink); font-size: 11.6px; font-weight: 750; }
@@ -374,7 +375,7 @@ main.dash-main { flex: 1; padding: clamp(1.5rem, 4vw, 2.5rem) 0 4rem; }
 .resume-role-org { color: var(--rz-teal); font-size: 10.6px; font-weight: 650; margin-top: 2px; }
 .resume-stack { color: var(--rz-muted); font-size: 9.6px; font-style: italic; margin-top: 2px; }
 .resume-bullets { margin: 7px 0 0; padding-left: 14px; list-style: none; }
-.resume-bullets li { position: relative; font-size: 10.4px; line-height: 1.55; margin-bottom: 5px; }
+.resume-bullets li { position: relative; font-size: 10px; line-height: 1.5; margin-bottom: 3.4px; }
 .resume-bullets li::before { content: ""; position: absolute; left: -12px; top: 7px; width: 4px; height: 4px; border-radius: 50%; background: var(--rz-teal); }
 .resume-pills { display: flex; flex-wrap: wrap; gap: 5px; }
 .resume-pill { font-size: 9.4px; font-weight: 600; color: #0f766e; background: #ccfbf1; border: 1px solid #99f6e4; border-radius: 999px; padding: 3.5px 9px; }
@@ -383,6 +384,15 @@ main.dash-main { flex: 1; padding: clamp(1.5rem, 4vw, 2.5rem) 0 4rem; }
 .resume-skill-items { color: var(--rz-body); font-size: 10px; line-height: 1.5; }
 .resume-edu .resume-role-meta { display: inline-block; margin-top: 2px; }
 .resume-course { color: var(--rz-muted); margin-top: 4px; font-size: 9.6px; }
+/* flagship repo link + selected-projects entries */
+.resume-link { display: inline-flex; align-items: center; gap: 5px; margin-top: 5px; color: var(--rz-teal); font-weight: 600; font-size: 9.4px; }
+.resume-link svg { width: 12px; height: 12px; flex: none; }
+.resume-proj { margin-bottom: 7px; }
+.resume-proj-desc {
+  font-size: 9.5px; line-height: 1.48; color: var(--rz-body); margin-top: 3px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.resume-proj-link { color: var(--rz-teal); font-weight: 600; font-style: normal; }
 
 @media print {
   @page { size: A4; margin: 0; }

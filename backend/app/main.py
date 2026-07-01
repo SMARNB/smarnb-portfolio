@@ -59,6 +59,36 @@ def _ensure_columns():
                 conn.execute(text("ALTER TABLE conversations ADD COLUMN wa_id VARCHAR(40) DEFAULT ''"))
 
 
+def _start_self_keepalive():
+    """Keep the Render free instance awake by pinging our own public URL on an
+    interval (10 min < Render's 15-min idle spin-down window). A cold instance
+    breaks Googlebot's robots.txt/sitemap fetches — which makes Search Console
+    report "blocked by robots.txt" / "sitemap could not be read" — so staying warm
+    fixes indexing. Enabled by default on Render when a public base URL is known;
+    set KEEPALIVE_SELF=0 to turn it off. Always-warm ≈720h/mo < the 750h free quota."""
+    flag = os.environ.get("KEEPALIVE_SELF", "").strip().lower()
+    on_render = os.environ.get("RENDER", "").lower() == "true"
+    base = (config.PUBLIC_BASE_URL or "").rstrip("/")
+    enabled = flag in ("1", "true", "yes") or (on_render and bool(base) and flag not in ("0", "false", "no"))
+    if not (enabled and base):
+        return
+    import threading
+    import time as _time
+    import urllib.request
+    url = base + "/api/health"
+
+    def _loop():
+        while True:
+            _time.sleep(600)
+            try:
+                urllib.request.urlopen(url, timeout=10).read()
+            except Exception:
+                pass
+
+    threading.Thread(target=_loop, daemon=True).start()
+    print("[keepalive] self-ping every 10 min →", url)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Create tables and seed the admin (developer) account on first run.
@@ -73,6 +103,7 @@ async def lifespan(app: FastAPI):
         crud.backfill_milestones(db)   # give pre-tracking orders a pipeline
     finally:
         db.close()
+    _start_self_keepalive()
     yield
 
 

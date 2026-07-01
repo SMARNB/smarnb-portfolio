@@ -16,6 +16,8 @@ export interface ResumeRole {
   meta: string; // dates · location/role
   stack?: string;
   bullets: string[];
+  link?: string;
+  linkLabel?: string;
 }
 export interface ResumeData {
   name: string;
@@ -27,6 +29,9 @@ export interface ResumeData {
   githubUrl: string;
   linkedinLabel: string; // long slug → clean "LinkedIn" label per cv-reference
   linkedinUrl: string;
+  website: string; // the portfolio site — the CV's call-to-action
+  websiteLabel: string;
+  flagshipProjectId: string; // which personalProjects entry is the detailed flagship
   summary: string;
   strengths: string[];
   skills: SkillGroup[];
@@ -51,6 +56,9 @@ export const RESUME: ResumeData = {
   linkedinLabel: "LinkedIn",
   linkedinUrl:
     "https://www.linkedin.com/in/syed-muhammad-ali-raza-naqvi-bukhari-311599412/",
+  website: "https://smarnb.onrender.com",
+  websiteLabel: "smarnb.onrender.com",
+  flagshipProjectId: "codewatch",
 
   summary:
     "Computer Science graduate specializing in real-time computer vision and full-stack " +
@@ -125,6 +133,8 @@ export const RESUME: ResumeData = {
     org: "Final Year Project",
     meta: "2025 – 2026 · Architecture & full-stack development",
     stack: "Python · PyTorch · Django REST · React · Redis · PostgreSQL · OpenCV",
+    link: "https://github.com/SMARNB/CodeWatch",
+    linkLabel: "github.com/SMARNB/CodeWatch",
     bullets: [
       "Built an end-to-end pipeline that ingests live RTSP/MJPEG feeds and, per frame, detects " +
         "people (YOLO26/YOLO11 segmentation), tracks them (DeepSort), and identifies them against " +

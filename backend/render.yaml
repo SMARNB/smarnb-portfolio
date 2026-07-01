@@ -50,7 +50,13 @@ services:
       - key: CORS_ORIGINS
         value: "*"                 # bearer-token API (no cookies) → * is safe
       - key: PUBLIC_BASE_URL
-        value: https://smarnb.onrender.com   # used by Stripe redirects (if enabled later)
+        value: https://smarnb.onrender.com   # Stripe redirects + the self-keepalive ping
+      # Self keep-warm: ON by default on Render (pings PUBLIC_BASE_URL/api/health every
+      # 10 min so the free instance never sleeps → no cold starts → Google can always
+      # fetch robots.txt/sitemap and index. Always-warm ≈720h/mo < the 750h free quota.
+      # Set KEEPALIVE_SELF=0 to disable (e.g. if you add a 2nd free service and need the hours).
+      # - key: KEEPALIVE_SELF
+      #   value: "1"
       - key: CONTACT_WHATSAPP
         value: "+92 341 4527256"             # the assistant shares this when asked how to reach you
       # --- Owner WhatsApp pings (optional): get pinged with the chat/client id when
