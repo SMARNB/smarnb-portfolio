@@ -79,6 +79,7 @@ def admin_list(db: Session = Depends(get_db)):
 def admin_create(data: schemas.BlogPostIn, db: Session = Depends(get_db)):
     post = crud.create_blog_post(db, data)
     seo.clear_cache()   # new post may now be in the sitemap + injected per-slug
+    seo.write_seo_files(db)   # refresh the on-disk sitemap mirror
     return crud.serialize_blog_post(post, full=True)
 
 
@@ -108,6 +109,7 @@ def admin_update(pid: int, data: schemas.BlogPostIn, db: Session = Depends(get_d
         raise HTTPException(404, "Not found.")
     post = crud.update_blog_post(db, post, data)
     seo.clear_cache()
+    seo.write_seo_files(db)
     return crud.serialize_blog_post(post, full=True)
 
 
@@ -118,6 +120,7 @@ def admin_delete(pid: int, db: Session = Depends(get_db)):
         raise HTTPException(404, "Not found.")
     crud.delete_blog_post(db, post)
     seo.clear_cache()
+    seo.write_seo_files(db)
     return {"ok": True}
 
 

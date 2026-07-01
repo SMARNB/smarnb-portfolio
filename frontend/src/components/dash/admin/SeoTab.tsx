@@ -616,9 +616,9 @@ export function SeoTab({ onUnauth }: { onUnauth: () => void }) {
       <section className="card manage">
         <h4 className="seo-h">9 · Sitemap &amp; robots</h4>
         <Help>
-          Your <a href="/sitemap_index.xml" target="_blank" rel="noopener">sitemap_index.xml</a> and{" "}
+          Your <a href="/sitemap.xml" target="_blank" rel="noopener">sitemap.xml</a> and{" "}
           <a href="/robots.txt" target="_blank" rel="noopener">robots.txt</a> are generated live from your routes,
-          services and products — no static files to maintain.
+          services and products (and mirrored to real files on disk) — no static files to maintain.
         </Help>
         <div className="seo-2col">
           <Field label="Sitemap change frequency" help="A hint to crawlers about how often content pages change.">
@@ -662,7 +662,7 @@ export function SeoTab({ onUnauth }: { onUnauth: () => void }) {
             <b>Submit your sitemap (do this once)</b>
             <ol>
               <li>Add &amp; verify your site in <b>Google Search Console</b> (paste the token in section 7, save here, then click Verify there).</li>
-              <li>In Search Console → <b>Sitemaps</b>, submit <code>sitemap_index.xml</code>.</li>
+              <li>In Search Console → <b>Sitemaps</b>, submit <code>sitemap.xml</code> (the older <code>sitemap_index.xml</code> still works — it redirects here).</li>
               <li>Repeat in <b>Bing Webmaster Tools</b> (you can import from Google).</li>
               <li>Request indexing for your Home &amp; Store URLs to speed things up.</li>
             </ol>

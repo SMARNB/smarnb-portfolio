@@ -18,6 +18,13 @@ os.environ["ADMIN_PASSWORD"] = "test-admin-123"
 
 from fastapi.testclient import TestClient  # noqa: E402
 from app.main import app  # noqa: E402
+from app import seo as seo_mod  # noqa: E402
+from app.database import SessionLocal  # noqa: E402
+
+# Importing app.main points seo.STATIC_DIR at the real frontend/dist; disable the
+# on-disk mirror for the main run so tests never overwrite the dev-served files.
+# (A dedicated block below re-enables it against a temp dir to exercise the writer.)
+seo_mod.STATIC_DIR = None
 
 ok = 0
 fail = 0
@@ -75,8 +82,8 @@ with TestClient(app) as c:
     check("admin save 200", r.status_code == 200)
     check("save round-trips title", r.json()["general"]["default_title"] == "SMARNB — Custom Title For Test")
 
-    print("== SEO: sitemap_index.xml ==")
-    r = c.get("/sitemap_index.xml")
+    print("== SEO: sitemap.xml (conventional path) ==")
+    r = c.get("/sitemap.xml")
     check("sitemap 200 + xml", r.status_code == 200 and "xml" in r.headers.get("content-type", ""))
     body = r.text
     check("sitemap urlset", "<urlset" in body and "</urlset>" in body)
@@ -84,16 +91,45 @@ with TestClient(app) as c:
     check("sitemap includes a service deep-link", "/store#svc-saas-dashboard" in body)
     check("sitemap has lastmod/priority", "<lastmod>" in body and "<priority>" in body)
 
-    print("== SEO: old /sitemap.xml redirects to /sitemap_index.xml ==")
-    r = c.get("/sitemap.xml", follow_redirects=False)
-    check("legacy sitemap 301", r.status_code == 301)
-    check("legacy sitemap redirects to new path", r.headers.get("location") == "/sitemap_index.xml")
+    print("== SEO: /sitemap_index.xml redirects to /sitemap.xml ==")
+    r = c.get("/sitemap_index.xml", follow_redirects=False)
+    check("index-alias sitemap 301", r.status_code == 301)
+    check("index-alias redirects to canonical path", r.headers.get("location") == "/sitemap.xml")
 
     print("== SEO: robots.txt ==")
     r = c.get("/robots.txt")
     check("robots 200", r.status_code == 200)
-    check("robots references sitemap", "Sitemap:" in r.text and "/sitemap_index.xml" in r.text)
+    check("robots references sitemap", "Sitemap:" in r.text and "/sitemap.xml" in r.text)
+    check("robots does not reference stale sitemap_index", "/sitemap_index.xml" not in r.text)
     check("robots disallows admin", "Disallow: /admin" in r.text)
+
+    print("== SEO: sitemap is crash-proof (DB unavailable) ==")
+    # Even if the DB call blows up, the core route pages must still be emitted
+    # (Google fail-closes the entire site if the sitemap errors).
+    class _Boom:
+        def query(self, *a, **k):
+            raise RuntimeError("db down")
+    boom_xml = seo_mod.build_sitemap(_Boom())
+    check("crash-proof sitemap still has <urlset>", "<urlset" in boom_xml and "</urlset>" in boom_xml)
+    check("crash-proof sitemap still lists home", "smarnb.onrender.com/</loc>" in boom_xml)
+
+    print("== SEO: write_seo_files mirrors real files to disk ==")
+    _mirror = tempfile.mkdtemp()
+    seo_mod.STATIC_DIR = _mirror
+    try:
+        db2 = SessionLocal()
+        try:
+            seo_mod.write_seo_files(db2)
+        finally:
+            db2.close()
+        sm_path = os.path.join(_mirror, "sitemap.xml")
+        rb_path = os.path.join(_mirror, "robots.txt")
+        check("sitemap.xml written to disk", os.path.isfile(sm_path))
+        check("robots.txt written to disk", os.path.isfile(rb_path))
+        with open(sm_path, encoding="utf-8") as fh:
+            check("mirrored sitemap is valid xml", "<urlset" in fh.read())
+    finally:
+        seo_mod.STATIC_DIR = None
 
     print("== SEO: per-route <head> injection ==")
     home = c.get("/").text

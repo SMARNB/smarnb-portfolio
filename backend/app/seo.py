@@ -21,6 +21,7 @@ tags and JSON-LD data blocks are inert and CSP-safe.
 import copy
 import html
 import json
+import os
 import re
 import time
 
@@ -28,6 +29,11 @@ from . import config, crud, models
 
 # --- Defaults -----------------------------------------------------------------
 _BASE_URL = (config.PUBLIC_BASE_URL or "https://smarnb.onrender.com").rstrip("/")
+
+# The served static root (frontend/dist). main.py sets this at import so we can
+# persist real sitemap.xml / robots.txt files there — a crawler reads a flat file
+# with no database in the request path. None (e.g. in unit tests) disables writing.
+STATIC_DIR = None
 
 DEFAULT_DOC = {
     "general": {
@@ -269,6 +275,7 @@ def save_doc(db, doc):
         db.add(row)
     db.commit()
     clear_cache()
+    write_seo_files(db)   # refresh the on-disk sitemap.xml / robots.txt mirror
     return get_doc(db)
 
 
@@ -870,7 +877,15 @@ def cached_csp(base_csp):
 
 # --- sitemap.xml --------------------------------------------------------------
 def build_sitemap(db, base_url=None, doc=None):
-    doc = doc or get_doc(db)
+    # Crash-proof: a cold/suspended database (Neon free tier auto-suspends) must
+    # never make the sitemap error or hang — Google fail-closes the whole site if
+    # it can't read it. So the route pages always render from settings/defaults,
+    # and only the DB-derived extras (service deep-links, blog posts) are best-effort.
+    if doc is None:
+        try:
+            doc = get_doc(db)
+        except Exception:
+            doc = copy.deepcopy(DEFAULT_DOC)
     g = doc["general"]
     base_url = (base_url or g.get("base_url") or _BASE_URL).rstrip("/")
     changefreq = g.get("sitemap_changefreq") or "weekly"
@@ -890,17 +905,21 @@ def build_sitemap(db, base_url=None, doc=None):
         priority = "1.0" if path == "/" else "0.9"
         add(base_url + (path if path != "/" else "/"), priority=priority)
 
-    # A deep-link per active service + the products section (real, resolvable URLs).
-    for s in crud.list_services(db, active_only=True):
-        lm = s.created_at.date().isoformat() if getattr(s, "created_at", None) else now
-        add(base_url + "/store#svc-" + s.slug, lastmod=lm, freq="monthly", priority="0.6")
+    # The products section (static, always resolvable).
     add(base_url + "/store#products", freq="monthly", priority="0.6")
 
-    # Every published blog post (real, indexable URLs with a server-rendered article).
-    for p in crud.list_blog_posts(db, published_only=True):
-        lm_dt = p.published_at or p.updated_at
-        lm = lm_dt.date().isoformat() if lm_dt else now
-        add(base_url + "/blog/" + p.slug, lastmod=lm, priority="0.7")
+    try:
+        # A deep-link per active service + every published blog post (real,
+        # indexable URLs). Best-effort so a DB hiccup still yields the core routes.
+        for s in crud.list_services(db, active_only=True):
+            lm = s.created_at.date().isoformat() if getattr(s, "created_at", None) else now
+            add(base_url + "/store#svc-" + s.slug, lastmod=lm, freq="monthly", priority="0.6")
+        for p in crud.list_blog_posts(db, published_only=True):
+            lm_dt = p.published_at or p.updated_at
+            lm = lm_dt.date().isoformat() if lm_dt else now
+            add(base_url + "/blog/" + p.slug, lastmod=lm, priority="0.7")
+    except Exception:
+        pass
 
     rows = "\n".join(
         "  <url>\n"
@@ -917,11 +936,15 @@ def build_sitemap(db, base_url=None, doc=None):
 
 # --- robots.txt ---------------------------------------------------------------
 def build_robots(db, base_url=None, doc=None):
-    doc = doc or get_doc(db)
+    if doc is None:
+        try:
+            doc = get_doc(db)
+        except Exception:
+            doc = copy.deepcopy(DEFAULT_DOC)
     g = doc["general"]
     base_url = (base_url or g.get("base_url") or _BASE_URL).rstrip("/")
     custom = (g.get("robots_txt") or "").strip()
-    sitemap_line = "Sitemap: {}/sitemap_index.xml".format(base_url)
+    sitemap_line = "Sitemap: {}/sitemap.xml".format(base_url)
     if custom:
         # Honour the developer's custom robots.txt, but guarantee the sitemap line.
         if "sitemap:" not in custom.lower():
@@ -935,3 +958,23 @@ def build_robots(db, base_url=None, doc=None):
             "Disallow: /admin\n"
             "Disallow: /app\n\n"
             + sitemap_line + "\n")
+
+
+# --- Physical file mirror -----------------------------------------------------
+def write_seo_files(db):
+    """Persist the current sitemap.xml + robots.txt as real files in the served
+    static root (STATIC_DIR = frontend/dist). This is a first-party mirror of the
+    live routes: a plain, valid file exists on disk that anyone (or Google) can read
+    without touching the database, and it self-refreshes on boot and whenever SEO
+    settings or blog posts change. Best-effort — a failure just leaves the previous
+    copy (or the build-time committed baseline in frontend/public) in place, and the
+    live routes still serve the freshly generated document regardless."""
+    if not STATIC_DIR or not os.path.isdir(STATIC_DIR):
+        return
+    try:
+        with open(os.path.join(STATIC_DIR, "sitemap.xml"), "w", encoding="utf-8") as fh:
+            fh.write(build_sitemap(db))
+        with open(os.path.join(STATIC_DIR, "robots.txt"), "w", encoding="utf-8") as fh:
+            fh.write(build_robots(db))
+    except Exception:
+        pass

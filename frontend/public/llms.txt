@@ -36,4 +36,4 @@ content below is the canonical map of what the site offers.
 
 - Pricing and the live service catalogue are also available as JSON at /api/services.
 - The client area (/app) and developer dashboard (/admin) are private tools and are intentionally excluded from indexing.
-- See https://smarnb.onrender.com/sitemap_index.xml for the full URL list.
+- See https://smarnb.onrender.com/sitemap.xml for the full URL list.

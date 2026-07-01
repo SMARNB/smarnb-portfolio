@@ -33,19 +33,23 @@ def admin_save_seo(doc: schemas.SeoDoc, db: Session = Depends(get_db)):
     return saved
 
 
-@router.get("/sitemap_index.xml")
+@router.get("/sitemap.xml")
 def sitemap(db: Session = Depends(get_db)):
+    """The sitemap, served at the conventional /sitemap.xml that Google and every
+    SEO tool default to. Generated fresh from settings + catalog + published blog
+    posts (so new pages appear automatically), crash-proof against a cold database,
+    and mirrored to a real file on disk (see seo.write_seo_files)."""
     xml = seo.build_sitemap(db)
     return Response(content=xml, media_type="application/xml",
                     headers={"Cache-Control": "public, max-age=3600"})
 
 
-@router.get("/sitemap.xml")
-def sitemap_legacy_redirect():
-    """The sitemap now lives at /sitemap_index.xml. Keep this old URL alive as a
-    permanent redirect so anything that already crawled/bookmarked it (Google
-    Search Console included) isn't left with a dead link."""
-    return RedirectResponse(url="/sitemap_index.xml", status_code=301)
+@router.get("/sitemap_index.xml")
+def sitemap_index_alias():
+    """Older submissions used /sitemap_index.xml. Keep it alive as a permanent
+    redirect to the canonical /sitemap.xml so nothing that already crawled it (Google
+    Search Console included) is left with a dead link."""
+    return RedirectResponse(url="/sitemap.xml", status_code=301)
 
 
 @router.get("/robots.txt")

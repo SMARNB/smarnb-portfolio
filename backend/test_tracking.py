@@ -17,6 +17,9 @@ os.environ["ADMIN_PASSWORD"] = "test-admin-123"
 
 from fastapi.testclient import TestClient  # noqa: E402
 from app.main import app  # noqa: E402
+from app import seo as _seo  # noqa: E402
+
+_seo.STATIC_DIR = None   # don't let the app-boot sitemap mirror touch the dev dist
 
 ok = 0
 fail = 0
