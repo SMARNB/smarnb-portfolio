@@ -206,6 +206,7 @@ export interface BotUnanswered {
 
 export interface PaymentConfig {
   stripe_enabled: boolean;
+  safepay_enabled?: boolean;
 }
 
 /* --- Blog ------------------------------------------------------------------- */

@@ -65,6 +65,7 @@ class Order(Base):
     notes = Column(Encrypted, default="")                     # may contain PII
     payment_method = Column(String(60), default="")
     payment_status = Column(String(20), default="unpaid")     # unpaid | paid | refunded
+    payment_ref = Column(String(120), default="")             # gateway tracker/session id (e.g. Safepay)
 
     created_at = Column(DateTime, default=utcnow)
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)

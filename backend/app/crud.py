@@ -226,6 +226,13 @@ def get_order(db, public_id):
     return db.query(models.Order).filter_by(public_id=public_id).first()
 
 
+def get_order_by_payment_ref(db, ref):
+    """Find an order by the gateway tracker/session id we stored on it (Safepay)."""
+    if not ref:
+        return None
+    return db.query(models.Order).filter_by(payment_ref=ref).first()
+
+
 def mark_paid(db, order, note="Payment received."):
     """Flag an order paid and log a client-visible update (used by the Stripe webhook)."""
     if order.payment_status != "paid":

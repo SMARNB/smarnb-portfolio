@@ -88,3 +88,20 @@ services:
       #   sync: false
       # - key: STRIPE_WEBHOOK_SECRET
       #   sync: false
+      # --- Safepay (optional — Pakistan card/wallet gateway, settles to YOUR bank) ---
+      # OFF until SAFEPAY_API_KEY is set. Hosted-redirect flow (buyer pays on
+      # getsafepay.com) so the strict first-party CSP is untouched. Setup:
+      #   1) Sign up at getsafepay.com, complete KYC (CNIC + bank account for payout).
+      #   2) Dashboard → Developers → copy the API key ("sec_…") → SAFEPAY_API_KEY.
+      #   3) Test in sandbox first: SAFEPAY_ENVIRONMENT=sandbox and run a test charge;
+      #      confirm the amount is right (if 100× off, set SAFEPAY_AMOUNT_MULTIPLIER=1).
+      #   4) (Optional) Webhooks → add https://smarnb.onrender.com/api/payments/safepay/webhook
+      #      and copy the signing secret → SAFEPAY_WEBHOOK_SECRET.
+      #   5) Go live: set SAFEPAY_ENVIRONMENT=production with your live API key.
+      # Your bank details live in Safepay's dashboard, never in this app.
+      # - key: SAFEPAY_API_KEY
+      #   sync: false
+      # - key: SAFEPAY_ENVIRONMENT
+      #   value: sandbox
+      # - key: SAFEPAY_WEBHOOK_SECRET
+      #   sync: false

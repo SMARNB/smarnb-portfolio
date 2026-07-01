@@ -84,3 +84,29 @@ STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 # Used to build Stripe success/cancel redirect URLs (e.g. https://smarnb.onrender.com).
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
+
+# --- Safepay (OPTIONAL — Pakistan card/wallet gateway) ------------------------
+# Safepay ("the Stripe of Pakistan") settles card + wallet payments into YOUR bank
+# account. It stays completely OFF (no external calls, no UI) until SAFEPAY_API_KEY
+# is set — the flow is a hosted redirect (the buyer pays on getsafepay.com), so our
+# strict first-party CSP is untouched (no third-party script runs on our origin).
+# Sign up at getsafepay.com, complete KYC, and paste the API key here (as a Render
+# env secret). Your bank details go in Safepay's own dashboard, never in this app.
+SAFEPAY_API_KEY = os.environ.get("SAFEPAY_API_KEY", "")          # public/client key ("sec_…")
+SAFEPAY_WEBHOOK_SECRET = os.environ.get("SAFEPAY_WEBHOOK_SECRET", "")  # optional, for signed webhooks
+SAFEPAY_ENVIRONMENT = (os.environ.get("SAFEPAY_ENVIRONMENT", "sandbox") or "sandbox").lower()  # sandbox | production
+SAFEPAY_CURRENCY = os.environ.get("SAFEPAY_CURRENCY", "PKR").upper()   # Safepay settles in PKR
+# Safepay's API takes the amount in the minor unit (paisa) by default, matching the
+# Stripe scaffold (×100). If a sandbox test charge comes through at the wrong scale,
+# set this to 1 (whole rupees) — no code change needed. ALWAYS verify with a sandbox
+# test charge before going live.
+SAFEPAY_AMOUNT_MULTIPLIER = int(os.environ.get("SAFEPAY_AMOUNT_MULTIPLIER", "100") or "100")
+# API + hosted-checkout hosts. Defaults follow Safepay's sandbox/production split;
+# override only if Safepay changes them (so we never need a code edit).
+_sfpy_sandbox = SAFEPAY_ENVIRONMENT != "production"
+SAFEPAY_API_BASE = (os.environ.get("SAFEPAY_API_BASE", "")
+                    or ("https://sandbox.api.getsafepay.com" if _sfpy_sandbox
+                        else "https://api.getsafepay.com")).rstrip("/")
+SAFEPAY_CHECKOUT_BASE = (os.environ.get("SAFEPAY_CHECKOUT_BASE", "")
+                         or ("https://sandbox.getsafepay.com" if _sfpy_sandbox
+                             else "https://getsafepay.com")).rstrip("/")

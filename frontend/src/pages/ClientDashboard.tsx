@@ -88,18 +88,35 @@ function Projects({ payCfg, onUnauth }: { payCfg: PaymentConfig; onUnauth: () =>
       });
   }, [onUnauth]);
 
-  // Thank-you banner after a Stripe redirect (?paid=ORDER).
+  // After an online-payment redirect. Stripe returns to ?paid=ORDER; Safepay returns
+  // to ?sfpy=ORDER, which we verify server-side (the browser can't fake it) before
+  // showing the thank-you — the 25s poll / webhook is the backstop either way.
   useEffect(() => {
-    const m = /[?&]paid=([^&]+)/.exec(location.search || "");
-    if (m) {
-      try {
-        window.history.replaceState({}, "", location.pathname);
-      } catch {
-        /* ignore */
-      }
+    const search = location.search || "";
+    const paid = /[?&]paid=([^&]+)/.exec(search);
+    const sfpy = /[?&]sfpy=([^&]+)/.exec(search);
+    if (!paid && !sfpy) return;
+    try {
+      window.history.replaceState({}, "", location.pathname);
+    } catch {
+      /* ignore */
+    }
+    if (sfpy) {
+      const pid = decodeURIComponent(sfpy[1]);
+      API.get<{ paid?: boolean }>("/api/payments/safepay/verify/" + encodeURIComponent(pid))
+        .then((r) => {
+          if (r && r.paid) {
+            setThanks(true);
+            load();
+          }
+        })
+        .catch(() => {
+          /* leave it to the poll/webhook */
+        });
+    } else {
       setThanks(true);
     }
-  }, []);
+  }, [load]);
 
   // Initial load + 25s polling for live updates.
   useEffect(() => {

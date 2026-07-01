@@ -57,6 +57,11 @@ def _ensure_columns():
                 conn.execute(text("ALTER TABLE conversations ADD COLUMN channel VARCHAR(20) DEFAULT 'web'"))
             if "wa_id" not in cols:
                 conn.execute(text("ALTER TABLE conversations ADD COLUMN wa_id VARCHAR(40) DEFAULT ''"))
+    if "orders" in insp.get_table_names():
+        cols = {c["name"] for c in insp.get_columns("orders")}
+        if "payment_ref" not in cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN payment_ref VARCHAR(120) DEFAULT ''"))
 
 
 def _start_self_keepalive():
@@ -101,6 +106,7 @@ async def lifespan(app: FastAPI):
                              config.ADMIN_NAME, role="admin")
             print("[seed] created admin account:", config.ADMIN_EMAIL)
         crud.backfill_milestones(db)   # give pre-tracking orders a pipeline
+        seo.write_seo_files(db)        # mirror sitemap.xml/robots.txt to disk as real files
     finally:
         db.close()
     _start_self_keepalive()
@@ -176,7 +182,7 @@ app.include_router(testimonials.router)
 app.include_router(chat.router)
 app.include_router(chat.admin_router)
 app.include_router(payments.router)
-app.include_router(seo_router.router)   # /api/seo, /api/admin/seo, /sitemap_index.xml, /robots.txt
+app.include_router(seo_router.router)   # /api/seo, /api/admin/seo, /sitemap.xml, /robots.txt, /marketing.js
 app.include_router(whatsapp_router.router)  # /api/whatsapp/webhook (WhatsApp Cloud API bridge)
 app.include_router(blog.router)         # /api/blog, /api/blog/{slug}, /api/blog/images/{id}
 app.include_router(blog.admin_router)   # /api/admin/blog CRUD + image upload + preview
@@ -207,6 +213,7 @@ def version():
 # so /api/* and the routes above keep priority.
 _DIST_DIR = os.path.join(config.SITE_DIR, "frontend", "dist")
 _INDEX = os.path.join(_DIST_DIR, "index.html")
+seo.STATIC_DIR = _DIST_DIR   # where seo.write_seo_files persists sitemap.xml/robots.txt
 
 # Known client-side routes — used to pick the right SEO meta/JSON-LD per page.
 _SPA_ROUTES = {"/", "/store", "/services", "/work", "/projects", "/about", "/contact",

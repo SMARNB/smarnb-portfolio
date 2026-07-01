@@ -51,6 +51,16 @@ export function ProjectCard({
       .catch((err: ApiError) => setPayStatus({ type: "err", msg: err.message || "Card payments aren't enabled yet." }));
   }
 
+  function startSafepay() {
+    setPayStatus({ type: "ok", msg: "Opening secure Safepay checkout…" });
+    API.post<{ url?: string }>("/api/payments/safepay/checkout/" + encodeURIComponent(o.public_id))
+      .then((r) => {
+        if (r && r.url) window.location.href = r.url;
+        else setPayStatus({ type: "err", msg: "Could not start Safepay checkout." });
+      })
+      .catch((err: ApiError) => setPayStatus({ type: "err", msg: err.message || "Safepay isn't enabled yet." }));
+  }
+
   return (
     <article className="card proj-card">
       <div className="proj-top">
@@ -108,7 +118,7 @@ export function ProjectCard({
               </button>
             )}
           </div>
-          {showPay && <PayPanel o={o} payCfg={payCfg} onStripe={startStripe} status={payStatus} />}
+          {showPay && <PayPanel o={o} payCfg={payCfg} onStripe={startStripe} onSafepay={startSafepay} status={payStatus} />}
         </>
       ) : (
         cancellable && (
@@ -195,24 +205,30 @@ function PayPanel({
   o,
   payCfg,
   onStripe,
+  onSafepay,
   status,
 }: {
   o: Order;
   payCfg: PaymentConfig;
   onStripe: () => void;
+  onSafepay: () => void;
   status: { type: string; msg: string } | null;
 }) {
   const pi = CONFIG.paymentInstructions;
+  const online = payCfg.stripe_enabled || payCfg.safepay_enabled;
   return (
     <div className="pay-panel">
-      {payCfg.stripe_enabled && (
-        <>
-          <button className="btn btn-primary btn-block" onClick={onStripe}>
-            💳 Pay {money(o.total)} with card
-          </button>
-          <div className="pay-or">or pay manually</div>
-        </>
+      {payCfg.safepay_enabled && (
+        <button className="btn btn-primary btn-block" onClick={onSafepay}>
+          💳 Pay {money(o.total)} with card / wallet
+        </button>
       )}
+      {payCfg.stripe_enabled && (
+        <button className="btn btn-primary btn-block" onClick={onStripe}>
+          💳 Pay {money(o.total)} with card
+        </button>
+      )}
+      {online && <div className="pay-or">or pay manually</div>}
       <div className="pay-methods">
         {pi.methods.map((m, i) => (
           <div className={`pay-method${m.soon ? " soon" : ""}`} key={i}>

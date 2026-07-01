@@ -5,6 +5,8 @@ admin inbox). Runs against a throwaway SQLite DB via FastAPI's TestClient.
 Run:  .venv/Scripts/python test_new_features.py
 """
 import base64
+import hashlib as _hashlib
+import hmac as _hmac
 import os
 import tempfile
 
@@ -18,6 +20,9 @@ os.environ["ADMIN_PASSWORD"] = "test-admin-123"
 
 from fastapi.testclient import TestClient  # noqa: E402
 from app.main import app  # noqa: E402
+from app import seo as _seo  # noqa: E402
+
+_seo.STATIC_DIR = None   # don't let the app-boot sitemap mirror touch the dev dist
 
 PNG_1x1 = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")
@@ -296,6 +301,38 @@ with TestClient(app) as c:
     check("dev Inbox reply bridged to WhatsApp", any(b == "Hi! Thanks for reaching out." for _, b in sent))
 
     appcfg.WHATSAPP_TOKEN = appcfg.WHATSAPP_PHONE_ID = appcfg.WHATSAPP_VERIFY_TOKEN = ""
+
+    print("== Safepay gateway (inert by default; hosted-redirect when configured) ==")
+    from app import safepay  # noqa: E402
+
+    # OFF by default: config advertises the flag, endpoints refuse, helpers stay pure.
+    pc = c.get("/api/payments/config").json()
+    check("payment config exposes safepay flag",
+          pc.get("safepay_enabled") is False and pc.get("stripe_enabled") is False)
+    check("safepay disabled by default", safepay.enabled() is False)
+    check("safepay checkout 503 when off",
+          c.post("/api/payments/safepay/checkout/ANY123").status_code == 503)
+    check("safepay webhook 200 (never disables) when off",
+          c.post("/api/payments/safepay/webhook", json={"tracker": "t"}).status_code == 200)
+
+    # Pure helpers — no network: amount unit, hosted-checkout URL, signature.
+    check("minor amount = rupees x100", safepay.minor_amount(150) == 15000)
+    url = safepay.checkout_url("track_abc", "https://x/app?sfpy=ORD1", "https://x/app", "ORD1")
+    check("checkout url is safepay-hosted w/ beacon",
+          "getsafepay.com" in url and "beacon=track_abc" in url and "ORD1" in url)
+    check("webhook sig false without secret",
+          safepay.verify_webhook_signature(b"{}", "deadbeef") is False)
+
+    # Switch it on at runtime → enabled(); a valid HMAC verifies (still no network).
+    appcfg.SAFEPAY_API_KEY = "sec_test_key"
+    appcfg.SAFEPAY_WEBHOOK_SECRET = "whsec_test"
+    check("safepay enabled once key set", safepay.enabled() is True)
+    _body = b'{"tracker":"track_abc"}'
+    _good = _hmac.new(b"whsec_test", _body, _hashlib.sha256).hexdigest()
+    check("valid webhook signature accepted", safepay.verify_webhook_signature(_body, _good) is True)
+    check("bad webhook signature rejected", safepay.verify_webhook_signature(_body, "nope") is False)
+    appcfg.SAFEPAY_API_KEY = ""
+    appcfg.SAFEPAY_WEBHOOK_SECRET = ""
 
 print("\n==== RESULT: %d passed, %d failed ====" % (ok, fail))
 if os.path.exists(_DB):
