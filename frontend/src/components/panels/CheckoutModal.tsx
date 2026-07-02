@@ -175,27 +175,29 @@ export function CheckoutModal() {
                   <input className="input" id="co-email" name="email" type="email" required autoComplete="email" />
                 </div>
               </div>
-              <div className="field">
-                <label htmlFor="co-wa">WhatsApp <span style={{ color: "var(--muted)", fontWeight: 400 }}>(optional)</span></label>
-                <input className="input" id="co-wa" name="whatsapp" autoComplete="tel" />
+              <div className="two">
+                <div className="field">
+                  <label htmlFor="co-wa">WhatsApp <span style={{ color: "var(--muted)", fontWeight: 400 }}>(optional)</span></label>
+                  <input className="input" id="co-wa" name="whatsapp" autoComplete="tel" />
+                </div>
+                <div className="field">
+                  <label htmlFor="co-pay">
+                    {payCfg.safepay_enabled ? "Payment method" : "Preferred payment method"}
+                  </label>
+                  <select
+                    className="select"
+                    id="co-pay"
+                    name="payment"
+                    value={method}
+                    onChange={(e) => setMethod(e.target.value)}
+                  >
+                    <PaymentOptions />
+                  </select>
+                </div>
               </div>
               <div className="field">
                 <label htmlFor="co-notes">Project details</label>
                 <textarea className="textarea" id="co-notes" name="notes" placeholder="Anything I should know — links, references, deadlines…" />
-              </div>
-              <div className="field">
-                <label htmlFor="co-pay">
-                  {payCfg.safepay_enabled ? "Payment method" : "Preferred payment method"}
-                </label>
-                <select
-                  className="select"
-                  id="co-pay"
-                  name="payment"
-                  value={method}
-                  onChange={(e) => setMethod(e.target.value)}
-                >
-                  <PaymentOptions />
-                </select>
               </div>
               <input className="hp" tabIndex={-1} autoComplete="off" name="_gotcha" aria-hidden="true" />
               {status && <div className={`form-status show ${status.type}`}>{status.msg}</div>}

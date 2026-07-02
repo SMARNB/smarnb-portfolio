@@ -541,6 +541,14 @@ h2.section-title { font-size: clamp(1.8rem, 4.4vw, 2.8rem); }
 .order-summary .row { display: flex; justify-content: space-between; padding: .35rem 0; font-size: .92rem; }
 .order-summary .row.total { border-top: 1px solid var(--border); margin-top: .4rem; padding-top: .7rem; font-weight: 800; font-size: 1.05rem; }
 
+/* Checkout modal: compact vertical rhythm so the whole form (incl. the submit
+   button) fits within the modal on typical laptop screens instead of clipping. */
+#checkoutModal { max-height: min(92vh, 780px); }
+#checkoutModal .modal-body { padding: 1.15rem 1.4rem 1.3rem; }
+#checkoutModal .order-summary { margin-bottom: .9rem; padding: .75rem 1rem; }
+#checkoutModal .form { gap: .75rem; }
+#checkoutModal .textarea { min-height: 74px; }
+
 /* order success + tracking */
 .success-icon { width: 70px; height: 70px; border-radius: 50%; background: rgba(52,211,153,.15); color: var(--ok); display: grid; place-items: center; margin: 0 auto 1rem; animation: pop .5s var(--ease) both; }
 .success-icon svg { width: 38px; height: 38px; }

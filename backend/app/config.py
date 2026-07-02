@@ -107,10 +107,12 @@ _sfpy_sandbox = SAFEPAY_ENVIRONMENT != "production"
 SAFEPAY_API_BASE = (os.environ.get("SAFEPAY_API_BASE", "")
                     or ("https://sandbox.api.getsafepay.com" if _sfpy_sandbox
                         else "https://api.getsafepay.com")).rstrip("/")
-# The hosted-checkout base already includes the /components path.
+# The hosted-checkout base includes the full /checkout/pay path (per Safepay's
+# official SDK: sandbox.api.getsafepay.com/checkout/pay | getsafepay.com/checkout/pay).
+# NB: the older community "/components" host 301s to the marketing site — don't use it.
 SAFEPAY_CHECKOUT_BASE = (os.environ.get("SAFEPAY_CHECKOUT_BASE", "")
-                         or ("https://sandbox.api.getsafepay.com/components" if _sfpy_sandbox
-                             else "https://www.getsafepay.com/components")).rstrip("/")
+                         or ("https://sandbox.api.getsafepay.com/checkout/pay" if _sfpy_sandbox
+                             else "https://getsafepay.com/checkout/pay")).rstrip("/")
 
 # --- Email (SendGrid, OPTIONAL) — powers account/email verification ----------
 # Verification + security emails go over SendGrid's HTTPS API because Render blocks

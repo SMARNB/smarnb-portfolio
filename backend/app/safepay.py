@@ -116,7 +116,9 @@ def create_tracker(amount_total, currency=None):
 
 def checkout_url(tracker, redirect_url, cancel_url="", order_id=""):
     """The hosted checkout URL the buyer is sent to (they pay on getsafepay.com).
-    SAFEPAY_CHECKOUT_BASE already includes the /components path (config)."""
+    SAFEPAY_CHECKOUT_BASE already includes the full /checkout/pay path (config);
+    params mirror Safepay's official SDK (beacon/env/source/order_id/redirect/cancel,
+    plus webhooks=true when webhook delivery is configured)."""
     from urllib.parse import urlencode
     params = {
         "env": config.SAFEPAY_ENVIRONMENT,
@@ -128,6 +130,8 @@ def checkout_url(tracker, redirect_url, cancel_url="", order_id=""):
         params["cancel_url"] = cancel_url
     if order_id:
         params["order_id"] = order_id
+    if config.SAFEPAY_WEBHOOK_SECRET:
+        params["webhooks"] = "true"
     return config.SAFEPAY_CHECKOUT_BASE + "?" + urlencode(params)
 
 

@@ -321,6 +321,8 @@ with TestClient(app) as c:
     url = safepay.checkout_url("track_abc", "https://x/app?sfpy=ORD1", "https://x/app", "ORD1")
     check("checkout url is safepay-hosted w/ beacon",
           "getsafepay.com" in url and "beacon=track_abc" in url and "ORD1" in url)
+    # Official SDK path — the older /components host 301s to the marketing site.
+    check("checkout url uses the official /checkout/pay path", "/checkout/pay?" in url)
     check("webhook sig false without secret",
           safepay.verify_webhook_signature(b"{}", "deadbeef") is False)
 
