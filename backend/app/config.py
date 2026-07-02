@@ -96,17 +96,18 @@ SAFEPAY_API_KEY = os.environ.get("SAFEPAY_API_KEY", "")          # public/client
 SAFEPAY_WEBHOOK_SECRET = os.environ.get("SAFEPAY_WEBHOOK_SECRET", "")  # optional, for signed webhooks
 SAFEPAY_ENVIRONMENT = (os.environ.get("SAFEPAY_ENVIRONMENT", "sandbox") or "sandbox").lower()  # sandbox | production
 SAFEPAY_CURRENCY = os.environ.get("SAFEPAY_CURRENCY", "PKR").upper()   # Safepay settles in PKR
-# Safepay's API takes the amount in the minor unit (paisa) by default, matching the
-# Stripe scaffold (×100). If a sandbox test charge comes through at the wrong scale,
-# set this to 1 (whole rupees) — no code change needed. ALWAYS verify with a sandbox
-# test charge before going live.
-SAFEPAY_AMOUNT_MULTIPLIER = int(os.environ.get("SAFEPAY_AMOUNT_MULTIPLIER", "100") or "100")
+# Safepay's /order/v1/init takes the amount in the major unit (rupees) — the
+# reference integration sends e.g. 1000.00 for PKR 1,000. If a sandbox test charge
+# comes through at the wrong scale, set this to 100 (paisa) — no code change needed.
+# ALWAYS verify with a sandbox test charge before going live.
+SAFEPAY_AMOUNT_MULTIPLIER = int(os.environ.get("SAFEPAY_AMOUNT_MULTIPLIER", "1") or "1")
 # API + hosted-checkout hosts. Defaults follow Safepay's sandbox/production split;
 # override only if Safepay changes them (so we never need a code edit).
 _sfpy_sandbox = SAFEPAY_ENVIRONMENT != "production"
 SAFEPAY_API_BASE = (os.environ.get("SAFEPAY_API_BASE", "")
                     or ("https://sandbox.api.getsafepay.com" if _sfpy_sandbox
                         else "https://api.getsafepay.com")).rstrip("/")
+# The hosted-checkout base already includes the /components path.
 SAFEPAY_CHECKOUT_BASE = (os.environ.get("SAFEPAY_CHECKOUT_BASE", "")
-                         or ("https://sandbox.getsafepay.com" if _sfpy_sandbox
-                             else "https://getsafepay.com")).rstrip("/")
+                         or ("https://sandbox.api.getsafepay.com/components" if _sfpy_sandbox
+                             else "https://www.getsafepay.com/components")).rstrip("/")

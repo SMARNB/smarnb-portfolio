@@ -125,7 +125,9 @@ def safepay_checkout(public_id: str, request: Request, return_to: str = "/app",
 
     tracker = safepay.create_tracker(order.total)
     if not tracker:
-        raise HTTPException(502, "Could not start Safepay checkout. Please try again.")
+        # Surface Safepay's own reason (key-free) so setup issues are diagnosable.
+        raise HTTPException(502, "Could not start Safepay checkout. " +
+                            (safepay.last_error() or "Please try again."))
     # Remember the tracker so the return/webhook can be verified against this order.
     order.payment_ref = tracker
     order.payment_method = order.payment_method or "Safepay"

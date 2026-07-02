@@ -316,7 +316,8 @@ with TestClient(app) as c:
           c.post("/api/payments/safepay/webhook", json={"tracker": "t"}).status_code == 200)
 
     # Pure helpers — no network: amount unit, hosted-checkout URL, signature.
-    check("minor amount = rupees x100", safepay.minor_amount(150) == 15000)
+    check("amount honors the configured multiplier",
+          safepay.minor_amount(150) == 150 * safepay._MULTIPLIER)
     url = safepay.checkout_url("track_abc", "https://x/app?sfpy=ORD1", "https://x/app", "ORD1")
     check("checkout url is safepay-hosted w/ beacon",
           "getsafepay.com" in url and "beacon=track_abc" in url and "ORD1" in url)
