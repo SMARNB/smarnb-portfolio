@@ -32,9 +32,17 @@ def _stripe():
 
 @router.get("/config")
 def payment_config():
-    """Frontend uses this to decide which online-payment buttons to show."""
-    return {"stripe_enabled": bool(config.STRIPE_SECRET_KEY),
-            "safepay_enabled": safepay.enabled()}
+    """Frontend uses this to decide which online-payment buttons to show, and to
+    preview the converted charge ("≈ Rs …") when the store currency differs from
+    the gateway's settlement currency."""
+    out = {"stripe_enabled": bool(config.STRIPE_SECRET_KEY),
+           "safepay_enabled": safepay.enabled()}
+    if out["safepay_enabled"]:
+        rate = safepay.fx_rate()
+        if rate > 0:
+            out["safepay_currency"] = config.SAFEPAY_CURRENCY
+            out["fx_rate"] = round(rate, 2)
+    return out
 
 
 @router.post("/stripe/checkout/{public_id}")

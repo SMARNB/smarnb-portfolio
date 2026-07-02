@@ -220,6 +220,10 @@ export interface BotUnanswered {
 export interface PaymentConfig {
   stripe_enabled: boolean;
   safepay_enabled?: boolean;
+  /* Present when the gateway charges a different currency than the store lists
+     (e.g. USD store, PKR gateway) — used to preview the converted amount. */
+  safepay_currency?: string;
+  fx_rate?: number;
 }
 
 /* --- Blog ------------------------------------------------------------------- */

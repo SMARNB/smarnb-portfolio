@@ -298,7 +298,8 @@ def get_order_by_payment_ref(db, ref):
 
 
 def mark_paid(db, order, note="Payment received."):
-    """Flag an order paid and log a client-visible update (used by the Stripe webhook)."""
+    """Flag an order paid and log a client-visible update (used by the payment
+    gateways' verify/webhook paths and the admin dashboard)."""
     if order.payment_status != "paid":
         order.payment_status = "paid"
         add_update(db, order, note, status=order.status, progress=order.progress)
@@ -307,6 +308,15 @@ def mark_paid(db, order, note="Payment received."):
         # Paying confirms the brief — auto-advance the tracker so the client sees it move.
         complete_milestone_by_status(db, order, "confirmed",
                                      note="✓ Requirements confirmed (payment received)")
+        # Ping the owner on WhatsApp so they know money landed without watching the
+        # dashboard (fire-and-forget; inert until a sender is configured in notify.py).
+        from . import notify
+        try:
+            notify.notify_owner("💰 PAID: order %s — %s%s. %s"
+                                % (order.public_id, config.CURRENCY,
+                                   format(order.total or 0, ",.2f"), note))
+        except Exception:
+            pass
     return order
 
 

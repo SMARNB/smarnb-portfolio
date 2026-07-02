@@ -18,19 +18,32 @@ import { useToast } from "../../context/ToastContext";
 // The dropdown option that means "pay online by card now" (Safepay hosted checkout).
 const CARD_LABEL = CONFIG.payments.find((p) => p.id === "card")?.label ?? "Credit / Debit card";
 
-function PaymentOptions() {
-  const groups: Record<string, typeof CONFIG.payments> = {};
+function PaymentOptions({ safepayOn }: { safepayOn: boolean }) {
+  // With online card payment enabled, regroup so buyers can't confuse the instant
+  // option with the manual ones: card first under "Pay online now", everything
+  // else clearly labelled as a manual transfer (details sent after the order).
+  // Option VALUES stay the original labels — the backend + pay-now logic match on them.
+  const groups: Record<string, { value: string; text: string }[]> = {};
   CONFIG.payments.forEach((p) => {
-    (groups[p.group] = groups[p.group] || []).push(p);
+    const isCard = p.id === "card";
+    const group = safepayOn
+      ? (isCard ? "Pay online now — instant" : "Manual transfer — I'll send details after the order")
+      : p.group;
+    (groups[group] = groups[group] || []).push({
+      value: p.label,
+      text: safepayOn && isCard ? p.label + " (pay now, secure)" : p.label,
+    });
   });
+  const names = Object.keys(groups);
+  if (safepayOn) names.sort((a) => (a.startsWith("Pay online") ? -1 : 1));
   return (
     <>
       <option value="">Select how you'd like to pay…</option>
-      {Object.keys(groups).map((g) => (
+      {names.map((g) => (
         <optgroup key={g} label={g}>
           {groups[g].map((p) => (
-            <option key={p.id} value={p.label}>
-              {p.label}
+            <option key={p.value} value={p.value}>
+              {p.text}
             </option>
           ))}
         </optgroup>
@@ -191,7 +204,7 @@ export function CheckoutModal() {
                     value={method}
                     onChange={(e) => setMethod(e.target.value)}
                   >
-                    <PaymentOptions />
+                    <PaymentOptions safepayOn={!!payCfg.safepay_enabled} />
                   </select>
                 </div>
               </div>
@@ -215,7 +228,11 @@ export function CheckoutModal() {
               </button>
               <p className="form-note">
                 {payNow
-                  ? "You'll be redirected to Safepay's secure checkout to pay by card. Your order is saved either way."
+                  ? `You'll be redirected to Safepay's secure checkout to pay by card${
+                      payCfg.fx_rate
+                        ? ` — charged as ${payCfg.safepay_currency || "PKR"} ${Math.round(total * payCfg.fx_rate).toLocaleString()} (today's rate)`
+                        : ""
+                    }. Your order is saved either way.`
                   : "By placing this order you're sending me a request — I'll confirm the details and payment with you before starting."}
               </p>
             </form>

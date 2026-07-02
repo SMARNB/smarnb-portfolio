@@ -101,6 +101,13 @@ SAFEPAY_CURRENCY = os.environ.get("SAFEPAY_CURRENCY", "PKR").upper()   # Safepay
 # comes through at the wrong scale, set this to 100 (paisa) — no code change needed.
 # ALWAYS verify with a sandbox test charge before going live.
 SAFEPAY_AMOUNT_MULTIPLIER = int(os.environ.get("SAFEPAY_AMOUNT_MULTIPLIER", "1") or "1")
+# The store prices in USD (CURRENCY_CODE) but Safepay charges PKR, so totals are
+# converted server-side before charging. SAFEPAY_FX_RATE pins the rate manually
+# (e.g. 280); 0 = use a live rate (open.er-api.com, cached 6h). If no rate can be
+# determined, card checkout fails with a clear error — it never charges 1:1.
+# SAFEPAY_FX_MARGIN_PCT adds an optional % buffer against rate movement (e.g. 2).
+SAFEPAY_FX_RATE = float(os.environ.get("SAFEPAY_FX_RATE", "0") or "0")
+SAFEPAY_FX_MARGIN_PCT = float(os.environ.get("SAFEPAY_FX_MARGIN_PCT", "0") or "0")
 # API + hosted-checkout hosts. Defaults follow Safepay's sandbox/production split;
 # override only if Safepay changes them (so we never need a code edit).
 _sfpy_sandbox = SAFEPAY_ENVIRONMENT != "production"

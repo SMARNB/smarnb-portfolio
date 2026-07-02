@@ -335,6 +335,32 @@ with TestClient(app) as c:
     check("valid webhook signature accepted", safepay.verify_webhook_signature(_body, _good) is True)
     check("bad webhook signature rejected", safepay.verify_webhook_signature(_body, "nope") is False)
 
+    print("== Safepay FX conversion (USD store → PKR gateway) ==")
+    appcfg.SAFEPAY_FX_RATE = 280.0
+    check("pinned fx rate wins", safepay.fx_rate() == 280.0)
+    check("USD 10 charges as Rs 2,800 (not Rs 10!)",
+          safepay.charge_amount(10) == safepay.minor_amount(2800))
+    appcfg.SAFEPAY_FX_MARGIN_PCT = 2.0
+    check("fx margin buffers the charge",
+          safepay.charge_amount(100) == safepay.minor_amount(100 * 280.0 * 1.02))
+    appcfg.SAFEPAY_FX_MARGIN_PCT = 0.0
+    appcfg.SAFEPAY_CURRENCY = "USD"
+    check("same currency needs no conversion", safepay.fx_rate() == 1.0)
+    appcfg.SAFEPAY_CURRENCY = "PKR"
+    pc2 = c.get("/api/payments/config").json()
+    check("config previews the fx rate while enabled",
+          pc2.get("fx_rate") == 280.0 and pc2.get("safepay_currency") == "PKR")
+    # No rate available → checkout must FAIL, never fall through charging 1:1.
+    appcfg.SAFEPAY_FX_RATE = 0.0
+    _old_get = safepay._get_json
+    safepay._get_json = lambda u: (_ for _ in ()).throw(RuntimeError("fx api down"))
+    safepay._fx_cache["rate"], safepay._fx_cache["ts"] = 0.0, 0.0
+    check("no fx rate -> charge_amount is None", safepay.charge_amount(10) is None)
+    check("no fx rate -> create_tracker refuses w/ clear error",
+          safepay.create_tracker(10) is None and "exchange rate" in safepay.last_error())
+    safepay._get_json = _old_get
+    appcfg.SAFEPAY_FX_RATE = 280.0   # pinned rate for the flow below
+
     # Full store-checkout wiring (tracker + verify faked — no real network): an order
     # → hosted-checkout URL that returns to /store, then verify-on-return marks it paid.
     safepay.create_tracker = lambda *a, **k: "track_TEST123"
@@ -357,6 +383,7 @@ with TestClient(app) as c:
 
     appcfg.SAFEPAY_API_KEY = ""
     appcfg.SAFEPAY_WEBHOOK_SECRET = ""
+    appcfg.SAFEPAY_FX_RATE = 0.0
 
 print("\n==== RESULT: %d passed, %d failed ====" % (ok, fail))
 if os.path.exists(_DB):

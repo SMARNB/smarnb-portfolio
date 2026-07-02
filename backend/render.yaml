@@ -105,6 +105,12 @@ services:
       #   value: sandbox
       # - key: SAFEPAY_WEBHOOK_SECRET
       #   sync: false
+      # Store prices are USD; Safepay charges PKR. Totals convert with a live FX
+      # rate (cached 6h). Optionally pin the rate / add a % buffer:
+      # - key: SAFEPAY_FX_RATE
+      #   value: "0"
+      # - key: SAFEPAY_FX_MARGIN_PCT
+      #   value: "0"
       # --- Email verification (SendGrid) — anti-spam gate ---
       # Render blocks SMTP, so verification emails go via SendGrid's HTTPS API.
       # Email verification + "verified account required to order" stay OFF until BOTH

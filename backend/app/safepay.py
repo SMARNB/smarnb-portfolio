@@ -18,6 +18,7 @@ caller; failures just mean "not verified / not paid".
 import hashlib
 import hmac
 import json
+import time
 import urllib.error
 import urllib.request
 
@@ -52,6 +53,50 @@ def minor_amount(total) -> int:
         return int(round(float(total) * _MULTIPLIER))
     except (TypeError, ValueError):
         return 0
+
+
+# --- Currency conversion --------------------------------------------------------
+# The store prices in config.CURRENCY_CODE (USD) but Safepay charges in
+# SAFEPAY_CURRENCY (PKR) — passing the bare number through would charge Rs 1,200
+# for a $1,200 order. Convert server-side: a manual SAFEPAY_FX_RATE override wins;
+# otherwise a live rate (open.er-api.com, free/no key) cached for 6h. If NO rate is
+# available the checkout fails loudly rather than ever charging 1:1 in the wrong
+# currency.
+_FX_API = "https://open.er-api.com/v6/latest/"
+_FX_TTL = 6 * 3600
+_fx_cache = {"rate": 0.0, "ts": 0.0}
+
+
+def fx_rate() -> float:
+    """Store-currency → SAFEPAY_CURRENCY rate. 0.0 when genuinely unavailable."""
+    base = (config.CURRENCY_CODE or "usd").upper()
+    quote = (config.SAFEPAY_CURRENCY or "PKR").upper()
+    if base == quote:
+        return 1.0
+    if getattr(config, "SAFEPAY_FX_RATE", 0) and config.SAFEPAY_FX_RATE > 0:
+        return float(config.SAFEPAY_FX_RATE)
+    now = time.time()
+    if _fx_cache["rate"] and now - _fx_cache["ts"] < _FX_TTL:
+        return _fx_cache["rate"]
+    try:
+        body = _get_json(_FX_API + base)
+        rate = float((body.get("rates") or {}).get(quote) or 0)
+        if rate > 0:
+            _fx_cache["rate"], _fx_cache["ts"] = rate, now
+            return rate
+    except Exception:
+        pass
+    return _fx_cache["rate"]  # last known rate (possibly stale) — never a guess
+
+
+def charge_amount(total):
+    """Order total (store currency) → the amount Safepay charges, in gateway units.
+    None when no exchange rate is available (checkout must fail, not undercharge)."""
+    rate = fx_rate()
+    if rate <= 0:
+        return None
+    margin = 1.0 + max(float(getattr(config, "SAFEPAY_FX_MARGIN_PCT", 0) or 0), 0.0) / 100.0
+    return minor_amount(float(total) * rate * margin)
 
 
 def _headers(extra=None):
@@ -95,10 +140,16 @@ def create_tracker(amount_total, currency=None):
     if not enabled():
         _last_error = "Safepay is not enabled (SAFEPAY_API_KEY missing)."
         return None
+    amount = charge_amount(amount_total)
+    if amount is None or amount <= 0:
+        _last_error = ("No %s→%s exchange rate available right now — try again in a "
+                       "moment (or the owner can set SAFEPAY_FX_RATE)."
+                       % ((config.CURRENCY_CODE or "usd").upper(), config.SAFEPAY_CURRENCY))
+        return None
     url = config.SAFEPAY_API_BASE + "/order/v1/init"
     payload = {
         "client": config.SAFEPAY_API_KEY,
-        "amount": minor_amount(amount_total),
+        "amount": amount,
         "currency": (currency or config.SAFEPAY_CURRENCY),
         "environment": config.SAFEPAY_ENVIRONMENT,
     }
