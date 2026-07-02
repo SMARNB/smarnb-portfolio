@@ -134,7 +134,7 @@ export const API = {
   upload: <T = unknown>(p: string, file: File) => uploadReq<T>(p, file),
   register: (d: { email: string; password: string; name?: string; whatsapp?: string }) =>
     req<Token>("POST", "/api/auth/register", d).then(saveAuth),
-  login: (d: { email: string; password: string }) =>
+  login: (d: { email: string; password: string; totp_code?: string }) =>
     req<Token>("POST", "/api/auth/login", d).then(saveAuth),
   me: () => req<User>("GET", "/api/auth/me"),
 };

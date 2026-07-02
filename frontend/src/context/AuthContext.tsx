@@ -8,7 +8,7 @@ import type { Token, User } from "../lib/types";
 interface AuthCtx {
   user: User | null;
   ready: boolean; // becomes true once the initial /me check resolves
-  login: (d: { email: string; password: string }) => Promise<Token>;
+  login: (d: { email: string; password: string; totp_code?: string }) => Promise<Token>;
   register: (d: { email: string; password: string; name?: string; whatsapp?: string }) => Promise<Token>;
   logout: () => void;
   setUser: (u: User | null) => void;
@@ -45,9 +45,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const login = useCallback(async (d: { email: string; password: string }) => {
+  const login = useCallback(async (d: { email: string; password: string; totp_code?: string }) => {
     const res = await API.login(d);
-    setUserState(res.user);
+    if (res.user) setUserState(res.user); // absent when the server asks for a 2FA code
     return res;
   }, []);
 

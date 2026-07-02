@@ -1,11 +1,19 @@
-/* Client login / register card. Port of renderAuth() in client-dash.js. */
+/* Client login / register with the anti-spam flow: registration may require an
+   emailed 6-digit code before the account is usable, and login may require a 2FA
+   code when the account has an authenticator enabled. */
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { API } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
+import type { ApiError, User } from "../../lib/types";
+
+type Step = "form" | "verify" | "totp";
 
 export function ClientAuth({ onAuthed }: { onAuthed: () => void }) {
-  const { login, register } = useAuth();
+  const { login, register, setUser } = useAuth();
   const [mode, setMode] = useState<"login" | "register">("login");
+  const [step, setStep] = useState<Step>("form");
+  const [creds, setCreds] = useState<{ email: string; password: string }>({ email: "", password: "" });
   const [status, setStatus] = useState<{ type: string; msg: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const reg = mode === "register";
@@ -23,20 +31,103 @@ export function ClientAuth({ onAuthed }: { onAuthed: () => void }) {
     setStatus({ type: "ok", msg: "Please wait…" });
     try {
       if (reg) {
-        await register({
+        const res = await register({
           email,
           password,
           name: (f.elements.namedItem("name") as HTMLInputElement)?.value.trim() || "",
           whatsapp: (f.elements.namedItem("whatsapp") as HTMLInputElement)?.value.trim() || "",
         });
+        if (res.verification_required) {
+          setCreds({ email, password });
+          setStep("verify");
+          setStatus({ type: "ok", msg: "We emailed you a 6-digit code — enter it below." });
+          setBusy(false);
+          return;
+        }
+        onAuthed();
       } else {
-        await login({ email, password });
+        const res = await login({ email, password });
+        if (res.totp_required) {
+          setCreds({ email, password });
+          setStep("totp");
+          setStatus(null);
+          setBusy(false);
+          return;
+        }
+        onAuthed();
       }
-      onAuthed();
     } catch (err) {
-      setStatus({ type: "err", msg: (err as Error).message || "Something went wrong." });
+      setStatus({ type: "err", msg: (err as ApiError).message || "Something went wrong." });
       setBusy(false);
     }
+  }
+
+  async function submitCode(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const code = (e.currentTarget.elements.namedItem("code") as HTMLInputElement).value.replace(/\s/g, "");
+    setBusy(true);
+    setStatus({ type: "ok", msg: "Verifying…" });
+    try {
+      if (step === "verify") {
+        const user = await API.post<User>("/api/auth/verify", { code });
+        setUser(user);
+        onAuthed();
+      } else {
+        const res = await login({ email: creds.email, password: creds.password, totp_code: code });
+        if (res.access_token) onAuthed();
+        else setStatus({ type: "err", msg: "That code wasn't right." });
+        setBusy(false);
+      }
+    } catch (err) {
+      setStatus({ type: "err", msg: (err as ApiError).message || "That code wasn't right." });
+      setBusy(false);
+    }
+  }
+
+  async function resend() {
+    setStatus({ type: "ok", msg: "Sending a new code…" });
+    try {
+      await API.post("/api/auth/resend");
+      setStatus({ type: "ok", msg: "Sent — check your inbox (and spam)." });
+    } catch (err) {
+      setStatus({ type: "err", msg: (err as ApiError).message || "Couldn't resend right now." });
+    }
+  }
+
+  if (step !== "form") {
+    const verifying = step === "verify";
+    return (
+      <div className="auth-wrap">
+        <div className="card auth-card">
+          <h1>{verifying ? "Verify your email" : "Two-factor code"}</h1>
+          <p className="lead">
+            {verifying
+              ? `Enter the 6-digit code we sent to ${creds.email}.`
+              : "Enter the 6-digit code from your authenticator app."}
+          </p>
+          <form className="form" onSubmit={submitCode} noValidate>
+            <div className="field">
+              <label htmlFor="c-code">6-digit code</label>
+              <input className="input" id="c-code" name="code" inputMode="numeric" autoComplete="one-time-code"
+                pattern="\d{6}" maxLength={6} placeholder="123456" required autoFocus />
+            </div>
+            {status && <div className={`dash-status show ${status.type}`} role="alert">{status.msg}</div>}
+            <button className="btn btn-primary btn-block" type="submit" disabled={busy}>
+              {verifying ? "Verify" : "Continue"}
+            </button>
+          </form>
+          <p className="auth-foot">
+            {verifying ? (
+              <a href="#" style={{ color: "var(--accent-2)", fontWeight: 600 }}
+                onClick={(e) => { e.preventDefault(); resend(); }}>Resend code</a>
+            ) : (
+              <a href="#" style={{ color: "var(--muted)" }}
+                onClick={(e) => { e.preventDefault(); setStep("form"); setStatus(null); }}>← Back</a>
+            )}
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (

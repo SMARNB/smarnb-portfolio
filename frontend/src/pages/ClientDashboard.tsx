@@ -11,6 +11,7 @@ import { useAuth } from "../context/AuthContext";
 import { useDashBody } from "../lib/useDashBody";
 import { DashTopbar } from "../components/dash/DashTopbar";
 import { ClientAuth } from "../components/dash/ClientAuth";
+import { AccountSecurity } from "../components/dash/AccountSecurity";
 import { ProjectCard } from "../components/dash/ProjectCard";
 import { ChatWidget } from "../components/chat/ChatWidget";
 
@@ -149,6 +150,8 @@ function Projects({ payCfg, onUnauth }: { payCfg: PaymentConfig; onUnauth: () =>
           Payment received — thank you! Your order will update to Paid shortly.
         </div>
       )}
+
+      <AccountSecurity />
 
       <div className="projects">
         {error ? (

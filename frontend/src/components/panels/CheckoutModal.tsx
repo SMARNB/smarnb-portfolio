@@ -3,13 +3,14 @@
    ID, a WhatsApp confirm link and a "track this order" jump. Port of the checkout
    flow in app.js. */
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { Icon } from "../../lib/icons";
 import { CONFIG } from "../../lib/config";
 import { money, validEmail, whatsappLink } from "../../lib/format";
 import { placeOrder, placeOrderViaApi, orderSummaryText } from "../../lib/cart";
 import type { Customer, LocalOrder } from "../../lib/cart";
 import { API } from "../../lib/api";
-import type { PaymentConfig } from "../../lib/types";
+import type { ApiError, PaymentConfig } from "../../lib/types";
 import { useCart } from "../../context/CartContext";
 import { useUI } from "../../context/UIContext";
 import { useToast } from "../../context/ToastContext";
@@ -48,6 +49,7 @@ export function CheckoutModal() {
   const [status, setStatus] = useState<{ type: string; msg: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [method, setMethod] = useState("");
+  const [gated, setGated] = useState(false);
   const [payCfg, setPayCfg] = useState<PaymentConfig>({ stripe_enabled: false });
 
   // Reset to the form whenever the modal re-opens, and learn whether online card
@@ -58,6 +60,7 @@ export function CheckoutModal() {
       setStatus(null);
       setBusy(false);
       setMethod("");
+      setGated(false);
       API.get<PaymentConfig>("/api/payments/config")
         .then(setPayCfg)
         .catch(() => setPayCfg({ stripe_enabled: false }));
@@ -109,7 +112,17 @@ export function CheckoutModal() {
         }
       }
       setOrder(o);
-    } catch {
+    } catch (err) {
+      const status = (err as ApiError)?.status;
+      // Verification gate (must be a signed-in, verified account) or a rejected
+      // email — don't fake a local order; guide the buyer to the client area.
+      if (status === 401 || status === 403 || status === 400) {
+        setGated(status !== 400);
+        setStatus({ type: "err", msg: (err as ApiError).message || "Please sign in and verify your email to order." });
+        setBusy(false);
+        return;
+      }
+      // Genuine network/other failure → keep the resilient local + WhatsApp fallback.
       setOrder(placeOrder(customer));
     } finally {
       setBusy(false);
@@ -186,6 +199,14 @@ export function CheckoutModal() {
               </div>
               <input className="hp" tabIndex={-1} autoComplete="off" name="_gotcha" aria-hidden="true" />
               {status && <div className={`form-status show ${status.type}`}>{status.msg}</div>}
+              {gated && (
+                <p className="form-note" style={{ marginTop: ".4rem" }}>
+                  <Link to="/app" style={{ color: "var(--accent-2)", fontWeight: 600 }}>
+                    Sign in or create a verified account →
+                  </Link>{" "}
+                  then come back and place your order.
+                </p>
+              )}
               <button className="btn btn-primary btn-block" type="submit" disabled={busy}>
                 <Icon name={payNow ? "arrow" : "check"} size={18} />{" "}
                 {payNow ? `Pay ${money(total)} securely` : "Place order"}

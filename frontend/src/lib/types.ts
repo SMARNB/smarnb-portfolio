@@ -10,12 +10,25 @@ export interface User {
   role: string; // "client" | "admin"
   whatsapp?: string;
   created_at: string;
+  email_verified?: boolean;
+  totp_enabled?: boolean;
 }
 
 export interface Token {
   access_token: string;
   token_type: string;
   user: User;
+  // Register: email verification is pending. Login: admin must still set up 2FA.
+  verification_required?: boolean;
+  must_setup_2fa?: boolean;
+  // Login only: password was right but a 2FA code is needed (no token issued yet).
+  totp_required?: boolean;
+}
+
+export interface TotpSetup {
+  secret: string;
+  otpauth_uri: string;
+  qr_svg: string;
 }
 
 export interface OrderItem {
