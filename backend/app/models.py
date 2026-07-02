@@ -90,6 +90,8 @@ class Order(Base):
     milestones = relationship("OrderMilestone", back_populates="order",
                               cascade="all, delete-orphan",
                               order_by="OrderMilestone.sort_order, OrderMilestone.id")
+    proofs = relationship("PaymentProof", back_populates="order",
+                          cascade="all, delete-orphan", order_by="PaymentProof.created_at")
 
     @property
     def items(self):
@@ -101,6 +103,24 @@ class Order(Base):
     @property
     def status_label(self):
         return STATUS_LABELS.get(self.status, self.status)
+
+
+class PaymentProof(Base):
+    """A buyer-uploaded payment screenshot for a MANUAL transfer (Raast / SadaPay /
+    JazzCash). Stored first-party in the DB (like chat attachments); the developer
+    reviews it in the admin dashboard and marks the order paid. `ref` is the buyer's
+    transaction reference / date-time note; the upload itself is timestamped."""
+    __tablename__ = "payment_proofs"
+    id = Column(Integer, primary_key=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
+    filename = Column(String(120), default="")
+    content_type = Column(String(60), default="")
+    size = Column(Integer, default=0)
+    data = Column(LargeBinary, nullable=False)
+    ref = Column(String(200), default="")          # txn id / "sent at 3:40pm 2 Jul" note
+    created_at = Column(DateTime, default=utcnow)
+
+    order = relationship("Order", back_populates="proofs")
 
 
 class OrderMilestone(Base):

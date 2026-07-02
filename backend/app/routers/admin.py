@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from .. import crud, models, schemas
@@ -9,6 +9,17 @@ from ..deps import get_current_admin
 
 # Every route requires an admin (the developer).
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(get_current_admin)])
+
+
+@router.get("/payments/proofs/{proof_id}")
+def payment_proof_image(proof_id: int, db: Session = Depends(get_db)):
+    """The raw payment-proof screenshot a buyer uploaded (admin review only)."""
+    proof = crud.get_payment_proof(db, proof_id)
+    if not proof:
+        raise HTTPException(404, "Not found.")
+    return Response(content=proof.data, media_type=proof.content_type or "image/png",
+                    headers={"Cache-Control": "private, max-age=3600",
+                             "X-Content-Type-Options": "nosniff"})
 
 
 # ---- Orders ------------------------------------------------------------------

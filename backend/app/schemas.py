@@ -118,6 +118,13 @@ class MilestoneOut(BaseModel):
     sort_order: int = 0
 
 
+class PaymentProofOut(BaseModel):
+    id: int
+    filename: str = ""
+    ref: str = ""
+    created_at: dt.datetime
+
+
 class MilestoneIn(BaseModel):
     title: str = Field(min_length=1, max_length=200)
 
@@ -147,6 +154,7 @@ class OrderOut(BaseModel):
     deliverables: List[DeliverableOut] = []
     milestones: List[MilestoneOut] = []
     next_step: Optional[str] = None
+    proofs: List[PaymentProofOut] = []
 
     class Config:
         from_attributes = True

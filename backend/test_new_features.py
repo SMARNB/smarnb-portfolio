@@ -385,6 +385,36 @@ with TestClient(app) as c:
     appcfg.SAFEPAY_WEBHOOK_SECRET = ""
     appcfg.SAFEPAY_FX_RATE = 0.0
 
+    print("== Manual-payment proof upload (Raast/SadaPay/JazzCash) ==")
+    _png = b"\x89PNG\r\n\x1a\n" + b"proofbytes" * 20
+    mo = c.post("/api/orders", json={
+        "customer_name": "Manual Buyer", "customer_email": "manual@example.com",
+        "payment_method": "SadaPay",
+        "items": [{"service": "Logo", "tier": "Basic", "price": 60, "qty": 1}],
+    }).json()
+    mpid = mo["public_id"]
+    r = c.post("/api/orders/%s/proof" % mpid,
+               files={"file": ("receipt.png", _png, "image/png")},
+               data={"ref": "TID 8839021 · sent 2 Jul 3:40pm"})
+    check("proof upload 200", r.status_code == 200)
+    body = r.json()
+    check("order lists the proof + ref", len(body.get("proofs") or []) == 1
+          and body["proofs"][0]["ref"].startswith("TID 8839021"))
+    check("timeline logs the proof",
+          any("proof" in u["message"].lower() for u in body["updates"]))
+    proof_id = body["proofs"][0]["id"]
+    check("proof image is admin-gated (401 without token)",
+          c.get("/api/admin/payments/proofs/%s" % proof_id).status_code == 401)
+    rimg = c.get("/api/admin/payments/proofs/%s" % proof_id, headers=AH)
+    check("admin can view the proof image", rimg.status_code == 200 and rimg.content == _png)
+    check("non-image proof rejected (415)",
+          c.post("/api/orders/%s/proof" % mpid,
+                 files={"file": ("x.txt", b"not an image", "text/plain")}).status_code == 415)
+    c.patch("/api/admin/orders/%s" % mpid, headers=AH, json={"payment_status": "paid"})
+    check("paid order refuses further proofs (400)",
+          c.post("/api/orders/%s/proof" % mpid,
+                 files={"file": ("y.png", _png, "image/png")}).status_code == 400)
+
 print("\n==== RESULT: %d passed, %d failed ====" % (ok, fail))
 if os.path.exists(_DB):
     try:

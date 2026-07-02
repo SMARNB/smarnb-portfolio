@@ -84,6 +84,14 @@ export interface Order {
   deliverables: Deliverable[];
   milestones: Milestone[];
   next_step: string | null;
+  proofs?: PaymentProof[];
+}
+
+export interface PaymentProof {
+  id: number;
+  filename: string;
+  ref: string;
+  created_at: string;
 }
 
 export interface OrderCreate {

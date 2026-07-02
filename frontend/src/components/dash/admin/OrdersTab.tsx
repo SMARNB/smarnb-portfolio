@@ -357,6 +357,17 @@ function ManagePanel({
         </div>
       )}
 
+      {(order.proofs || []).length > 0 && (
+        <div className="field" style={{ marginBottom: ".8rem" }}>
+          <label>📎 Payment proofs (client-uploaded — verify, then set Payment to Paid)</label>
+          <div className="proof-list">
+            {(order.proofs || []).map((p) => (
+              <ProofThumb key={p.id} id={p.id} filename={p.filename} refNote={p.ref} at={p.created_at} />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="two">
         <div className="field">
           <label htmlFor="m-due">Due date</label>
@@ -464,5 +475,46 @@ function ManagePanel({
         Add deliverable
       </button>
     </div>
+  );
+}
+
+/* A payment-proof thumbnail. The image is admin-gated, so it's fetched with the
+   bearer token and rendered from an in-memory blob URL (CSP img-src allows blob:).
+   Click opens the full screenshot in a new tab for inspection. */
+function ProofThumb({ id, filename, refNote, at }: { id: number; filename: string; refNote: string; at: string }) {
+  const [src, setSrc] = useState("");
+  useEffect(() => {
+    let url = "";
+    let live = true;
+    fetch(API.base + "/api/admin/payments/proofs/" + id, {
+      headers: { Authorization: "Bearer " + (API.getToken() || "") },
+    })
+      .then((r) => (r.ok ? r.blob() : Promise.reject(new Error("fetch failed"))))
+      .then((b) => {
+        url = URL.createObjectURL(b);
+        if (live) setSrc(url);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [id]);
+  return (
+    <a
+      className="proof-thumb"
+      href="#"
+      title={filename}
+      onClick={(e) => {
+        e.preventDefault();
+        if (src) window.open(src, "_blank", "noopener");
+      }}
+    >
+      {src ? <img src={src} alt={"Payment proof " + filename} /> : <span className="proof-ph">…</span>}
+      <span className="proof-meta">
+        {refNote && <b>{refNote}</b>}
+        <small>{fmtDate(at)}</small>
+      </span>
+    </a>
   );
 }

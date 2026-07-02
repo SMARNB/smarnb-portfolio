@@ -430,3 +430,16 @@ main.dash-main { flex: 1; padding: clamp(1.5rem, 4vw, 2.5rem) 0 4rem; }
 .tfa-qr svg { width: 100%; height: 100%; display: block; }
 .tfa-secret { font-size: .82rem; color: var(--muted); margin: .4rem 0 .9rem; }
 .tfa-secret code { color: var(--text); font-weight: 600; letter-spacing: 1px; }
+
+/* --- Payment proofs (admin review) ----------------------------------------- */
+.proof-list { display: flex; flex-wrap: wrap; gap: .6rem; }
+.proof-thumb {
+  display: grid; gap: .3rem; width: 120px; text-align: center;
+  border: 1px solid var(--border); border-radius: var(--r-sm); padding: .45rem;
+  background: var(--surface); transition: border-color .2s;
+}
+.proof-thumb:hover { border-color: var(--accent); }
+.proof-thumb img { width: 100%; height: 82px; object-fit: cover; border-radius: 6px; }
+.proof-ph { display: grid; place-items: center; height: 82px; color: var(--muted); }
+.proof-meta { display: grid; font-size: .72rem; color: var(--muted); word-break: break-word; }
+.proof-meta b { color: var(--text); font-size: .74rem; }

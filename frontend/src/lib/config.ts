@@ -90,20 +90,17 @@ export const CONFIG: SiteConfig = {
     subtitle: "Ask about services, pricing, or start an order",
   },
 
-  // --- Payment trust grid ---
+  // --- Payment trust grid (only methods that can actually receive money) ---
   payments: [
-    { id: "raast", label: "Raast (instant)", group: "Local · Pakistan" },
-    { id: "sadapay", label: "SadaPay", group: "Local · Pakistan" },
-    { id: "jazzcash", label: "JazzCash", group: "Local · Pakistan" },
-    { id: "card", label: "Credit / Debit card", group: "International" },
-    { id: "paypal", label: "PayPal", group: "International" },
-    { id: "wise", label: "Wise", group: "International" },
-    { id: "crypto", label: "Crypto (USDT / BTC)", group: "International" },
+    { id: "card", label: "Credit / Debit card", group: "Cards · local & international" },
+    { id: "raast", label: "Raast (instant)", group: "Bank / wallet · Pakistan" },
+    { id: "sadapay", label: "SadaPay", group: "Bank / wallet · Pakistan" },
+    { id: "jazzcash", label: "JazzCash", group: "Bank / wallet · Pakistan" },
   ],
 
   // --- Manual payment details (shown to a client on an unpaid order) ---
   paymentInstructions: {
-    note: "Send the exact order total, then upload your receipt screenshot in the chat (bottom-right) so I can confirm and start your project.",
+    note: "Send the exact order total, then upload your payment screenshot below (it must show the date & time) so I can confirm and start your project.",
     methods: [
       { label: "Raast", value: "0324 2225073", sub: "Instant transfer · linked to HBL & SadaPay" },
       { label: "SadaPay", value: "0324 2225073", sub: "Send to this number" },

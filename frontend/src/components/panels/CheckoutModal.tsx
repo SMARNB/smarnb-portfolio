@@ -14,6 +14,7 @@ import type { ApiError, PaymentConfig } from "../../lib/types";
 import { useCart } from "../../context/CartContext";
 import { useUI } from "../../context/UIContext";
 import { useToast } from "../../context/ToastContext";
+import { ManualPayDetails, ProofUpload, manualMethodKey } from "./ManualPayment";
 
 // The dropdown option that means "pay online by card now" (Safepay hosted checkout).
 const CARD_LABEL = CONFIG.payments.find((p) => p.id === "card")?.label ?? "Credit / Debit card";
@@ -208,6 +209,14 @@ export function CheckoutModal() {
                   </select>
                 </div>
               </div>
+              {manualMethodKey(method) && (
+                <div className="manual-pay-inline">
+                  <ManualPayDetails methodLabel={method} />
+                  <p className="form-note">
+                    After placing the order you'll upload your payment screenshot here — I confirm it and start.
+                  </p>
+                </div>
+              )}
               <div className="field">
                 <label htmlFor="co-notes">Project details</label>
                 <textarea className="textarea" id="co-notes" name="notes" placeholder="Anything I should know — links, references, deadlines…" />
@@ -245,6 +254,7 @@ export function CheckoutModal() {
 
 function Success({ order, onTrack, onDone }: { order: LocalOrder; onTrack: () => void; onDone: () => void }) {
   const waLink = whatsappLink(orderSummaryText(order));
+  const manual = manualMethodKey(order.payment_method || "");
   const emailNote = CONFIG.formspreeId
     ? "A copy has been emailed to me — I'll reply soon."
     : "Tap below to send me the order on WhatsApp so I can confirm.";
@@ -260,13 +270,20 @@ function Success({ order, onTrack, onDone }: { order: LocalOrder; onTrack: () =>
           <small>Your order ID — save it to track</small>
           <div className="id">{order.id}</div>
         </div>
-        {order.payment_method && (
+        {order.payment_method && !manual && (
           <p className="form-note" style={{ margin: ".2rem auto 0" }}>
             Payment via <b>{order.payment_method}</b> — I'll send you the details to complete it.
           </p>
         )}
       </div>
-      <a className="btn btn-primary btn-block" href={waLink} target="_blank" rel="noopener">
+      {manual && (
+        <div className="manual-pay-inline" style={{ marginTop: ".9rem" }}>
+          <h4 style={{ margin: "0 0 .5rem" }}>Complete your payment</h4>
+          <ManualPayDetails methodLabel={order.payment_method} />
+          <ProofUpload orderId={order.id} />
+        </div>
+      )}
+      <a className="btn btn-primary btn-block" href={waLink} target="_blank" rel="noopener" style={manual ? { marginTop: ".8rem" } : undefined}>
         <Icon name="whatsapp" size={18} /> Confirm on WhatsApp
       </a>
       <button className="btn btn-ghost btn-block mt-2" onClick={onTrack}>

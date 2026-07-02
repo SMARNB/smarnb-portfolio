@@ -1,11 +1,12 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from .. import crud, crypto, email_guard, email_send, schemas
 from ..database import get_db
 from ..deps import get_current_user, get_optional_user
+from .blog import MAX_IMAGE, _detect_image
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
 
@@ -39,6 +40,31 @@ def track_order(public_id: str, db: Session = Depends(get_db)):
     order = crud.get_order(db, public_id.strip().upper())
     if not order:
         raise HTTPException(404, "No order found with that ID.")
+    return crud.serialize_order(order)
+
+
+@router.post("/{public_id}/proof", response_model=schemas.OrderOut)
+async def upload_payment_proof(public_id: str, file: UploadFile = File(...),
+                               ref: str = Form(""), db: Session = Depends(get_db)):
+    """Attach a payment screenshot to an order after a MANUAL transfer (Raast /
+    SadaPay / JazzCash). The screenshot should show the transfer's date & time;
+    ``ref`` carries the buyer's transaction id / when-sent note. The developer
+    reviews it in the admin dashboard and marks the order paid."""
+    order = crud.get_order(db, public_id.strip().upper())
+    if not order:
+        raise HTTPException(404, "No order found with that ID.")
+    if order.payment_status == "paid":
+        raise HTTPException(400, "This order is already paid — no proof needed.")
+    raw = await file.read(MAX_IMAGE + 1)
+    if len(raw) > MAX_IMAGE:
+        raise HTTPException(413, "Screenshot is too large (max 6 MB).")
+    if not raw:
+        raise HTTPException(400, "Empty file.")
+    ctype = _detect_image(raw)
+    if not ctype:
+        raise HTTPException(415, "Please upload the screenshot as PNG, JPG, GIF or WEBP.")
+    name = (file.filename or "proof").rsplit("/", 1)[-1][:120] or "proof"
+    crud.add_payment_proof(db, order, name, ctype, len(raw), raw, ref=ref)
     return crud.serialize_order(order)
 
 

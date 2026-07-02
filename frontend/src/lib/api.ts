@@ -79,11 +79,13 @@ async function req<T = unknown>(method: Method, path: string, body?: unknown): P
   return data as T;
 }
 
-/** Multipart upload (a File under the "file" field). Mirrors req()'s error shape;
-    the browser sets the multipart Content-Type/boundary, so we don't. */
-async function uploadReq<T = unknown>(path: string, file: File): Promise<T> {
+/** Multipart upload (a File under the "file" field, plus optional extra text
+    fields). Mirrors req()'s error shape; the browser sets the multipart
+    Content-Type/boundary, so we don't. */
+async function uploadReq<T = unknown>(path: string, file: File, fields?: Record<string, string>): Promise<T> {
   const fd = new FormData();
   fd.append("file", file);
+  if (fields) Object.entries(fields).forEach(([k, v]) => fd.append(k, v));
   const headers: Record<string, string> = {};
   const t = getToken();
   if (t) headers["Authorization"] = "Bearer " + t;
@@ -131,7 +133,7 @@ export const API = {
   put: <T = unknown>(p: string, b?: unknown) => req<T>("PUT", p, b === undefined ? {} : b),
   patch: <T = unknown>(p: string, b?: unknown) => req<T>("PATCH", p, b === undefined ? {} : b),
   del: <T = unknown>(p: string) => req<T>("DELETE", p),
-  upload: <T = unknown>(p: string, file: File) => uploadReq<T>(p, file),
+  upload: <T = unknown>(p: string, file: File, fields?: Record<string, string>) => uploadReq<T>(p, file, fields),
   register: (d: { email: string; password: string; name?: string; whatsapp?: string }) =>
     req<Token>("POST", "/api/auth/register", d).then(saveAuth),
   login: (d: { email: string; password: string; totp_code?: string }) =>

@@ -549,6 +549,20 @@ h2.section-title { font-size: clamp(1.8rem, 4.4vw, 2.8rem); }
 #checkoutModal .form { gap: .75rem; }
 #checkoutModal .textarea { min-height: 74px; }
 
+/* Manual transfer (Raast / SadaPay / JazzCash): the owner's account details +
+   payment-proof upload, shown in the checkout when a manual method is selected. */
+.manual-pay { display: grid; gap: .5rem; }
+.manual-pay .pay-method { padding: .6rem .8rem; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); }
+.manual-pay .pay-method.soon { opacity: .65; }
+.manual-pay .pm-val { font-weight: 700; font-size: 1.05rem; letter-spacing: .02em; color: var(--accent-2); }
+.manual-pay .pay-method small { color: var(--muted); display: block; margin-top: .15rem; }
+.manual-pay-inline {
+  border: 1px dashed var(--border-strong); border-radius: var(--r); padding: .9rem 1rem;
+  background: var(--surface); display: grid; gap: .6rem;
+}
+.proof-form { gap: .6rem !important; }
+.proof-form input[type="file"] { padding: .55rem .8rem; }
+
 /* order success + tracking */
 .success-icon { width: 70px; height: 70px; border-radius: 50%; background: rgba(52,211,153,.15); color: var(--ok); display: grid; place-items: center; margin: 0 auto 1rem; animation: pop .5s var(--ease) both; }
 .success-icon svg { width: 38px; height: 38px; }

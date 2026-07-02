@@ -7,6 +7,7 @@ import { CONFIG } from "../../lib/config";
 import { Icon } from "../../lib/icons";
 import { money, fmtDate } from "../../lib/format";
 import { API } from "../../lib/api";
+import { ProofUpload } from "../panels/ManualPayment";
 import type { ApiError, Order, PaymentConfig } from "../../lib/types";
 
 const STAGES = ["received", "confirmed", "in_progress", "in_review", "delivered"];
@@ -241,6 +242,16 @@ function PayPanel({
         ))}
       </div>
       {pi.note && <p className="form-note" style={{ marginTop: ".6rem" }}>{pi.note}</p>}
+      {(o.proofs || []).length > 0 ? (
+        <div className="form-status ok show" style={{ marginTop: ".6rem" }}>
+          ✓ Payment proof uploaded — awaiting confirmation.
+        </div>
+      ) : (
+        <div style={{ marginTop: ".8rem" }}>
+          <b style={{ fontSize: ".92rem" }}>Paid by bank / wallet transfer?</b>
+          <ProofUpload orderId={o.public_id} />
+        </div>
+      )}
       {status && <div className={`dash-status show ${status.type}`}>{status.msg}</div>}
     </div>
   );

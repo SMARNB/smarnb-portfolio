@@ -373,7 +373,36 @@ def serialize_order(order, reveal_final=False):
             for m in order.milestones
         ],
         "next_step": next_step(order),
+        "proofs": [
+            {"id": p.id, "filename": p.filename, "ref": p.ref or "", "created_at": p.created_at}
+            for p in order.proofs
+        ],
     }
+
+
+# --- Payment proofs (manual transfers) -----------------------------------------
+def add_payment_proof(db, order, filename, content_type, size, data, ref=""):
+    """Attach a buyer's payment screenshot to an order, log it on the timeline and
+    ping the owner so it can be reviewed + marked paid from the admin dashboard."""
+    proof = models.PaymentProof(order_id=order.id, filename=filename,
+                                content_type=content_type, size=size, data=data,
+                                ref=(ref or "")[:200])
+    db.add(proof)
+    add_update(db, order, "📎 Payment proof uploaded — I'll verify and confirm shortly.",
+               status=order.status, progress=order.progress)
+    db.commit()
+    db.refresh(proof)
+    from . import notify
+    try:
+        notify.notify_owner("📎 Payment proof uploaded for order %s (%s%s). Review it in /admin."
+                            % (order.public_id, config.CURRENCY, format(order.total or 0, ",.2f")))
+    except Exception:
+        pass
+    return proof
+
+
+def get_payment_proof(db, proof_id):
+    return db.get(models.PaymentProof, proof_id)
 
 
 # --- Stats --------------------------------------------------------------------
