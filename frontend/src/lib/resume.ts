@@ -54,8 +54,7 @@ export const RESUME: ResumeData = {
   github: "github.com/SMARNB",
   githubUrl: "https://github.com/SMARNB",
   linkedinLabel: "LinkedIn",
-  linkedinUrl:
-    "https://www.linkedin.com/in/syed-muhammad-ali-raza-naqvi-bukhari-311599412/",
+  linkedinUrl: "https://www.linkedin.com/in/muhammad-ali-r-43713598/",
   website: "https://smarnb.onrender.com",
   websiteLabel: "smarnb.onrender.com",
   flagshipProjectId: "codewatch",

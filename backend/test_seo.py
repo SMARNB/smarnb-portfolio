@@ -82,6 +82,16 @@ with TestClient(app) as c:
     check("admin save 200", r.status_code == 200)
     check("save round-trips title", r.json()["general"]["default_title"] == "SMARNB — Custom Title For Test")
 
+    # same_as (social profiles) must UNION with the code defaults — a doc saved
+    # before a new profile was added can't silently hide it.
+    doc2 = c.get("/api/admin/seo", headers=AH).json()
+    doc2["general"]["same_as"] = ["https://example.com/custom-profile"]
+    saved = c.put("/api/admin/seo", headers=AH, json=doc2).json()
+    got = saved["general"]["same_as"]
+    check("same_as keeps code defaults after a save",
+          "https://github.com/SMARNB" in got and any("linkedin.com" in s for s in got))
+    check("same_as keeps the stored custom entry", "https://example.com/custom-profile" in got)
+
     print("== SEO: sitemap.xml (conventional path) ==")
     r = c.get("/sitemap.xml")
     check("sitemap 200 + xml", r.status_code == 200 and "xml" in r.headers.get("content-type", ""))

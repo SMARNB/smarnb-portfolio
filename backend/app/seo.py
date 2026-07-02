@@ -86,7 +86,14 @@ DEFAULT_DOC = {
         "price_range": "$$",
         "logo": "/assets/img/profile.jpg",
         "image": "/assets/img/profile.jpg",
-        "same_as": ["https://github.com/SMARNB"],
+        "same_as": [
+            "https://github.com/SMARNB",
+            "https://www.linkedin.com/in/muhammad-ali-r-43713598/",
+            "https://www.instagram.com/smarnb.co.ltd/",
+            "https://www.facebook.com/SMARNB.Co/",
+            "https://x.com/SMARNB_Co_Ltd",
+            "https://www.reddit.com/user/SMARNB-Co/",
+        ],
         # Icons / manifest.
         "favicon": "/favicon.svg",
         "manifest": "/manifest.webmanifest",
@@ -261,7 +268,18 @@ def get_doc(db):
             stored = json.loads(row.value)
         except Exception:
             stored = {}
-    return _deep_merge(DEFAULT_DOC, stored)
+    merged = _deep_merge(DEFAULT_DOC, stored)
+    # same_as (social profiles for Person/Org JSON-LD) is identity data owned by the
+    # codebase defaults — UNION any stored list with them so a previously-saved doc
+    # can't silently hide profiles added later (lists otherwise replace wholesale).
+    try:
+        defaults = DEFAULT_DOC["general"].get("same_as") or []
+        stored_list = merged["general"].get("same_as") or []
+        merged["general"]["same_as"] = list(dict.fromkeys(
+            [s for s in list(defaults) + list(stored_list) if s]))
+    except Exception:
+        pass
+    return merged
 
 
 def save_doc(db, doc):

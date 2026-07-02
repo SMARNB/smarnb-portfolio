@@ -12,6 +12,7 @@ const SOCIALS: { key: string; label: string }[] = [
   { key: "facebook", label: "Facebook" },
   { key: "linkedin", label: "LinkedIn" },
   { key: "x", label: "X (Twitter)" },
+  { key: "reddit", label: "Reddit" },
   { key: "github", label: "GitHub" },
 ];
 
