@@ -35,21 +35,38 @@ export function Header({ onMenu, menuOpen }: { onMenu: () => void; menuOpen: boo
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Fit-based nav: show inline links only while they actually fit.
+  // Fit-based nav: show inline links only while they actually fit. Measured
+  // robustly so a mistimed first measurement — e.g. right after returning from a
+  // dashboard route, before fonts/CSS have settled — self-corrects instead of
+  // getting stuck on the hamburger. Re-runs on rAF, on font load, on any container
+  // resize (ResizeObserver), and after a couple of short delays.
   useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    let raf = 0;
     const measure = () => {
-      const nav = navRef.current;
-      if (!nav) return;
-      // Temporarily assume expanded to measure natural width.
-      setExpanded(true);
-      requestAnimationFrame(() => {
-        if (!nav) return;
-        setExpanded(nav.scrollWidth <= nav.clientWidth + 1);
+      cancelAnimationFrame(raf);
+      setExpanded(true); // reveal links so scrollWidth reflects their natural width
+      raf = requestAnimationFrame(() => {
+        const el = navRef.current;
+        if (!el || el.clientWidth === 0) return; // not laid out yet — don't collapse
+        setExpanded(el.scrollWidth <= el.clientWidth + 1);
       });
     };
     measure();
+    const t1 = window.setTimeout(measure, 120);
+    const t2 = window.setTimeout(measure, 450);
     window.addEventListener("resize", measure, { passive: true });
-    return () => window.removeEventListener("resize", measure);
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    ro?.observe(nav);
+    if (document.fonts?.ready) document.fonts.ready.then(measure).catch(() => {});
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.removeEventListener("resize", measure);
+      ro?.disconnect();
+    };
   }, []);
 
   return (
