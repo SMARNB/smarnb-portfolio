@@ -47,6 +47,12 @@ def enabled() -> bool:
     return bool(config.SAFEPAY_API_KEY)
 
 
+def embedded_enabled() -> bool:
+    """The in-site (iframe) checkout also needs the merchant SECRET key, which
+    authenticates the server-side TBT/passport call. Without it → hosted redirect."""
+    return enabled() and bool(config.SAFEPAY_SECRET_KEY)
+
+
 def minor_amount(total) -> int:
     """The order total in Safepay's expected unit (paisa by default)."""
     try:
@@ -106,10 +112,12 @@ def _headers(extra=None):
     return h
 
 
-def _post_json(url, payload):
+def _post_json(url, payload, extra_headers=None):
     data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(url, data=data, method="POST",
-                                 headers=_headers({"Content-Type": "application/json"}))
+    headers = _headers({"Content-Type": "application/json"})
+    if extra_headers:
+        headers.update(extra_headers)
+    req = urllib.request.Request(url, data=data, method="POST", headers=headers)
     with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
         return json.loads(resp.read().decode("utf-8") or "{}")
 
@@ -163,6 +171,48 @@ def create_tracker(amount_total, currency=None):
     if not token:
         _last_error = "Safepay response had no tracker token: %s" % (str(body)[:200])
     return token
+
+
+def create_tbt():
+    """A Time-Based authentication Token (Safepay "passport") — required by the
+    embedded checkout app. Authenticated with the merchant SECRET key via the
+    X-SFPY-MERCHANT-SECRET header (per Safepay's official PHP SDK). Returns the
+    token string, or None (see last_error()) — callers then fall back to the
+    hosted redirect, so a passport hiccup can never block a sale."""
+    global _last_error
+    if not embedded_enabled():
+        _last_error = "embedded checkout not configured (SAFEPAY_SECRET_KEY missing)"
+        return None
+    url = config.SAFEPAY_API_BASE + "/client/passport/v1/token"
+    try:
+        body = _post_json(url, {}, {"X-SFPY-MERCHANT-SECRET": config.SAFEPAY_SECRET_KEY})
+    except Exception as e:
+        _last_error = _describe_error(url, e)
+        return None
+    data = body.get("data") if isinstance(body, dict) else None
+    if isinstance(data, str) and data:
+        return data
+    if isinstance(data, dict):
+        return data.get("token") or data.get("tbt") or None
+    _last_error = "passport response had no token: %s" % (str(body)[:200])
+    return None
+
+
+def embedded_url(tracker, tbt, redirect_url, cancel_url=""):
+    """The in-site checkout URL rendered in an iframe on OUR page (the buyer never
+    leaves the site; card fields stay inside Safepay's app, so no PCI scope for us).
+    Contract per Safepay's PHP SDK: {host}/embedded?environment&tracker&tbt&…"""
+    from urllib.parse import urlencode
+    params = {
+        "environment": config.SAFEPAY_ENVIRONMENT,
+        "tracker": tracker,
+        "tbt": tbt,
+        "source": "custom",
+        "redirect_url": redirect_url,
+    }
+    if cancel_url:
+        params["cancel_url"] = cancel_url
+    return config.SAFEPAY_EMBED_BASE + "?" + urlencode(params)
 
 
 def checkout_url(tracker, redirect_url, cancel_url="", order_id=""):

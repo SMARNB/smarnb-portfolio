@@ -65,6 +65,10 @@ export function CheckoutModal() {
   const [method, setMethod] = useState("");
   const [gated, setGated] = useState(false);
   const [payCfg, setPayCfg] = useState<PaymentConfig>({ stripe_enabled: false });
+  // Embedded (in-site) card checkout: Safepay's payment app in an iframe — the
+  // buyer never leaves the site. Completion is detected by polling /verify.
+  const [embed, setEmbed] = useState<{ url: string; pid: string; hosted: string } | null>(null);
+  const [paid, setPaid] = useState(false);
 
   // Reset to the form whenever the modal re-opens, and learn whether online card
   // checkout (Safepay) is available so "Credit / Debit card" can charge instantly.
@@ -75,11 +79,31 @@ export function CheckoutModal() {
       setBusy(false);
       setMethod("");
       setGated(false);
+      setEmbed(null);
+      setPaid(false);
       API.get<PaymentConfig>("/api/payments/config")
         .then(setPayCfg)
         .catch(() => setPayCfg({ stripe_enabled: false }));
     }
   }, [open]);
+
+  // While the embedded checkout is showing, poll the server until the payment is
+  // verified (the server re-checks with Safepay — the browser can't fake this).
+  useEffect(() => {
+    if (!embed || paid) return;
+    const t = window.setInterval(() => {
+      API.get<{ paid?: boolean }>("/api/payments/safepay/verify/" + encodeURIComponent(embed.pid))
+        .then((r) => {
+          if (r && r.paid) {
+            setPaid(true);
+            setEmbed(null);
+            toast("Payment received for " + embed.pid + " ✅", "check");
+          }
+        })
+        .catch(() => {});
+    }, 3500);
+    return () => window.clearInterval(t);
+  }, [embed, paid, toast]);
 
   const payNow = !!payCfg.safepay_enabled && method === CARD_LABEL;
 
@@ -109,11 +133,19 @@ export function CheckoutModal() {
       // Pay-now: if they chose card and Safepay is on, hand off to the secure hosted
       // checkout immediately (buyer pays on getsafepay.com, then returns to /store).
       if (payCfg.safepay_enabled && customer.payment_method === CARD_LABEL) {
-        setStatus({ type: "ok", msg: "Redirecting to secure card checkout…" });
+        setStatus({ type: "ok", msg: "Opening secure card checkout…" });
         try {
-          const r = await API.post<{ url?: string }>(
+          const r = await API.post<{ url?: string; embed_url?: string }>(
             "/api/payments/safepay/checkout/" + encodeURIComponent(o.id) + "?return_to=%2Fstore",
           );
+          // Preferred: embedded — pay right here without leaving the site.
+          if (r && r.embed_url) {
+            setOrder(o);
+            setEmbed({ url: r.embed_url, pid: o.id, hosted: r.url || "" });
+            setBusy(false);
+            setStatus(null);
+            return;
+          }
           if (r && r.url) {
             window.location.href = r.url;
             return;
@@ -144,7 +176,7 @@ export function CheckoutModal() {
     }
   }
 
-  const title = order ? "Order received" : "Checkout";
+  const title = embed ? "Secure card payment" : paid ? "Payment received" : order ? "Order received" : "Checkout";
 
   return (
     <div
@@ -162,8 +194,31 @@ export function CheckoutModal() {
         </button>
       </div>
       <div className="modal-body" id="checkoutBody">
-        {order ? (
-          <Success order={order} onTrack={() => { close("checkout"); openTrack(order.id); }} onDone={() => close("checkout")} />
+        {embed ? (
+          <div className="embed-pay">
+            <iframe
+              className="embed-pay-frame"
+              src={embed.url}
+              title="Safepay secure card payment"
+              allow="payment"
+            />
+            <p className="form-note" style={{ textAlign: "center" }}>
+              🔒 Card details are entered in Safepay's secure form — they never touch this site.
+              Order <b>{embed.pid}</b> is saved either way.
+            </p>
+            <div className="pay-row" style={{ justifyContent: "center" }}>
+              {embed.hosted && (
+                <a className="btn btn-outline btn-sm" href={embed.hosted}>
+                  Having trouble? Open the full payment page
+                </a>
+              )}
+              <button className="btn btn-ghost btn-sm" onClick={() => setEmbed(null)}>
+                Cancel payment
+              </button>
+            </div>
+          </div>
+        ) : order ? (
+          <Success order={order} paid={paid} onTrack={() => { close("checkout"); openTrack(order.id); }} onDone={() => close("checkout")} />
         ) : (
           <>
             <div className="order-summary">
@@ -252,9 +307,9 @@ export function CheckoutModal() {
   );
 }
 
-function Success({ order, onTrack, onDone }: { order: LocalOrder; onTrack: () => void; onDone: () => void }) {
+function Success({ order, paid = false, onTrack, onDone }: { order: LocalOrder; paid?: boolean; onTrack: () => void; onDone: () => void }) {
   const waLink = whatsappLink(orderSummaryText(order));
-  const manual = manualMethodKey(order.payment_method || "");
+  const manual = !paid && manualMethodKey(order.payment_method || "");
   const emailNote = CONFIG.formspreeId
     ? "A copy has been emailed to me — I'll reply soon."
     : "Tap below to send me the order on WhatsApp so I can confirm.";
@@ -264,13 +319,15 @@ function Success({ order, onTrack, onDone }: { order: LocalOrder; onTrack: () =>
         <div className="success-icon">
           <Icon name="check" />
         </div>
-        <h3>Thank you!</h3>
-        <p className="lead" style={{ margin: ".5rem auto 0" }}>Your order request is in. {emailNote}</p>
+        <h3>{paid ? "Payment received — thank you!" : "Thank you!"}</h3>
+        <p className="lead" style={{ margin: ".5rem auto 0" }}>
+          {paid ? "Your payment is confirmed and your project is queued. Track it anytime with your order ID." : `Your order request is in. ${emailNote}`}
+        </p>
         <div className="order-id-box">
           <small>Your order ID — save it to track</small>
           <div className="id">{order.id}</div>
         </div>
-        {order.payment_method && !manual && (
+        {order.payment_method && !manual && !paid && (
           <p className="form-note" style={{ margin: ".2rem auto 0" }}>
             Payment via <b>{order.payment_method}</b> — I'll send you the details to complete it.
           </p>

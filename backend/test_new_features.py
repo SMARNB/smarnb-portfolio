@@ -381,6 +381,44 @@ with TestClient(app) as c:
     check("paid order isn't charged again",
           c.post("/api/payments/safepay/checkout/%s" % _pid).status_code == 400)
 
+    print("== Safepay EMBEDDED (in-site iframe) checkout ==")
+    check("embedded off without the secret key", safepay.embedded_enabled() is False)
+    _o2 = c.post("/api/orders", json={
+        "customer_name": "Embed Buyer", "customer_email": "embed@example.com",
+        "payment_method": "Credit / Debit card",
+        "items": [{"service": "X", "tier": "Y", "price": 25, "qty": 1}],
+    }).json()
+    co2 = c.post("/api/payments/safepay/checkout/%s" % _o2["public_id"]).json()
+    check("no embed_url without the secret key", "embed_url" not in co2 and "url" in co2)
+
+    appcfg.SAFEPAY_SECRET_KEY = "whsec_embed_test"
+    check("embedded on with both keys", safepay.embedded_enabled() is True)
+    _tbt_calls = []
+    safepay.create_tbt = lambda: (_tbt_calls.append(1) or "tbt_TEST42")
+    eurl = safepay.embedded_url("track_abc", "tbt_TEST42", "https://x/done", "https://x/cancel")
+    check("embedded url shape (/embedded + tracker + tbt + env)",
+          "/embedded?" in eurl and "tracker=track_abc" in eurl
+          and "tbt=tbt_TEST42" in eurl and "environment=" in eurl)
+    _o3 = c.post("/api/orders", json={
+        "customer_name": "Embed Buyer2", "customer_email": "embed2@example.com",
+        "payment_method": "Credit / Debit card",
+        "items": [{"service": "X", "tier": "Y", "price": 25, "qty": 1}],
+    }).json()
+    co3 = c.post("/api/payments/safepay/checkout/%s" % _o3["public_id"]).json()
+    check("checkout returns embed_url + hosted fallback",
+          "/embedded?" in co3.get("embed_url", "") and "/checkout/pay?" in co3.get("url", ""))
+    check("embed redirects into the frameable done page",
+          "safepay%2Fdone" in co3["embed_url"] or "safepay/done" in co3["embed_url"])
+
+    rdone = c.get("/api/payments/safepay/done", params={"pid": _o3["public_id"]})
+    check("done page 200 + frameable by our origin only",
+          rdone.status_code == 200
+          and rdone.headers.get("x-frame-options") == "SAMEORIGIN"
+          and "frame-ancestors 'self'" in rdone.headers.get("content-security-policy", ""))
+    check("done page (cancelled) renders",
+          "cancelled" in c.get("/api/payments/safepay/done", params={"cancelled": 1}).text.lower())
+
+    appcfg.SAFEPAY_SECRET_KEY = ""
     appcfg.SAFEPAY_API_KEY = ""
     appcfg.SAFEPAY_WEBHOOK_SECRET = ""
     appcfg.SAFEPAY_FX_RATE = 0.0

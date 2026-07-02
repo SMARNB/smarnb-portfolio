@@ -94,6 +94,12 @@ PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
 # env secret). Your bank details go in Safepay's own dashboard, never in this app.
 SAFEPAY_API_KEY = os.environ.get("SAFEPAY_API_KEY", "")          # public/client key ("sec_…")
 SAFEPAY_WEBHOOK_SECRET = os.environ.get("SAFEPAY_WEBHOOK_SECRET", "")  # optional, for signed webhooks
+# Merchant SECRET key (Safepay dashboard → Developer → API → "Secret key").
+# OPTIONAL: unlocks the EMBEDDED checkout — the payment form renders inside our own
+# page (an iframe of Safepay's /embedded app; card data still never touches us).
+# It authenticates the server-side TBT (passport) call. Without it the flow simply
+# stays a hosted redirect.
+SAFEPAY_SECRET_KEY = os.environ.get("SAFEPAY_SECRET_KEY", "")
 SAFEPAY_ENVIRONMENT = (os.environ.get("SAFEPAY_ENVIRONMENT", "sandbox") or "sandbox").lower()  # sandbox | production
 SAFEPAY_CURRENCY = os.environ.get("SAFEPAY_CURRENCY", "PKR").upper()   # Safepay settles in PKR
 # Safepay's /order/v1/init takes the amount in the major unit (rupees) — the
@@ -120,6 +126,11 @@ SAFEPAY_API_BASE = (os.environ.get("SAFEPAY_API_BASE", "")
 SAFEPAY_CHECKOUT_BASE = (os.environ.get("SAFEPAY_CHECKOUT_BASE", "")
                          or ("https://sandbox.api.getsafepay.com/checkout/pay" if _sfpy_sandbox
                              else "https://getsafepay.com/checkout/pay")).rstrip("/")
+# The embeddable checkout app (rendered in an iframe on OUR page when the secret
+# key is set). Per Safepay's PHP SDK: {host}/embedded?environment&tracker&tbt&….
+SAFEPAY_EMBED_BASE = (os.environ.get("SAFEPAY_EMBED_BASE", "")
+                      or ("https://sandbox.api.getsafepay.com/embedded" if _sfpy_sandbox
+                          else "https://getsafepay.com/embedded")).rstrip("/")
 
 # --- Email (SendGrid, OPTIONAL) — powers account/email verification ----------
 # Verification + security emails go over SendGrid's HTTPS API because Render blocks

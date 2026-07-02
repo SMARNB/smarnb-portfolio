@@ -155,6 +155,20 @@ _CSP = (
 # admin Inbox fetches chat attachments with the bearer token and renders them from
 # URL.createObjectURL(blob), so image/PDF previews need blob: to be allowed.
 
+# Embedded Safepay checkout renders Safepay's payment app in an IFRAME on our page
+# (no third-party script ever runs on our origin — script-src stays 'self'). Allow
+# framing exactly the configured checkout hosts, and only while Safepay is enabled;
+# with no key the CSP above is byte-identical.
+if config.SAFEPAY_API_KEY:
+    from urllib.parse import urlparse as _urlparse
+    _sfpy_hosts = []
+    for _u in (config.SAFEPAY_EMBED_BASE, config.SAFEPAY_CHECKOUT_BASE):
+        _p = _urlparse(_u)
+        _origin = "%s://%s" % (_p.scheme, _p.netloc)
+        if _origin not in _sfpy_hosts:
+            _sfpy_hosts.append(_origin)
+    _CSP += "; frame-src 'self' " + " ".join(_sfpy_hosts)
+
 
 import re as _re
 from fastapi.responses import PlainTextResponse as _PlainText

@@ -105,6 +105,11 @@ services:
       #   value: sandbox
       # - key: SAFEPAY_WEBHOOK_SECRET
       #   sync: false
+      # Merchant SECRET key (Developer → API → Secret key) — unlocks the EMBEDDED
+      # checkout: buyers pay inside our own page (Safepay app in an iframe; card
+      # data still never touches our origin). Without it: hosted redirect.
+      # - key: SAFEPAY_SECRET_KEY
+      #   sync: false
       # Store prices are USD; Safepay charges PKR. Totals convert with a live FX
       # rate (cached 6h). Optionally pin the rate / add a % buffer:
       # - key: SAFEPAY_FX_RATE

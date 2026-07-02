@@ -10,6 +10,7 @@
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from .. import config, crud, safepay
@@ -151,7 +152,46 @@ def safepay_checkout(public_id: str, request: Request, return_to: str = "/app",
         cancel_url=base + rt,
         order_id=order.public_id,
     )
-    return {"url": url}
+    out = {"url": url}
+    # Embedded (in-site) checkout when the secret key is configured: the frontend
+    # renders this in an iframe so the buyer never leaves the site. Its post-payment
+    # redirect targets the tiny frameable /done page (the SPA itself refuses to be
+    # framed); the modal polls /verify for the real completion signal. Any TBT
+    # failure just leaves the hosted redirect as the fallback.
+    if safepay.embedded_enabled():
+        tbt = safepay.create_tbt()
+        if tbt:
+            out["embed_url"] = safepay.embedded_url(
+                tracker,
+                tbt,
+                redirect_url=base + "/api/payments/safepay/done?pid=" + order.public_id,
+                cancel_url=base + "/api/payments/safepay/done?cancelled=1",
+            )
+    return out
+
+
+@router.get("/safepay/done")
+def safepay_embedded_done(pid: str = "", cancelled: int = 0):
+    """The page Safepay's EMBEDDED checkout redirects to inside our iframe after the
+    buyer pays (or cancels). It only needs to be a friendly end-cap: the checkout
+    modal polls /verify for the authoritative result. Framing is allowed for our own
+    origin only (the SPA shell itself keeps X-Frame-Options: DENY)."""
+    msg = ("Payment cancelled — you can close this and pick another method."
+           if cancelled else "✓ Payment received — finalising your order…")
+    html = (
+        "<!doctype html><html><head><meta charset='utf-8'><title>Safepay</title>"
+        "<style>body{font-family:Inter,Segoe UI,Arial,sans-serif;display:grid;"
+        "place-items:center;height:96vh;margin:0;color:#0f172a;background:#f8fafc}"
+        "div{text-align:center;padding:1rem}h2{margin:.2rem 0}</style></head>"
+        "<body><div><h2>" + msg + "</h2>"
+        + ("" if cancelled else "<p>This window will update automatically.</p>")
+        + "</div></body></html>"
+    )
+    return HTMLResponse(html, headers={
+        "X-Frame-Options": "SAMEORIGIN",
+        "Content-Security-Policy": "frame-ancestors 'self'",
+        "Cache-Control": "no-store",
+    })
 
 
 @router.get("/safepay/verify/{public_id}")
