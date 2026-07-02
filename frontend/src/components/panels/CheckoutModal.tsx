@@ -8,8 +8,13 @@ import { CONFIG } from "../../lib/config";
 import { money, validEmail, whatsappLink } from "../../lib/format";
 import { placeOrder, placeOrderViaApi, orderSummaryText } from "../../lib/cart";
 import type { Customer, LocalOrder } from "../../lib/cart";
+import { API } from "../../lib/api";
+import type { PaymentConfig } from "../../lib/types";
 import { useCart } from "../../context/CartContext";
 import { useUI } from "../../context/UIContext";
+
+// The dropdown option that means "pay online by card now" (Safepay hosted checkout).
+const CARD_LABEL = CONFIG.payments.find((p) => p.id === "card")?.label ?? "Credit / Debit card";
 
 function PaymentOptions() {
   const groups: Record<string, typeof CONFIG.payments> = {};
@@ -40,15 +45,24 @@ export function CheckoutModal() {
   const [order, setOrder] = useState<LocalOrder | null>(null);
   const [status, setStatus] = useState<{ type: string; msg: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [method, setMethod] = useState("");
+  const [payCfg, setPayCfg] = useState<PaymentConfig>({ stripe_enabled: false });
 
-  // Reset to the form whenever the modal re-opens.
+  // Reset to the form whenever the modal re-opens, and learn whether online card
+  // checkout (Safepay) is available so "Credit / Debit card" can charge instantly.
   useEffect(() => {
     if (open) {
       setOrder(null);
       setStatus(null);
       setBusy(false);
+      setMethod("");
+      API.get<PaymentConfig>("/api/payments/config")
+        .then(setPayCfg)
+        .catch(() => setPayCfg({ stripe_enabled: false }));
     }
   }, [open]);
+
+  const payNow = !!payCfg.safepay_enabled && method === CARD_LABEL;
 
   const summary = useMemo(() => items, [items]);
 
@@ -73,6 +87,22 @@ export function CheckoutModal() {
     setStatus({ type: "ok", msg: "Placing your order…" });
     try {
       const o = await placeOrderViaApi(customer);
+      // Pay-now: if they chose card and Safepay is on, hand off to the secure hosted
+      // checkout immediately (buyer pays on getsafepay.com, then returns to /store).
+      if (payCfg.safepay_enabled && customer.payment_method === CARD_LABEL) {
+        setStatus({ type: "ok", msg: "Redirecting to secure card checkout…" });
+        try {
+          const r = await API.post<{ url?: string }>(
+            "/api/payments/safepay/checkout/" + encodeURIComponent(o.id) + "?return_to=%2Fstore",
+          );
+          if (r && r.url) {
+            window.location.href = r.url;
+            return;
+          }
+        } catch {
+          /* couldn't start the gateway — fall back to the order-received screen */
+        }
+      }
       setOrder(o);
     } catch {
       setOrder(placeOrder(customer));
@@ -136,19 +166,29 @@ export function CheckoutModal() {
                 <textarea className="textarea" id="co-notes" name="notes" placeholder="Anything I should know — links, references, deadlines…" />
               </div>
               <div className="field">
-                <label htmlFor="co-pay">Preferred payment method</label>
-                <select className="select" id="co-pay" name="payment">
+                <label htmlFor="co-pay">
+                  {payCfg.safepay_enabled ? "Payment method" : "Preferred payment method"}
+                </label>
+                <select
+                  className="select"
+                  id="co-pay"
+                  name="payment"
+                  value={method}
+                  onChange={(e) => setMethod(e.target.value)}
+                >
                   <PaymentOptions />
                 </select>
               </div>
               <input className="hp" tabIndex={-1} autoComplete="off" name="_gotcha" aria-hidden="true" />
               {status && <div className={`form-status show ${status.type}`}>{status.msg}</div>}
               <button className="btn btn-primary btn-block" type="submit" disabled={busy}>
-                <Icon name="check" size={18} /> Place order
+                <Icon name={payNow ? "arrow" : "check"} size={18} />{" "}
+                {payNow ? `Pay ${money(total)} securely` : "Place order"}
               </button>
               <p className="form-note">
-                By placing this order you're sending me a request — I'll confirm the details and payment with you before
-                starting. No payment is taken on this site.
+                {payNow
+                  ? "You'll be redirected to Safepay's secure checkout to pay by card. Your order is saved either way."
+                  : "By placing this order you're sending me a request — I'll confirm the details and payment with you before starting."}
               </p>
             </form>
           </>

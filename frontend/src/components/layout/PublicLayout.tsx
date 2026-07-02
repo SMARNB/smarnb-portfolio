@@ -8,6 +8,8 @@ import { CatalogProvider } from "../../context/CatalogContext";
 import { CartProvider } from "../../context/CartContext";
 import { ToastProvider } from "../../context/ToastContext";
 import { UIProvider, useUI } from "../../context/UIContext";
+import { useToast } from "../../context/ToastContext";
+import { API } from "../../lib/api";
 import { useSmoothScroll } from "../../lib/useLenis";
 import { scrollToHash, scrollToTarget } from "../../lib/lenis";
 import { Header } from "./Header";
@@ -50,6 +52,7 @@ function Shell() {
       <Header onMenu={() => setMenuOpen((o) => !o)} menuOpen={menuOpen} />
       <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
       <ScrollManager />
+      <SafepayReturn />
 
       <main id="main">
         {/* Keyed remount per route → a clean enter-fade and a guaranteed content
@@ -82,6 +85,40 @@ function Shell() {
       <ChatWidget />
     </>
   );
+}
+
+/* After a Safepay hosted-checkout redirect the buyer lands back here with ?sfpy=<id>.
+   Verify the payment server-side (the browser can't fake it — this also marks the
+   order paid), confirm to the buyer, and jump them to order tracking. */
+function SafepayReturn() {
+  const { toast } = useToast();
+  const { openTrack } = useUI();
+  const done = useRef(false);
+
+  useEffect(() => {
+    if (done.current) return;
+    const m = /[?&]sfpy=([^&]+)/.exec(window.location.search || "");
+    if (!m) return;
+    done.current = true;
+    const id = decodeURIComponent(m[1]);
+    try {
+      window.history.replaceState({}, "", window.location.pathname);
+    } catch {
+      /* ignore */
+    }
+    API.get<{ paid?: boolean }>("/api/payments/safepay/verify/" + encodeURIComponent(id))
+      .then((r) => {
+        if (r && r.paid) {
+          toast("Payment received for " + id + " ✅", "check");
+          openTrack(id);
+        } else {
+          toast("Payment for " + id + " is still processing.", "doc");
+        }
+      })
+      .catch(() => toast("We couldn't confirm the payment yet — it may still be processing.", "doc"));
+  }, [toast, openTrack]);
+
+  return null;
 }
 
 /* Scroll to the hash target (or top) on every navigation. Instant when the page

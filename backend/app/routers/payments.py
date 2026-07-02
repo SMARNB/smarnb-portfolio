@@ -107,9 +107,12 @@ _SAFEPAY_PAID_NOTE = "Card/wallet payment received via Safepay. ✅"
 
 
 @router.post("/safepay/checkout/{public_id}")
-def safepay_checkout(public_id: str, request: Request, db: Session = Depends(get_db)):
+def safepay_checkout(public_id: str, request: Request, return_to: str = "/app",
+                     db: Session = Depends(get_db)):
     """Create a Safepay tracker and hand back the hosted-checkout URL to redirect to.
-    The buyer pays on getsafepay.com, so nothing third-party runs on our origin."""
+    The buyer pays on getsafepay.com, so nothing third-party runs on our origin.
+    ``return_to`` is where Safepay sends the buyer back (the store checkout uses
+    /store so a guest lands on the public site, not the login-gated /app)."""
     if not safepay.enabled():
         raise HTTPException(503, "Safepay isn't enabled yet.")
     order = crud.get_order(db, public_id.strip().upper())
@@ -129,10 +132,13 @@ def safepay_checkout(public_id: str, request: Request, db: Session = Depends(get
     db.commit()
 
     base = config.PUBLIC_BASE_URL or str(request.base_url).rstrip("/")
+    # Only allow a local return path (never an open redirect off our origin).
+    rt = return_to if return_to.startswith("/") and not return_to.startswith("//") else "/app"
+    sep = "&" if "?" in rt else "?"
     url = safepay.checkout_url(
         tracker,
-        redirect_url=base + "/app?sfpy=" + order.public_id,
-        cancel_url=base + "/app",
+        redirect_url=base + rt + sep + "sfpy=" + order.public_id,
+        cancel_url=base + rt,
         order_id=order.public_id,
     )
     return {"url": url}

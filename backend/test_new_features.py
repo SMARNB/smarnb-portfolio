@@ -331,6 +331,27 @@ with TestClient(app) as c:
     _good = _hmac.new(b"whsec_test", _body, _hashlib.sha256).hexdigest()
     check("valid webhook signature accepted", safepay.verify_webhook_signature(_body, _good) is True)
     check("bad webhook signature rejected", safepay.verify_webhook_signature(_body, "nope") is False)
+
+    # Full store-checkout wiring (tracker + verify faked — no real network): an order
+    # → hosted-checkout URL that returns to /store, then verify-on-return marks it paid.
+    safepay.create_tracker = lambda *a, **k: "track_TEST123"
+    _o = c.post("/api/orders", json={
+        "customer_name": "Sara", "customer_email": "sara@example.com",
+        "payment_method": "Credit / Debit card",
+        "items": [{"service": "SaaS Dashboard", "tier": "Starter", "price": 150, "qty": 1}],
+    }).json()
+    _pid = _o["public_id"]
+    _co = c.post("/api/payments/safepay/checkout/%s?return_to=/store" % _pid).json()
+    check("safepay checkout returns a hosted url",
+          "getsafepay.com" in _co["url"] and "beacon=track_TEST123" in _co["url"])
+    check("checkout returns to the store with the order id",
+          "%2Fstore" in _co["url"] and ("order_id=" + _pid) in _co["url"])
+    safepay.verify_tracker = lambda *a, **k: True
+    check("verify-on-return marks the order paid",
+          c.get("/api/payments/safepay/verify/%s" % _pid).json().get("paid") is True)
+    check("paid order isn't charged again",
+          c.post("/api/payments/safepay/checkout/%s" % _pid).status_code == 400)
+
     appcfg.SAFEPAY_API_KEY = ""
     appcfg.SAFEPAY_WEBHOOK_SECRET = ""
 
