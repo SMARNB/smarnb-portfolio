@@ -12,6 +12,7 @@ import { API } from "../../lib/api";
 import type { PaymentConfig } from "../../lib/types";
 import { useCart } from "../../context/CartContext";
 import { useUI } from "../../context/UIContext";
+import { useToast } from "../../context/ToastContext";
 
 // The dropdown option that means "pay online by card now" (Safepay hosted checkout).
 const CARD_LABEL = CONFIG.payments.find((p) => p.id === "card")?.label ?? "Credit / Debit card";
@@ -40,6 +41,7 @@ function PaymentOptions() {
 export function CheckoutModal() {
   const { items, total, refresh } = useCart();
   const { isOpen, close, openTrack } = useUI();
+  const { toast } = useToast();
   const open = isOpen("checkout");
 
   const [order, setOrder] = useState<LocalOrder | null>(null);
@@ -99,8 +101,11 @@ export function CheckoutModal() {
             window.location.href = r.url;
             return;
           }
-        } catch {
-          /* couldn't start the gateway — fall back to the order-received screen */
+        } catch (err) {
+          // Surface the gateway's reason (helps during setup) — the order is still
+          // saved, so fall through to the order-received screen afterwards.
+          const msg = (err as { message?: string })?.message || "Card checkout couldn't start.";
+          toast(msg, "doc");
         }
       }
       setOrder(o);
