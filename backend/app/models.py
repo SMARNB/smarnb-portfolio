@@ -42,6 +42,18 @@ class User(Base):
     whatsapp = Column(Encrypted, default="")
     created_at = Column(DateTime, default=utcnow)
 
+    # Email verification (anti-spam). Codes are stored hashed, short-lived, rate-limited.
+    email_verified = Column(Boolean, default=False)
+    verify_code_hash = Column(String(128), default="")
+    verify_expires = Column(DateTime, nullable=True)
+    verify_sent_at = Column(DateTime, nullable=True)
+    verify_attempts = Column(Integer, default=0)
+
+    # Two-factor auth (TOTP). Secret is encrypted at rest; optional for clients,
+    # required for the admin.
+    totp_secret = Column(Encrypted, default="")
+    totp_enabled = Column(Boolean, default=False)
+
     orders = relationship("Order", back_populates="client")
 
 

@@ -16,6 +16,7 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+    totp_code: str = Field(default="", max_length=10)
 
 
 class UserOut(BaseModel):
@@ -25,6 +26,8 @@ class UserOut(BaseModel):
     role: str
     whatsapp: str = ""
     created_at: dt.datetime
+    email_verified: bool = True
+    totp_enabled: bool = False
 
     class Config:
         from_attributes = True
@@ -34,6 +37,32 @@ class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserOut
+    # True right after signup while email verification is pending; the UI then shows
+    # the "enter your code" screen. Also flags an admin who must still set up 2FA.
+    verification_required: bool = False
+    must_setup_2fa: bool = False
+
+
+class LoginResult(BaseModel):
+    """Login can either succeed (token) or ask for a second factor (totp_required)."""
+    access_token: str = ""
+    token_type: str = "bearer"
+    user: Optional[UserOut] = None
+    totp_required: bool = False
+    must_setup_2fa: bool = False
+
+
+class VerifyEmailIn(BaseModel):
+    code: str = Field(min_length=4, max_length=10)
+
+
+class TotpEnableIn(BaseModel):
+    code: str = Field(min_length=6, max_length=10)
+
+
+class TotpDisableIn(BaseModel):
+    code: str = Field(default="", max_length=10)
+    password: str = Field(default="", max_length=128)
 
 
 # --- Orders -------------------------------------------------------------------

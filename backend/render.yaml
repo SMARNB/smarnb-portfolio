@@ -105,3 +105,22 @@ services:
       #   value: sandbox
       # - key: SAFEPAY_WEBHOOK_SECRET
       #   sync: false
+      # --- Email verification (SendGrid) — anti-spam gate ---
+      # Render blocks SMTP, so verification emails go via SendGrid's HTTPS API.
+      # Email verification + "verified account required to order" stay OFF until BOTH
+      # SENDGRID_API_KEY and EMAIL_FROM are set (nothing breaks before then). Setup:
+      #   1) sendgrid.com → free account → Settings → API Keys → create a "Mail Send" key.
+      #   2) Settings → Sender Authentication → verify a Single Sender (or your domain).
+      #   3) Set SENDGRID_API_KEY + EMAIL_FROM (the verified sender) below.
+      # - key: SENDGRID_API_KEY
+      #   sync: false
+      # - key: EMAIL_FROM
+      #   sync: false               # e.g. no-reply@yourdomain.com (must be verified in SendGrid)
+      # - key: EMAIL_FROM_NAME
+      #   value: SMARNB
+      # --- Two-factor auth (TOTP) — required for admin, optional for clients ---
+      # Works with Google/Microsoft Authenticator, Authy, etc. No external service.
+      # - key: TOTP_ISSUER
+      #   value: SMARNB
+      # - key: ADMIN_2FA_REQUIRED   # set to 0 only if you must temporarily allow admin login without 2FA
+      #   value: "1"

@@ -3,7 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from .. import crud, crypto, schemas
+from .. import crud, crypto, email_guard, email_send, schemas
 from ..database import get_db
 from ..deps import get_current_user, get_optional_user
 
@@ -14,6 +14,16 @@ router = APIRouter(prefix="/api/orders", tags=["orders"])
 def create_order(data: schemas.OrderCreate, db: Session = Depends(get_db), user=Depends(get_optional_user)):
     if not data.items:
         raise HTTPException(400, "Your order has no items.")
+    # Always block throwaway addresses (cheap, no network).
+    if email_guard.is_disposable(data.customer_email):
+        raise HTTPException(400, "Temporary / disposable email addresses aren't allowed. Please use a permanent email.")
+    # Once verification is configured, orders require a verified client account —
+    # this is what stops anonymous spam order requests.
+    if email_send.enabled():
+        if not user or user.role != "client":
+            raise HTTPException(401, "Please create an account and verify your email to place an order.")
+        if not user.email_verified:
+            raise HTTPException(403, "Please verify your email address before placing an order.")
     client = user if (user and user.role == "client") else None
     order = crud.create_order(db, data, client=client)
     return crud.serialize_order(order)

@@ -62,6 +62,29 @@ def _ensure_columns():
         if "payment_ref" not in cols:
             with engine.begin() as conn:
                 conn.execute(text("ALTER TABLE orders ADD COLUMN payment_ref VARCHAR(120) DEFAULT ''"))
+    if "users" in insp.get_table_names():
+        cols = {c["name"] for c in insp.get_columns("users")}
+        adds = [
+            ("email_verified", "BOOLEAN DEFAULT FALSE"),
+            ("verify_code_hash", "VARCHAR(128) DEFAULT ''"),
+            ("verify_expires", "TIMESTAMP NULL"),
+            ("verify_sent_at", "TIMESTAMP NULL"),
+            ("verify_attempts", "INTEGER DEFAULT 0"),
+            ("totp_secret", "TEXT"),
+            ("totp_enabled", "BOOLEAN DEFAULT FALSE"),
+        ]
+        added_verified = False
+        with engine.begin() as conn:
+            for name, ddl in adds:
+                if name not in cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN %s %s" % (name, ddl)))
+                    if name == "email_verified":
+                        added_verified = True
+        # ONE-TIME, only when the column is first created: existing accounts predate
+        # verification, so mark them verified (never lock a real customer out later).
+        if added_verified:
+            with engine.begin() as conn:
+                conn.execute(text("UPDATE users SET email_verified = TRUE"))
 
 
 def _start_self_keepalive():
@@ -103,7 +126,7 @@ async def lifespan(app: FastAPI):
     try:
         if not crud.get_user_by_email(db, config.ADMIN_EMAIL):
             crud.create_user(db, config.ADMIN_EMAIL, config.ADMIN_PASSWORD,
-                             config.ADMIN_NAME, role="admin")
+                             config.ADMIN_NAME, role="admin", email_verified=True)
             print("[seed] created admin account:", config.ADMIN_EMAIL)
         crud.backfill_milestones(db)   # give pre-tracking orders a pipeline
         seo.write_seo_files(db)        # mirror sitemap.xml/robots.txt to disk as real files

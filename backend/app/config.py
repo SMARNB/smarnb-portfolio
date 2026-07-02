@@ -111,3 +111,20 @@ SAFEPAY_API_BASE = (os.environ.get("SAFEPAY_API_BASE", "")
 SAFEPAY_CHECKOUT_BASE = (os.environ.get("SAFEPAY_CHECKOUT_BASE", "")
                          or ("https://sandbox.api.getsafepay.com/components" if _sfpy_sandbox
                              else "https://www.getsafepay.com/components")).rstrip("/")
+
+# --- Email (SendGrid, OPTIONAL) — powers account/email verification ----------
+# Verification + security emails go over SendGrid's HTTPS API because Render blocks
+# outbound SMTP ports on every plan. UNTIL SENDGRID_API_KEY + EMAIL_FROM are set,
+# email verification stays INACTIVE and the site behaves exactly as before (no new
+# gating) so nothing breaks. EMAIL_FROM must be a SendGrid-verified sender.
+SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
+EMAIL_FROM = os.environ.get("EMAIL_FROM", "")
+EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME", ADMIN_NAME or "SMARNB")
+EMAIL_VERIFY_TTL_MIN = int(os.environ.get("EMAIL_VERIFY_TTL_MIN", "15"))
+EMAIL_VERIFY_MAX_ATTEMPTS = int(os.environ.get("EMAIL_VERIFY_MAX_ATTEMPTS", "6"))
+
+# --- Two-factor auth (TOTP) ---------------------------------------------------
+# Optional for clients (opt-in), required for the admin. Works with Google
+# Authenticator, Microsoft Authenticator, Authy, etc. (standard RFC-6238).
+TOTP_ISSUER = os.environ.get("TOTP_ISSUER", "SMARNB")
+ADMIN_2FA_REQUIRED = (os.environ.get("ADMIN_2FA_REQUIRED", "1") or "1").lower() not in ("0", "false", "no")

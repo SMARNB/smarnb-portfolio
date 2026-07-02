@@ -7,7 +7,7 @@ import secrets
 
 from sqlalchemy import func
 
-from . import blog_render, crypto, models, security
+from . import blog_render, config, crypto, models, security
 
 
 # --- Users --------------------------------------------------------------------
@@ -17,11 +17,12 @@ def get_user_by_email(db, email):
     return db.query(models.User).filter(models.User.email_bidx == crypto.blind_index(email)).first()
 
 
-def create_user(db, email, password, name="", whatsapp="", role="client"):
+def create_user(db, email, password, name="", whatsapp="", role="client", email_verified=False):
     user = models.User(
         email=email, email_bidx=crypto.blind_index(email),
         name=name, whatsapp=whatsapp, role=role,
         hashed_password=security.hash_password(password),
+        email_verified=email_verified,
     )
     db.add(user)
     db.commit()
@@ -31,6 +32,69 @@ def create_user(db, email, password, name="", whatsapp="", role="client"):
         models.Order.client_id.is_(None),
         models.Order.customer_email_bidx == crypto.blind_index(email),
     ).update({"client_id": user.id}, synchronize_session=False)
+    db.commit()
+    return user
+
+
+# --- Email verification (anti-spam) -------------------------------------------
+def set_verification_code(db, user):
+    """Generate a fresh 6-digit code, store its hash + a short expiry, reset the
+    attempt counter. Returns the plaintext code (to email — never stored plain)."""
+    code = "".join(secrets.choice("0123456789") for _ in range(6))
+    now = models.utcnow()
+    user.verify_code_hash = security.hash_token(code)
+    user.verify_sent_at = now
+    user.verify_expires = now + dt.timedelta(minutes=config.EMAIL_VERIFY_TTL_MIN)
+    user.verify_attempts = 0
+    db.commit()
+    return code
+
+
+def check_verification_code(db, user, code):
+    """Validate a submitted code. Returns (ok: bool, error_message: str)."""
+    if user.email_verified:
+        return True, ""
+    if not (user.verify_code_hash and user.verify_expires):
+        return False, "Please request a new verification code."
+    if models.utcnow() > user.verify_expires:
+        return False, "That code has expired — request a new one."
+    if (user.verify_attempts or 0) >= config.EMAIL_VERIFY_MAX_ATTEMPTS:
+        return False, "Too many attempts. Please request a new code."
+    user.verify_attempts = (user.verify_attempts or 0) + 1
+    db.commit()
+    if security.token_matches(str(code).strip(), user.verify_code_hash):
+        user.email_verified = True
+        user.verify_code_hash = ""
+        user.verify_expires = None
+        db.commit()
+        return True, ""
+    return False, "That code isn't right. Please check it and try again."
+
+
+def seconds_since_last_code(user):
+    if not user.verify_sent_at:
+        return 10 ** 9
+    return (models.utcnow() - user.verify_sent_at).total_seconds()
+
+
+# --- Two-factor auth (TOTP) ---------------------------------------------------
+def set_totp_secret(db, user, secret):
+    """Stage a new (not-yet-enabled) TOTP secret during setup."""
+    user.totp_secret = secret
+    user.totp_enabled = False
+    db.commit()
+    return user
+
+
+def enable_totp(db, user):
+    user.totp_enabled = True
+    db.commit()
+    return user
+
+
+def disable_totp(db, user):
+    user.totp_secret = ""
+    user.totp_enabled = False
     db.commit()
     return user
 

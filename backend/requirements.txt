@@ -11,5 +11,9 @@ mistune>=3.0
 # Pure-python Postgres driver (used automatically when DATABASE_URL is Postgres,
 # e.g. a free Neon DB). Harmless for SQLite-only local dev.
 pg8000>=1.31
+# QR codes for 2FA setup (pure-python, no native deps) + DNS lookups so signup can
+# reject email domains that can't actually receive mail (throwaway-address defence).
+segno>=1.6
+dnspython>=2.6
 # Optional — uncomment to turn on Stripe card payments (then set STRIPE_SECRET_KEY):
 # stripe>=9.0

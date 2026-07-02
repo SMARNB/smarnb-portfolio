@@ -47,3 +47,16 @@ def create_access_token(subject, extra: dict = None) -> str:
 
 def decode_token(token: str) -> dict:
     return jwt.decode(token, config.SECRET_KEY, algorithms=["HS256"])
+
+
+def hash_token(value: str) -> str:
+    """Keyed hash for short-lived secrets (email verification codes) so they're never
+    stored in the clear. HMAC-SHA256 with the app secret; compared constant-time."""
+    return hmac.new(config.SECRET_KEY.encode("utf-8"), (value or "").encode("utf-8"),
+                    hashlib.sha256).hexdigest()
+
+
+def token_matches(value: str, stored_hash: str) -> bool:
+    if not (value and stored_hash):
+        return False
+    return hmac.compare_digest(hash_token(value), stored_hash)
