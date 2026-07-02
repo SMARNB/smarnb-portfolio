@@ -109,6 +109,33 @@ export function CheckoutModal() {
 
   const summary = useMemo(() => items, [items]);
 
+  /** Kick off the online card payment for a server-side order: embedded (in-site
+      iframe) when available, else redirect to the hosted page. Returns false when
+      the gateway couldn't start (the caller decides what to show). */
+  async function startCardCheckout(o: LocalOrder): Promise<boolean> {
+    try {
+      const r = await API.post<{ url?: string; embed_url?: string }>(
+        "/api/payments/safepay/checkout/" + encodeURIComponent(o.id) + "?return_to=%2Fstore",
+      );
+      // Preferred: embedded — pay right here without leaving the site.
+      if (r && r.embed_url) {
+        setOrder(o);
+        setEmbed({ url: r.embed_url, pid: o.id, hosted: r.url || "" });
+        setBusy(false);
+        setStatus(null);
+        return true;
+      }
+      if (r && r.url) {
+        window.location.href = r.url;
+        return true;
+      }
+    } catch (err) {
+      // Surface the gateway's reason (helps during setup) — the order stays saved.
+      toast((err as { message?: string })?.message || "Card checkout couldn't start.", "doc");
+    }
+    return false;
+  }
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = e.currentTarget;
@@ -126,36 +153,17 @@ export function CheckoutModal() {
       notes: (f.elements.namedItem("notes") as HTMLTextAreaElement).value.trim(),
       payment_method: (f.elements.namedItem("payment") as HTMLSelectElement).value,
     };
+    const cardIntent = payCfg.safepay_enabled && customer.payment_method === CARD_LABEL;
     setBusy(true);
     setStatus({ type: "ok", msg: "Placing your order…" });
     try {
       const o = await placeOrderViaApi(customer);
-      // Pay-now: if they chose card and Safepay is on, hand off to the secure hosted
-      // checkout immediately (buyer pays on getsafepay.com, then returns to /store).
-      if (payCfg.safepay_enabled && customer.payment_method === CARD_LABEL) {
+      // Pay-now: if they chose card and Safepay is on, start the secure checkout
+      // immediately (embedded in this modal, or Safepay's hosted page).
+      if (cardIntent) {
         setStatus({ type: "ok", msg: "Opening secure card checkout…" });
-        try {
-          const r = await API.post<{ url?: string; embed_url?: string }>(
-            "/api/payments/safepay/checkout/" + encodeURIComponent(o.id) + "?return_to=%2Fstore",
-          );
-          // Preferred: embedded — pay right here without leaving the site.
-          if (r && r.embed_url) {
-            setOrder(o);
-            setEmbed({ url: r.embed_url, pid: o.id, hosted: r.url || "" });
-            setBusy(false);
-            setStatus(null);
-            return;
-          }
-          if (r && r.url) {
-            window.location.href = r.url;
-            return;
-          }
-        } catch (err) {
-          // Surface the gateway's reason (helps during setup) — the order is still
-          // saved, so fall through to the order-received screen afterwards.
-          const msg = (err as { message?: string })?.message || "Card checkout couldn't start.";
-          toast(msg, "doc");
-        }
+        const started = await startCardCheckout(o);
+        if (started) return;
       }
       setOrder(o);
     } catch (err) {
@@ -165,6 +173,13 @@ export function CheckoutModal() {
       if (status === 401 || status === 403 || status === 400) {
         setGated(status !== 400);
         setStatus({ type: "err", msg: (err as ApiError).message || "Please sign in and verify your email to order." });
+        setBusy(false);
+        return;
+      }
+      if (cardIntent) {
+        // A pay-now order MUST exist on the server — never fake a local one (it
+        // can't be charged). Keep the form so the buyer simply tries again.
+        setStatus({ type: "err", msg: "Couldn't reach the server — nothing was charged. Please try again in a moment." });
         setBusy(false);
         return;
       }
@@ -218,7 +233,15 @@ export function CheckoutModal() {
             </div>
           </div>
         ) : order ? (
-          <Success order={order} paid={paid} onTrack={() => { close("checkout"); openTrack(order.id); }} onDone={() => close("checkout")} />
+          <Success
+            order={order}
+            paid={paid}
+            onPayNow={payCfg.safepay_enabled && order.payment_method === CARD_LABEL
+              ? () => { setStatus(null); startCardCheckout(order); }
+              : undefined}
+            onTrack={() => { close("checkout"); openTrack(order.id); }}
+            onDone={() => close("checkout")}
+          />
         ) : (
           <>
             <div className="order-summary">
@@ -307,7 +330,7 @@ export function CheckoutModal() {
   );
 }
 
-function Success({ order, paid = false, onTrack, onDone }: { order: LocalOrder; paid?: boolean; onTrack: () => void; onDone: () => void }) {
+function Success({ order, paid = false, onPayNow, onTrack, onDone }: { order: LocalOrder; paid?: boolean; onPayNow?: () => void; onTrack: () => void; onDone: () => void }) {
   const waLink = whatsappLink(orderSummaryText(order));
   const manual = !paid && manualMethodKey(order.payment_method || "");
   const emailNote = CONFIG.formspreeId
@@ -327,12 +350,17 @@ function Success({ order, paid = false, onTrack, onDone }: { order: LocalOrder; 
           <small>Your order ID — save it to track</small>
           <div className="id">{order.id}</div>
         </div>
-        {order.payment_method && !manual && !paid && (
+        {order.payment_method && !manual && !paid && !onPayNow && (
           <p className="form-note" style={{ margin: ".2rem auto 0" }}>
             Payment via <b>{order.payment_method}</b> — I'll send you the details to complete it.
           </p>
         )}
       </div>
+      {onPayNow && (
+        <button className="btn btn-primary btn-block" style={{ marginTop: ".8rem" }} onClick={onPayNow}>
+          💳 Pay {money(order.total)} now
+        </button>
+      )}
       {manual && (
         <div className="manual-pay-inline" style={{ marginTop: ".9rem" }}>
           <h4 style={{ margin: "0 0 .5rem" }}>Complete your payment</h4>
