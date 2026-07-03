@@ -122,8 +122,8 @@ def _post_json(url, payload, extra_headers=None):
         return json.loads(resp.read().decode("utf-8") or "{}")
 
 
-def _get_json(url):
-    req = urllib.request.Request(url, headers=_headers())
+def _get_json(url, extra_headers=None):
+    req = urllib.request.Request(url, headers=_headers(extra_headers))
     with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
         return json.loads(resp.read().decode("utf-8") or "{}")
 
@@ -215,6 +215,36 @@ def embedded_url(tracker, tbt, redirect_url, cancel_url=""):
     return config.SAFEPAY_EMBED_BASE + "?" + urlencode(params)
 
 
+def embed_preflight(tracker, tbt) -> bool:
+    """Dry-run the EXACT call Safepay's embedded app makes on load —
+    ``GET /reporter/api/v1/payments/{tracker}`` authenticated with the TBT — so the
+    iframe is only ever rendered when it will actually work. The failure this
+    catches: SAFEPAY_API_KEY and SAFEPAY_SECRET_KEY from two *different* key pairs
+    (regenerating keys in the Safepay dashboard rotates BOTH halves), which makes
+    the embedded session fail with "cannot find tracker … using keys" even though
+    the tracker exists. On any failure the caller keeps the hosted redirect, so the
+    buyer can always pay."""
+    global _last_error
+    if not (tracker and tbt):
+        return False
+    url = config.SAFEPAY_API_BASE + "/reporter/api/v1/payments/" + str(tracker)
+    try:
+        body = _get_json(url, {"Authorization": "Bearer " + str(tbt)})
+    except Exception as e:
+        reason = _describe_error(url, e)
+        if "using keys" in reason:
+            reason += (" — SAFEPAY_API_KEY and SAFEPAY_SECRET_KEY belong to two "
+                       "different key pairs. Copy the CURRENT Public key AND Secret "
+                       "key together from the same Safepay dashboard page "
+                       "(regenerating the secret rotates the public key too).")
+        _last_error = "embedded preflight failed: " + reason
+        return False
+    if isinstance(body, dict) and str(body.get("code", "")).startswith("error"):
+        _last_error = "embedded preflight failed: %s" % (str(body)[:200])
+        return False
+    return True
+
+
 def checkout_url(tracker, redirect_url, cancel_url="", order_id=""):
     """The hosted checkout URL the buyer is sent to (they pay on getsafepay.com).
     SAFEPAY_CHECKOUT_BASE already includes the full /checkout/pay path (config);
@@ -251,10 +281,24 @@ def _extract(node, key):
 
 def verify_tracker(tracker) -> bool:
     """Ask Safepay whether ``tracker`` is a completed payment that belongs to us.
-    Mirrors the official plugin: state must be TRACKER_ENDED and the client id on
-    the record must equal our API key. Returns False on any doubt/error."""
+    Preferred source of truth: the authenticated Payments 2.0 reporter
+    (``GET /reporter/api/v2/payments/{tracker}`` + X-SFPY-MERCHANT-SECRET, see
+    safepay_payments_2.md) — it's merchant-scoped, so a hit already proves
+    ownership. Falls back to the public order lookup (state TRACKER_ENDED and the
+    client id equals our API key, per the official plugin) when no secret key is
+    configured or the reporter can't answer. Returns False on any doubt/error."""
     if not (enabled() and tracker):
         return False
+    if config.SAFEPAY_SECRET_KEY:
+        url = config.SAFEPAY_API_BASE + "/reporter/api/v2/payments/" + str(tracker)
+        try:
+            body = _get_json(url, {"X-SFPY-MERCHANT-SECRET": config.SAFEPAY_SECRET_KEY})
+            data = body.get("data") if isinstance(body, dict) else None
+            state = _extract(data, "state")
+            if state:  # authenticated + merchant-scoped ⇒ authoritative
+                return state == "TRACKER_ENDED"
+        except Exception:
+            pass  # reporter unavailable → public lookup below
     url = config.SAFEPAY_API_BASE + "/order/v1/" + str(tracker)
     try:
         body = _get_json(url)

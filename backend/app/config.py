@@ -99,6 +99,10 @@ SAFEPAY_WEBHOOK_SECRET = os.environ.get("SAFEPAY_WEBHOOK_SECRET", "")  # optiona
 # page (an iframe of Safepay's /embedded app; card data still never touches us).
 # It authenticates the server-side TBT (passport) call. Without it the flow simply
 # stays a hosted redirect.
+# ⚠ Keys come as a PAIR: regenerating ("Update key") rotates BOTH halves. Always
+# copy the Public key into SAFEPAY_API_KEY and the Secret key here from the SAME
+# dashboard page at the same time — a mixed pair makes the embedded app fail with
+# "cannot find tracker … using keys" (checkout then auto-falls back to hosted).
 SAFEPAY_SECRET_KEY = os.environ.get("SAFEPAY_SECRET_KEY", "")
 SAFEPAY_ENVIRONMENT = (os.environ.get("SAFEPAY_ENVIRONMENT", "sandbox") or "sandbox").lower()  # sandbox | production
 SAFEPAY_CURRENCY = os.environ.get("SAFEPAY_CURRENCY", "PKR").upper()   # Safepay settles in PKR

@@ -156,17 +156,21 @@ def safepay_checkout(public_id: str, request: Request, return_to: str = "/app",
     # Embedded (in-site) checkout when the secret key is configured: the frontend
     # renders this in an iframe so the buyer never leaves the site. Its post-payment
     # redirect targets the tiny frameable /done page (the SPA itself refuses to be
-    # framed); the modal polls /verify for the real completion signal. Any TBT
-    # failure just leaves the hosted redirect as the fallback.
+    # framed); the modal polls /verify for the real completion signal. The preflight
+    # replays the embedded app's own tracker lookup first — if the configured key
+    # pair can't see the tracker (e.g. keys regenerated but only one half updated),
+    # we skip the iframe and the buyer gets the hosted redirect instead of an error.
     if safepay.embedded_enabled():
         tbt = safepay.create_tbt()
-        if tbt:
+        if tbt and safepay.embed_preflight(tracker, tbt):
             out["embed_url"] = safepay.embedded_url(
                 tracker,
                 tbt,
                 redirect_url=base + "/api/payments/safepay/done?pid=" + order.public_id,
                 cancel_url=base + "/api/payments/safepay/done?cancelled=1",
             )
+        elif safepay.last_error():
+            print("[safepay] embedded checkout skipped →", safepay.last_error())
     return out
 
 

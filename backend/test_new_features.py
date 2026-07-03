@@ -305,6 +305,13 @@ with TestClient(app) as c:
     print("== Safepay gateway (inert by default; hosted-redirect when configured) ==")
     from app import safepay  # noqa: E402
 
+    # The developer's local .env may carry real sandbox keys — neutralise them so
+    # this suite never depends on the machine it runs on (or makes real calls).
+    appcfg.SAFEPAY_API_KEY = ""
+    appcfg.SAFEPAY_SECRET_KEY = ""
+    appcfg.SAFEPAY_WEBHOOK_SECRET = ""
+    appcfg.SAFEPAY_FX_RATE = 0.0
+
     # OFF by default: config advertises the flag, endpoints refuse, helpers stay pure.
     pc = c.get("/api/payments/config").json()
     check("payment config exposes safepay flag",
@@ -375,6 +382,7 @@ with TestClient(app) as c:
           "getsafepay.com" in _co["url"] and "beacon=track_TEST123" in _co["url"])
     check("checkout returns to the store with the order id",
           "%2Fstore" in _co["url"] and ("order_id=" + _pid) in _co["url"])
+    _real_verify = safepay.verify_tracker   # kept for the reporter-verify checks below
     safepay.verify_tracker = lambda *a, **k: True
     check("verify-on-return marks the order paid",
           c.get("/api/payments/safepay/verify/%s" % _pid).json().get("paid") is True)
@@ -404,6 +412,29 @@ with TestClient(app) as c:
         "payment_method": "Credit / Debit card",
         "items": [{"service": "X", "tier": "Y", "price": 25, "qty": 1}],
     }).json()
+
+    # The preflight replays the embedded app's own tracker lookup (reporter v1 +
+    # TBT auth). A mismatched key pair — regenerated secret + stale public key —
+    # must never produce an iframe that can't load: hosted redirect only.
+    import io as _io
+    import urllib.error as _uerr
+    _old_get2 = safepay._get_json
+    def _pf_mismatch(url, extra_headers=None):
+        raise _uerr.HTTPError(url, 500, "ISE", None, _io.BytesIO(
+            b'{"code":"error.internal_server_error","message":"internal error: '
+            b'cannot find tracker with token track_TEST123 using keys"}'))
+    safepay._get_json = _pf_mismatch
+    check("preflight rejects a mismatched key pair",
+          safepay.embed_preflight("track_TEST123", "tbt_TEST42") is False)
+    check("preflight failure names the key-pair fix", "key pairs" in safepay.last_error())
+    co_bad = c.post("/api/payments/safepay/checkout/%s" % _o3["public_id"]).json()
+    check("mismatched keys -> hosted url only, no embed_url",
+          "embed_url" not in co_bad and "/checkout/pay?" in co_bad.get("url", ""))
+    safepay._get_json = lambda url, extra_headers=None: {
+        "data": {"token": "track_TEST123", "state": "TRACKER_STARTED"}}
+    check("preflight passes when the embedded lookup works",
+          safepay.embed_preflight("track_TEST123", "tbt_TEST42") is True)
+
     co3 = c.post("/api/payments/safepay/checkout/%s" % _o3["public_id"]).json()
     check("checkout returns embed_url + hosted fallback",
           "/embedded?" in co3.get("embed_url", "") and "/checkout/pay?" in co3.get("url", ""))
@@ -417,6 +448,32 @@ with TestClient(app) as c:
           and "frame-ancestors 'self'" in rdone.headers.get("content-security-policy", ""))
     check("done page (cancelled) renders",
           "cancelled" in c.get("/api/payments/safepay/done", params={"cancelled": 1}).text.lower())
+
+    print("== Safepay verify via Payments 2.0 reporter (authenticated) ==")
+    _seen = {}
+    def _rep_ended(url, extra_headers=None):
+        _seen["url"], _seen["hdrs"] = url, dict(extra_headers or {})
+        return {"ok": True, "data": {"token": "track_zz", "state": "TRACKER_ENDED"}}
+    safepay._get_json = _rep_ended
+    check("verify prefers the merchant-scoped reporter (v2 + secret header)",
+          _real_verify("track_zz") is True
+          and "/reporter/api/v2/payments/track_zz" in _seen["url"]
+          and _seen["hdrs"].get("X-SFPY-MERCHANT-SECRET") == "whsec_embed_test")
+    safepay._get_json = lambda url, extra_headers=None: {"data": {"state": "TRACKER_STARTED"}}
+    check("reporter state != ENDED -> not paid", _real_verify("track_zz") is False)
+    def _rep_down(url, extra_headers=None):
+        if "/reporter/" in url:
+            raise _uerr.HTTPError(url, 500, "ISE", None, _io.BytesIO(b"{}"))
+        return {"data": {"state": "TRACKER_ENDED", "client": appcfg.SAFEPAY_API_KEY}}
+    safepay._get_json = _rep_down
+    check("reporter down -> falls back to the public order lookup",
+          _real_verify("track_zz") is True)
+    appcfg.SAFEPAY_SECRET_KEY = ""
+    safepay._get_json = lambda url, extra_headers=None: {
+        "data": {"state": "TRACKER_ENDED", "client": appcfg.SAFEPAY_API_KEY}}
+    check("no secret key -> classic public verify still works",
+          _real_verify("track_zz") is True)
+    safepay._get_json = _old_get2
 
     appcfg.SAFEPAY_SECRET_KEY = ""
     appcfg.SAFEPAY_API_KEY = ""
