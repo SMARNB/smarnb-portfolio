@@ -142,8 +142,13 @@ export function CheckoutModal() {
     if ((f.elements.namedItem("_gotcha") as HTMLInputElement)?.value) return; // honeypot
     const name = (f.elements.namedItem("name") as HTMLInputElement).value.trim();
     const email = (f.elements.namedItem("email") as HTMLInputElement).value.trim();
+    const payment = (f.elements.namedItem("payment") as HTMLSelectElement).value;
     if (!name || !validEmail(email)) {
       setStatus({ type: "err", msg: "Please add your name and a valid email." });
+      return;
+    }
+    if (!payment) {
+      setStatus({ type: "err", msg: "Please select a payment method." });
       return;
     }
     const customer: Customer = {
@@ -151,7 +156,7 @@ export function CheckoutModal() {
       email,
       whatsapp: (f.elements.namedItem("whatsapp") as HTMLInputElement).value.trim(),
       notes: (f.elements.namedItem("notes") as HTMLTextAreaElement).value.trim(),
-      payment_method: (f.elements.namedItem("payment") as HTMLSelectElement).value,
+      payment_method: payment,
     };
     const cardIntent = payCfg.safepay_enabled && customer.payment_method === CARD_LABEL;
     setBusy(true);
@@ -274,7 +279,7 @@ export function CheckoutModal() {
                 </div>
                 <div className="field">
                   <label htmlFor="co-pay">
-                    {payCfg.safepay_enabled ? "Payment method" : "Preferred payment method"}
+                    {payCfg.safepay_enabled ? "Payment method" : "Preferred payment method"} <span className="req">*</span>
                   </label>
                   <select
                     className="select"
@@ -282,6 +287,7 @@ export function CheckoutModal() {
                     name="payment"
                     value={method}
                     onChange={(e) => setMethod(e.target.value)}
+                    required
                   >
                     <PaymentOptions safepayOn={!!payCfg.safepay_enabled} />
                   </select>
