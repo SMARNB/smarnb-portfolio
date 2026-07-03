@@ -403,6 +403,8 @@ with TestClient(app) as c:
     check("embedded on with both keys", safepay.embedded_enabled() is True)
     _tbt_calls = []
     safepay.create_tbt = lambda: (_tbt_calls.append(1) or "tbt_TEST42")
+    _real_session = safepay.create_session   # kept for the v3-contract check below
+    safepay.create_session = lambda *a, **k: "track_SESS999"
     eurl = safepay.embedded_url("track_abc", "tbt_TEST42", "https://x/done", "https://x/cancel")
     check("embedded url shape (/embedded + tracker + tbt + env)",
           "/embedded?" in eurl and "tracker=track_abc" in eurl
@@ -438,8 +440,59 @@ with TestClient(app) as c:
     co3 = c.post("/api/payments/safepay/checkout/%s" % _o3["public_id"]).json()
     check("checkout returns embed_url + hosted fallback",
           "/embedded?" in co3.get("embed_url", "") and "/checkout/pay?" in co3.get("url", ""))
+    check("embed uses the 2.0 session; hosted keeps the classic tracker",
+          "tracker=track_SESS999" in co3["embed_url"] and "beacon=track_TEST123" in co3["url"])
     check("embed redirects into the frameable done page",
           "safepay%2Fdone" in co3["embed_url"] or "safepay/done" in co3["embed_url"])
+
+    # v3 session contract: endpoint + body + PAISA amount ($10 × 280 = Rs 2,800 = 280,000 paisa).
+    check("session amount is minor-unit (paisa)", safepay.session_amount(10) == 280000)
+    _sent = {}
+    _old_post = safepay._post_json
+    def _cap_post(url, payload, extra_headers=None):
+        _sent["url"], _sent["payload"] = url, payload
+        return {"data": {"tracker": {"token": "track_v3ok"}}}
+    safepay._post_json = _cap_post
+    check("create_session posts the Payments 2.0 contract",
+          _real_session(10) == "track_v3ok"
+          and _sent["url"].endswith("/order/payments/v3/")
+          and _sent["payload"].get("merchant_api_key") == appcfg.SAFEPAY_API_KEY
+          and _sent["payload"].get("intent") == "CYBERSOURCE"
+          and _sent["payload"].get("mode") == "payment"
+          and _sent["payload"].get("amount") == 280000)
+    safepay._post_json = _old_post
+
+    # payment_ref holds session|classic — verify + webhook match either half.
+    _o4 = c.post("/api/orders", json={
+        "customer_name": "Embed Buyer3", "customer_email": "embed3@example.com",
+        "payment_method": "Credit / Debit card",
+        "items": [{"service": "X", "tier": "Y", "price": 25, "qty": 1}],
+    }).json()
+    c.post("/api/payments/safepay/checkout/%s" % _o4["public_id"])
+    safepay.verify_tracker = lambda t: t == "track_SESS999"
+    check("verify matches the embedded session ref",
+          c.get("/api/payments/safepay/verify/%s" % _o4["public_id"]).json().get("paid") is True)
+    _o5 = c.post("/api/orders", json={
+        "customer_name": "Embed Buyer4", "customer_email": "embed4@example.com",
+        "payment_method": "Credit / Debit card",
+        "items": [{"service": "X", "tier": "Y", "price": 25, "qty": 1}],
+    }).json()
+    c.post("/api/payments/safepay/checkout/%s" % _o5["public_id"])
+    safepay.verify_tracker = lambda t: t == "track_TEST123"
+    check("verify matches the classic (hosted) ref too",
+          c.get("/api/payments/safepay/verify/%s" % _o5["public_id"]).json().get("paid") is True)
+    safepay.create_session = lambda *a, **k: "track_SESS_HOOK"
+    _o6 = c.post("/api/orders", json={
+        "customer_name": "Embed Buyer5", "customer_email": "embed5@example.com",
+        "payment_method": "Credit / Debit card",
+        "items": [{"service": "X", "tier": "Y", "price": 25, "qty": 1}],
+    }).json()
+    c.post("/api/payments/safepay/checkout/%s" % _o6["public_id"])
+    safepay.verify_tracker = lambda t: t == "track_SESS_HOOK"
+    c.post("/api/payments/safepay/webhook", json={"tracker": "track_SESS_HOOK"})
+    check("webhook matches an order inside the piped refs",
+          c.get("/api/payments/safepay/verify/%s" % _o6["public_id"]).json().get("paid") is True)
+    safepay.verify_tracker = lambda *a, **k: True
 
     rdone = c.get("/api/payments/safepay/done", params={"pid": _o3["public_id"]})
     check("done page 200 + frameable by our origin only",

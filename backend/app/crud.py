@@ -291,10 +291,12 @@ def get_order(db, public_id):
 
 
 def get_order_by_payment_ref(db, ref):
-    """Find an order by the gateway tracker/session id we stored on it (Safepay)."""
+    """Find an order by a gateway tracker/session id we stored on it (Safepay).
+    payment_ref may hold several |-joined refs (embedded session + hosted tracker),
+    so match by containment — the ids are UUID-based, no false positives."""
     if not ref:
         return None
-    return db.query(models.Order).filter_by(payment_ref=ref).first()
+    return db.query(models.Order).filter(models.Order.payment_ref.contains(ref)).first()
 
 
 def mark_paid(db, order, note="Payment received."):

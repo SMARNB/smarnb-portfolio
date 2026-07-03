@@ -105,6 +105,20 @@ def charge_amount(total):
     return minor_amount(float(total) * rate * margin)
 
 
+_SESSION_MULTIPLIER = int(getattr(config, "SAFEPAY_SESSION_AMOUNT_MULTIPLIER", 100) or 100)
+
+
+def session_amount(total):
+    """Like charge_amount, but in the *Payments 2.0* unit: MINOR units (paisa).
+    The embedded app formats quote_amount.amount with fromCents:true, so sending
+    rupees here would undercharge 100×. None when no exchange rate is available."""
+    rate = fx_rate()
+    if rate <= 0:
+        return None
+    margin = 1.0 + max(float(getattr(config, "SAFEPAY_FX_MARGIN_PCT", 0) or 0), 0.0) / 100.0
+    return int(round(float(total) * rate * margin * _SESSION_MULTIPLIER))
+
+
 def _headers(extra=None):
     h = {"Accept": "application/json", "User-Agent": _UA}
     if extra:
@@ -173,6 +187,46 @@ def create_tracker(amount_total, currency=None):
     return token
 
 
+def create_session(amount_total, currency=None):
+    """Create a *Payments 2.0* session (``POST /order/payments/v3/``) — the only
+    kind the EMBEDDED checkout app can load. Classic /order/v1/init trackers live
+    in a different store the embedded stack can't see (its reporter then fails with
+    "cannot find tracker … using keys"), while the hosted page is the mirror image:
+    it renders classic trackers and rejects sessions ("Tracker is in an invalid
+    state"). So checkout mints one of each and stores both refs on the order.
+    Returns the session token, or None on any failure (see last_error())."""
+    global _last_error
+    _last_error = ""
+    if not enabled():
+        _last_error = "Safepay is not enabled (SAFEPAY_API_KEY missing)."
+        return None
+    amount = session_amount(amount_total)
+    if amount is None or amount <= 0:
+        _last_error = ("No %s→%s exchange rate available right now — try again in a "
+                       "moment (or the owner can set SAFEPAY_FX_RATE)."
+                       % ((config.CURRENCY_CODE or "usd").upper(), config.SAFEPAY_CURRENCY))
+        return None
+    url = config.SAFEPAY_API_BASE + "/order/payments/v3/"
+    payload = {
+        "merchant_api_key": config.SAFEPAY_API_KEY,
+        "intent": getattr(config, "SAFEPAY_INTENT", "CYBERSOURCE") or "CYBERSOURCE",
+        "mode": "payment",
+        "currency": (currency or config.SAFEPAY_CURRENCY),
+        "amount": amount,
+    }
+    try:
+        body = _post_json(url, payload)
+    except Exception as e:
+        _last_error = _describe_error(url, e)
+        return None
+    data = body.get("data") if isinstance(body, dict) else None
+    trk = data.get("tracker") if isinstance(data, dict) else None
+    token = trk.get("token") if isinstance(trk, dict) else None
+    if not token:
+        _last_error = "Safepay session response had no tracker token: %s" % (str(body)[:200])
+    return token
+
+
 def create_tbt():
     """A Time-Based authentication Token (Safepay "passport") — required by the
     embedded checkout app. Authenticated with the merchant SECRET key via the
@@ -233,10 +287,12 @@ def embed_preflight(tracker, tbt) -> bool:
     except Exception as e:
         reason = _describe_error(url, e)
         if "using keys" in reason:
-            reason += (" — SAFEPAY_API_KEY and SAFEPAY_SECRET_KEY belong to two "
-                       "different key pairs. Copy the CURRENT Public key AND Secret "
-                       "key together from the same Safepay dashboard page "
-                       "(regenerating the secret rotates the public key too).")
+            reason += (" — the embedded stack can't see this tracker. Usual causes: "
+                       "the tracker is a classic /order/v1 one (this build creates "
+                       "Payments 2.0 sessions for the embed, so that shouldn't "
+                       "happen), or SAFEPAY_API_KEY and SAFEPAY_SECRET_KEY are from "
+                       "two different key pairs — copy both from the same Safepay "
+                       "dashboard page.")
         _last_error = "embedded preflight failed: " + reason
         return False
     if isinstance(body, dict) and str(body.get("code", "")).startswith("error"):

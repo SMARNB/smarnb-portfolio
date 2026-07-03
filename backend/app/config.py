@@ -111,6 +111,12 @@ SAFEPAY_CURRENCY = os.environ.get("SAFEPAY_CURRENCY", "PKR").upper()   # Safepay
 # comes through at the wrong scale, set this to 100 (paisa) — no code change needed.
 # ALWAYS verify with a sandbox test charge before going live.
 SAFEPAY_AMOUNT_MULTIPLIER = int(os.environ.get("SAFEPAY_AMOUNT_MULTIPLIER", "1") or "1")
+# Payments 2.0 sessions (the EMBEDDED checkout) take the amount in MINOR units —
+# their app renders quote_amount.amount with fromCents:true — so paisa, unlike the
+# classic order API above. Verified against the embedded app's own bundle.
+SAFEPAY_SESSION_AMOUNT_MULTIPLIER = int(os.environ.get("SAFEPAY_SESSION_AMOUNT_MULTIPLIER", "100") or "100")
+# The Payments 2.0 gateway intent for card processing (per Safepay's docs/examples).
+SAFEPAY_INTENT = os.environ.get("SAFEPAY_INTENT", "CYBERSOURCE") or "CYBERSOURCE"
 # The store prices in USD (CURRENCY_CODE) but Safepay charges PKR, so totals are
 # converted server-side before charging. SAFEPAY_FX_RATE pins the rate manually
 # (e.g. 280); 0 = use a live rate (open.er-api.com, cached 6h). If no rate can be

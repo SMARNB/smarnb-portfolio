@@ -137,10 +137,6 @@ def safepay_checkout(public_id: str, request: Request, return_to: str = "/app",
         # Surface Safepay's own reason (key-free) so setup issues are diagnosable.
         raise HTTPException(502, "Could not start Safepay checkout. " +
                             (safepay.last_error() or "Please try again."))
-    # Remember the tracker so the return/webhook can be verified against this order.
-    order.payment_ref = tracker
-    order.payment_method = order.payment_method or "Safepay"
-    db.commit()
 
     base = config.PUBLIC_BASE_URL or str(request.base_url).rstrip("/")
     # Only allow a local return path (never an open redirect off our origin).
@@ -153,24 +149,33 @@ def safepay_checkout(public_id: str, request: Request, return_to: str = "/app",
         order_id=order.public_id,
     )
     out = {"url": url}
+    refs = [tracker]
     # Embedded (in-site) checkout when the secret key is configured: the frontend
-    # renders this in an iframe so the buyer never leaves the site. Its post-payment
-    # redirect targets the tiny frameable /done page (the SPA itself refuses to be
-    # framed); the modal polls /verify for the real completion signal. The preflight
-    # replays the embedded app's own tracker lookup first — if the configured key
-    # pair can't see the tracker (e.g. keys regenerated but only one half updated),
-    # we skip the iframe and the buyer gets the hosted redirect instead of an error.
+    # renders this in an iframe so the buyer never leaves the site. It needs a
+    # *Payments 2.0 session* — the embedded app can't load the classic tracker that
+    # backs the hosted url above (and vice-versa, hence one of each). The embed's
+    # post-payment redirect targets the tiny frameable /done page (the SPA itself
+    # refuses to be framed); the modal polls /verify for the real completion signal.
+    # The preflight replays the embedded app's own session lookup first — on any
+    # failure we skip the iframe and the buyer keeps the hosted redirect.
     if safepay.embedded_enabled():
-        tbt = safepay.create_tbt()
-        if tbt and safepay.embed_preflight(tracker, tbt):
+        session = safepay.create_session(order.total)
+        tbt = safepay.create_tbt() if session else None
+        if session and tbt and safepay.embed_preflight(session, tbt):
             out["embed_url"] = safepay.embedded_url(
-                tracker,
+                session,
                 tbt,
                 redirect_url=base + "/api/payments/safepay/done?pid=" + order.public_id,
                 cancel_url=base + "/api/payments/safepay/done?cancelled=1",
             )
+            refs.insert(0, session)
         elif safepay.last_error():
             print("[safepay] embedded checkout skipped →", safepay.last_error())
+    # Remember every ref minted for this order — the buyer may complete EITHER the
+    # embedded session or the hosted tracker; verify/webhook match whichever ended.
+    order.payment_ref = "|".join(refs)
+    order.payment_method = order.payment_method or "Safepay"
+    db.commit()
     return out
 
 
@@ -208,9 +213,12 @@ def safepay_verify(public_id: str, db: Session = Depends(get_db)):
         raise HTTPException(404, "Order not found.")
     if order.payment_status == "paid":
         return {"paid": True}
-    if safepay.verify_tracker(order.payment_ref):
-        crud.mark_paid(db, order, _SAFEPAY_PAID_NOTE)
-        return {"paid": True}
+    # payment_ref may hold several refs (embedded session|hosted tracker) — the
+    # buyer completes exactly one of them; whichever ended marks the order paid.
+    for ref in (order.payment_ref or "").split("|"):
+        if ref and safepay.verify_tracker(ref):
+            crud.mark_paid(db, order, _SAFEPAY_PAID_NOTE)
+            return {"paid": True}
     return {"paid": False}
 
 
