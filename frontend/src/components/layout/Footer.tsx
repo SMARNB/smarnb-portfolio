@@ -9,6 +9,7 @@ import { useUI } from "../../context/UIContext";
 
 const SOCIALS: { key: string; label: string }[] = [
   { key: "instagram", label: "Instagram" },
+  { key: "threads", label: "Threads" },
   { key: "facebook", label: "Facebook" },
   { key: "linkedin", label: "LinkedIn" },
   { key: "x", label: "X (Twitter)" },

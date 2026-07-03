@@ -90,6 +90,7 @@ DEFAULT_DOC = {
             "https://github.com/SMARNB",
             "https://www.linkedin.com/in/muhammad-ali-r-43713598/",
             "https://www.instagram.com/smarnb.co.ltd/",
+            "https://www.threads.com/@smarnb.co.ltd",
             "https://www.facebook.com/SMARNB.Co/",
             "https://x.com/SMARNB_Co_Ltd",
             "https://www.reddit.com/user/SMARNB-Co/",

@@ -71,6 +71,7 @@ export const CONFIG: SiteConfig = {
   // --- Socials (empty string => dimmed placeholder) ---
   socials: {
     instagram: "https://www.instagram.com/smarnb.co.ltd/",
+    threads: "https://www.threads.com/@smarnb.co.ltd",
     facebook: "https://www.facebook.com/SMARNB.Co/",
     linkedin: "https://www.linkedin.com/in/muhammad-ali-r-43713598/",
     x: "https://x.com/SMARNB_Co_Ltd",
