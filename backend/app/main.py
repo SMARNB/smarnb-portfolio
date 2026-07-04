@@ -149,11 +149,16 @@ app.add_middleware(
 _CSP = (
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
     "img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://formspree.io; "
+    "worker-src 'self' blob:; "
     "form-action 'self' https://formspree.io; base-uri 'self'; object-src 'none'; frame-ancestors 'none'"
 )
 # Note: `blob:` in img-src is first-party (in-memory, same-origin object URLs). The
 # admin Inbox fetches chat attachments with the bearer token and renders them from
 # URL.createObjectURL(blob), so image/PDF previews need blob: to be allowed.
+# `worker-src 'self' blob:` is likewise first-party: three.js's DRACOLoader decodes
+# compressed .glb models in a Web Worker built from a same-origin Blob (decoder
+# vendored at /draco/, no CDN). Without the directive worker-src falls back to
+# script-src 'self', which blocks blob workers.
 
 # Embedded Safepay checkout renders Safepay's payment app in an IFRAME on our page
 # (no third-party script ever runs on our origin — script-src stays 'self'). Allow

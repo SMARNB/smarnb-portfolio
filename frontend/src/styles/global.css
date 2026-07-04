@@ -220,6 +220,17 @@ h2.section-title { font-size: clamp(1.8rem, 4.4vw, 2.8rem); }
 .code-line { height: 11px; border-radius: 4px; margin: .55rem 0; background: var(--surface-2); position: relative; overflow: hidden; }
 .code-line::after { content:""; position:absolute; inset:0; width:40%; background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb),.5), transparent); animation: shimmer 2.6s var(--ease) infinite; }
 .code-line.w1{width:55%;} .code-line.w2{width:80%;} .code-line.w3{width:40%;} .code-line.w4{width:68%;}
+
+/* 3D model stage (ModelStage/ModelViewer) */
+.model-stage { position: relative; width: 100%; aspect-ratio: 1 / 0.85; }
+.model-stage .model-poster {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+  padding: 8%; transition: opacity .5s var(--ease);
+}
+.model-stage .model-poster.is-hidden { opacity: 0; }
+.model-stage .model-canvas { z-index: 1; }
+.model-stage .model-canvas:active { cursor: grabbing; }
+.hero-card-3d { padding-bottom: .4rem; }
 .mini-chart { display: flex; align-items: flex-end; gap: .5rem; height: 90px; margin-top: 1rem; position: relative; }
 .mini-chart .bar { flex: 1; border-radius: 6px 6px 0 0; background: var(--grad); opacity: .85; transform-origin: bottom; animation: grow 1.2s var(--ease) both; }
 

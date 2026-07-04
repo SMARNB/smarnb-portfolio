@@ -7,6 +7,7 @@ import { CONFIG } from "../../lib/config";
 import { Icon } from "../../lib/icons";
 import { CountUp } from "../ui/CountUp";
 import { useCatalog } from "../../context/CatalogContext";
+import { ModelStage } from "../three/ModelStage";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -85,20 +86,13 @@ export function Hero() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.9, ease: EASE, delay: 0.15 }}
         >
-          <div className="hero-card">
+          <div className="hero-card hero-card-3d">
             <div className="win-dots"><span /><span /><span /></div>
-            <div className="code-line w2" />
-            <div className="code-line w1" />
-            <div className="code-line w4" />
-            <div className="code-line w3" />
-            <div className="mini-chart">
-              <span className="bar" style={{ height: "40%" }} />
-              <span className="bar" style={{ height: "65%" }} />
-              <span className="bar" style={{ height: "50%" }} />
-              <span className="bar" style={{ height: "85%" }} />
-              <span className="bar" style={{ height: "70%" }} />
-              <span className="bar" style={{ height: "100%" }} />
-            </div>
+            <ModelStage
+              src="/assets/models/hero-placeholder-v1.glb"
+              poster="/assets/img/hero-model-poster.svg"
+              alt="Rotating 3D model"
+            />
           </div>
           <div className="float-badge b1">
             <span className="ic"><Icon name="bot" size={20} /></span>
