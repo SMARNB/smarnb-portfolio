@@ -2,7 +2,6 @@
    the rest. Port of renderPersonalProjects in app.js. */
 import { Link } from "react-router-dom";
 import { Icon } from "../../lib/icons";
-import { gradFor } from "../../lib/art";
 import { personalProjects } from "../../lib/data";
 import { Reveal } from "../ui/Reveal";
 
@@ -26,7 +25,7 @@ export function PersonalProjects() {
           <Reveal className="card project-feature" key={p.id} as="article">
             <div
               className={`pf-visual${p.image ? " has-shot" : ""}`}
-              style={p.image ? undefined : { background: gradFor(p.category) }}
+              style={p.image ? undefined : { background: "var(--surface-2)" }}
             >
               {p.image ? (
                 <>
@@ -85,7 +84,7 @@ export function PersonalProjects() {
           <div className="grid cols-2" style={{ marginTop: "1.25rem" }}>
             {rest.map((p) => (
               <Reveal className="card" key={p.id} as="article">
-                <span className="cat" style={{ color: "var(--accent-2)", fontWeight: 700, textTransform: "uppercase", fontSize: ".74rem", letterSpacing: ".06em" }}>
+                <span className="cat" style={{ color: "var(--muted-2)", fontWeight: 700, textTransform: "uppercase", fontSize: ".74rem", letterSpacing: ".08em" }}>
                   {p.category}
                 </span>
                 <h3 style={{ fontSize: "1.15rem", margin: ".35rem 0" }}>{p.title}</h3>

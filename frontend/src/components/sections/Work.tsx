@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { portfolio } from "../../lib/data";
 import { Icon } from "../../lib/icons";
-import { CAT_GRAD, DEFAULT_GRAD, PortfolioArt } from "../../lib/art";
+import { PortfolioArt } from "../../lib/art";
 import { Reveal } from "../ui/Reveal";
 import { useUI } from "../../context/UIContext";
 
@@ -65,8 +65,7 @@ export function Work() {
               }}
             >
               <div className="work-thumb">
-                <span className="ph" style={{ background: CAT_GRAD[p.category] || DEFAULT_GRAD }} />
-                <PortfolioArt p={p} />
+                <PortfolioArt p={p} className="work-media" />
                 <span className="hover-go"><Icon name="arrow" size={18} /></span>
               </div>
               <div className="work-body">

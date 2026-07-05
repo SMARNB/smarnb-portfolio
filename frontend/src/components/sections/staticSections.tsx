@@ -16,7 +16,7 @@ const TECH = [
 export function Marquee() {
   const row = TECH.map((t, i) => (
     <span key={i}>
-      <Icon name="spark" style={{ display: "inline", width: 14, height: 14, verticalAlign: -2, color: "var(--accent-2)" }} /> {t}
+      <Icon name="spark" style={{ display: "inline", width: 14, height: 14, verticalAlign: -2, color: "var(--muted-2)" }} /> {t}
     </span>
   ));
   return (

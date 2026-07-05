@@ -3,7 +3,7 @@
    it. Port of openProject() in app.js. */
 import { useNavigate } from "react-router-dom";
 import { Icon } from "../../lib/icons";
-import { CAT_GRAD, CAT_ICON, PortfolioArt } from "../../lib/art";
+import { MediaFrame, kindFor } from "../../lib/art";
 import { portfolio } from "../../lib/data";
 import { setContactPrefill } from "../../lib/contactPrefill";
 import { useUI } from "../../context/UIContext";
@@ -39,30 +39,20 @@ export function ProjectModal() {
       <div className="modal-body" id="projectBody">
         {p && (
           <>
-            <div
-              style={{
-                height: "180px",
-                borderRadius: "var(--r)",
-                background: CAT_GRAD[p.category] || "linear-gradient(135deg,#7c5cff,#22d3ee)",
-                display: "grid",
-                placeItems: "center",
-                position: "relative",
-                overflow: "hidden",
-              }}
-            >
-              <PortfolioArt p={p} />
-              <Icon name={CAT_ICON[p.category] || "spark"} style={{ width: 54, height: 54, color: "#fff", position: "relative" }} />
-            </div>
+            <MediaFrame
+              kind={kindFor(p.category)}
+              className="modal-media"
+            />
             <span
               className="cat"
               style={{
                 display: "inline-block",
                 marginTop: "1rem",
-                color: "var(--accent-2)",
+                color: "var(--muted-2)",
                 fontWeight: 700,
                 textTransform: "uppercase",
                 fontSize: ".76rem",
-                letterSpacing: ".06em",
+                letterSpacing: ".08em",
               }}
             >
               {p.category}
