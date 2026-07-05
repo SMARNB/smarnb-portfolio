@@ -48,7 +48,7 @@ export function Hero() {
             <span>{CONFIG.availability}</span>
           </motion.span>
           <motion.h1 variants={item}>
-            I <span className="text-grad">build, automate &amp; design</span> the products that grow your business.
+            I <span className="text-grad">Build, Automate &amp; Design</span> the products that grow your business.
           </motion.h1>
           <motion.p className="lead" variants={item}>
             {CONFIG.bio}

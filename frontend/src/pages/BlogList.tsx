@@ -5,10 +5,11 @@ import { Link } from "react-router-dom";
 import { API } from "../lib/api";
 import type { BlogListResponse, BlogPost as Post } from "../lib/types";
 import { Reveal } from "../components/ui/Reveal";
+import { TeaserHead } from "../components/ui/TeaserHead";
 import { Icon } from "../lib/icons";
 import { fmtDay } from "../lib/format";
 
-export function BlogList() {
+export function BlogList({ home = false }: { home?: boolean }) {
   const [data, setData] = useState<BlogListResponse | null>(null);
   const [cat, setCat] = useState("All");
   const [error, setError] = useState("");
@@ -24,6 +25,24 @@ export function BlogList() {
     const all = data?.posts || [];
     return cat === "All" ? all : all.filter((p) => p.category === cat);
   }, [data, cat]);
+
+  // Home preview: at most 3 recent posts + a link to the full blog. Renders
+  // nothing until there is at least one published post.
+  if (home) {
+    if (!data || data.posts.length === 0) return null;
+    return (
+      <section id="blog">
+        <div className="container">
+          <TeaserHead eyebrow="Blog" title="From the blog" to="/blog" label="See all posts" />
+          <div className="blog-grid">
+            {data.posts.slice(0, 3).map((p, i) => (
+              <BlogCard key={p.slug} p={p} i={i} />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section id="blog">

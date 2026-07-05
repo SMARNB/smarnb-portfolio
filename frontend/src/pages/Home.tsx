@@ -1,10 +1,12 @@
 /* Public Home — a concise hub: intro, tech marquee, a Problem/Solution/Result
-   showcase of the top strengths, a short services teaser, and a CTA. The full
-   content lives on dedicated routes (/services, /work, /projects, /about,
-   /contact, /store), each a real crawlable page. */
+   showcase, then a capped 3-card preview of every content page (services, work,
+   projects, blog), each linking to its full route. */
 import { Hero } from "../components/sections/Hero";
 import { FeatureShowcase } from "../components/sections/FeatureShowcase";
 import { ServicesTeaser } from "../components/sections/ServicesTeaser";
+import { Work } from "../components/sections/Work";
+import { PersonalProjects } from "../components/sections/PersonalProjects";
+import { BlogList } from "./BlogList";
 import { Marquee, CtaBand } from "../components/sections/staticSections";
 
 export function Home() {
@@ -14,6 +16,9 @@ export function Home() {
       <Marquee />
       <FeatureShowcase />
       <ServicesTeaser limit={3} />
+      <Work home />
+      <PersonalProjects home />
+      <BlogList home />
       <CtaBand />
     </>
   );

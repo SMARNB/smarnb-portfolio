@@ -65,7 +65,7 @@ export function Store() {
               Each is delivered to a professional standard — pick a ready-made package below or ask for something custom.
             </p>
           </Reveal>
-          <div className="grid cols-2" id="servicesGrid">
+          <div className="grid cols-3" id="servicesGrid">
             {services.map((s, i) => (
               <ServiceCard key={s.id} s={s} index={i} onView={(id) => selectService(id, true)} />
             ))}

@@ -6,9 +6,10 @@ import { portfolio } from "../../lib/data";
 import { Icon } from "../../lib/icons";
 import { PortfolioArt } from "../../lib/art";
 import { Reveal } from "../ui/Reveal";
+import { TeaserHead } from "../ui/TeaserHead";
 import { useUI } from "../../context/UIContext";
 
-export function Work() {
+export function Work({ home = false }: { home?: boolean }) {
   const reduce = useReducedMotion();
   const { openProject } = useUI();
   const [filter, setFilter] = useState("All");
@@ -17,30 +18,40 @@ export function Work() {
     () => ["All", ...Array.from(new Set(portfolio.map((p) => p.category)))],
     [],
   );
-  const items = filter === "All" ? portfolio : portfolio.filter((p) => p.category === filter);
+  const items = home
+    ? portfolio.slice(0, 3)
+    : filter === "All"
+      ? portfolio
+      : portfolio.filter((p) => p.category === filter);
 
   return (
     <section id="work">
       <div className="container">
-        <Reveal className="section-head center">
-          <span className="eyebrow">Selected work</span>
-          <h2 className="section-title">A look at recent projects</h2>
-          <p className="lead" style={{ marginInline: "auto" }}>
-            Real results across development, design, automation and packaging.
-          </p>
-        </Reveal>
+        {home ? (
+          <TeaserHead eyebrow="Selected work" title="Recent work" to="/work" label="See all work" />
+        ) : (
+          <Reveal className="section-head center">
+            <span className="eyebrow">Selected work</span>
+            <h2 className="section-title">A look at recent projects</h2>
+            <p className="lead" style={{ marginInline: "auto" }}>
+              Real results across development, design, automation and packaging.
+            </p>
+          </Reveal>
+        )}
 
-        <div className="filter-row" id="workFilters">
-          {cats.map((c) => (
-            <button
-              key={c}
-              className={`filter-btn${filter === c ? " active" : ""}`}
-              onClick={() => setFilter(c)}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
+        {!home && (
+          <div className="filter-row" id="workFilters">
+            {cats.map((c) => (
+              <button
+                key={c}
+                className={`filter-btn${filter === c ? " active" : ""}`}
+                onClick={() => setFilter(c)}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="work-grid" id="workGrid">
           {items.map((p, i) => (

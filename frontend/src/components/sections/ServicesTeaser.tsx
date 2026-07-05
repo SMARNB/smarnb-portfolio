@@ -22,7 +22,7 @@ export function ServicesTeaser({ all = false, limit = 6 }: { all?: boolean; limi
             order in two clicks.
           </p>
         </Reveal>
-        <div className="grid cols-2" id="servicesGrid">
+        <div className="grid cols-3" id="servicesGrid">
           {list.map((s, i) => (
             <ServiceCard key={s.id} s={s} index={i} onView={(id) => navigate(`/store#svc-${id}`)} />
           ))}

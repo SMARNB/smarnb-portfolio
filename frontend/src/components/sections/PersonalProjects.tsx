@@ -4,10 +4,45 @@ import { Link } from "react-router-dom";
 import { Icon } from "../../lib/icons";
 import { personalProjects } from "../../lib/data";
 import { Reveal } from "../ui/Reveal";
+import { TeaserHead } from "../ui/TeaserHead";
 
-export function PersonalProjects() {
+export function PersonalProjects({ home = false }: { home?: boolean }) {
   const feat = personalProjects.filter((p) => p.featured);
   const rest = personalProjects.filter((p) => !p.featured);
+
+  if (home) {
+    return (
+      <section id="projects">
+        <div className="container">
+          <TeaserHead
+            eyebrow="Personal & open-source"
+            title="Projects I've built"
+            to="/projects"
+            label="See all projects"
+          />
+          <div className="grid cols-3">
+            {personalProjects.slice(0, 3).map((p) => (
+              <Reveal className="card" key={p.id} as="article">
+                <span className="cat" style={{ color: "var(--muted-2)", fontWeight: 700, textTransform: "uppercase", fontSize: ".74rem", letterSpacing: ".08em" }}>
+                  {p.category}
+                </span>
+                <h3 style={{ fontSize: "1.1rem", margin: ".35rem 0" }}>{p.title}</h3>
+                <p style={{ color: "var(--muted)", fontSize: ".9rem" }}>{p.desc}</p>
+                <div className="tag-row">
+                  {p.tags.slice(0, 4).map((t) => (
+                    <span className="tag" key={t}>{t}</span>
+                  ))}
+                </div>
+                <a className="card-link" href={p.link} target="_blank" rel="noopener">
+                  {p.linkLabel || "View"} <Icon name="arrow" size={16} />
+                </a>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section id="projects">
