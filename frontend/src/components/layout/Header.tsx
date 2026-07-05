@@ -39,18 +39,39 @@ export function Header({ onMenu, menuOpen }: { onMenu: () => void; menuOpen: boo
   // robustly so a mistimed first measurement — e.g. right after returning from a
   // dashboard route, before fonts/CSS have settled — self-corrects instead of
   // getting stuck on the hamburger. Re-runs on rAF, on font load, on any container
-  // resize (ResizeObserver), and after a couple of short delays.
+  // resize (ResizeObserver), after a couple of short delays, and whenever the cart
+  // count changes (opening the cart drawer scroll-locks the body, which used to
+  // shift the container width; scrollbar-gutter:stable now holds it, but re-measure
+  // anyway so the badge/menu state can never leave a stale verdict).
+  //
+  // Fit is measured from the rightmost flex item's edge (.nav-actions), NOT
+  // nav.scrollWidth: the cart-count badge is absolutely positioned and pokes ~5px
+  // past the container's right edge, so it inflates scrollWidth by a constant ~5px
+  // whenever the cart has items — which, with a tight tolerance, was the real reason
+  // the nav collapsed on a non-empty cart at ANY width. A border-box rect excludes
+  // that overhang. Hysteresis then prevents flapping at the borderline widths:
+  // while expanded, collapse only when actions clearly overflow (>1px); while
+  // collapsed, expand only once there is ≥12px of slack. lastVerdict holds the last
+  // committed decision because measure() forces expanded=true to lay the links out.
+  const lastVerdict = useRef(true);
   useEffect(() => {
     const nav = navRef.current;
     if (!nav) return;
     let raf = 0;
     const measure = () => {
       cancelAnimationFrame(raf);
-      setExpanded(true); // reveal links so scrollWidth reflects their natural width
+      setExpanded(true); // reveal links so the flex row reflects its natural width
       raf = requestAnimationFrame(() => {
         const el = navRef.current;
         if (!el || el.clientWidth === 0) return; // not laid out yet — don't collapse
-        setExpanded(el.scrollWidth <= el.clientWidth + 1);
+        const actions = el.querySelector<HTMLElement>(".nav-actions");
+        if (!actions) return;
+        // How far the actions row extends past the nav's client edge. Border-box
+        // rects ignore the overhanging (absolutely-positioned) cart badge.
+        const overflow = actions.getBoundingClientRect().right - el.getBoundingClientRect().right;
+        const next = lastVerdict.current ? overflow <= 1 : overflow <= -12;
+        lastVerdict.current = next;
+        setExpanded(next);
       });
     };
     measure();
@@ -67,7 +88,7 @@ export function Header({ onMenu, menuOpen }: { onMenu: () => void; menuOpen: boo
       window.removeEventListener("resize", measure);
       ro?.disconnect();
     };
-  }, []);
+  }, [count]);
 
   return (
     <header
