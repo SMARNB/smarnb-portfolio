@@ -696,6 +696,39 @@ def list_conversations(db):
             .order_by(models.Conversation.last_message_at.desc()).all())
 
 
+def list_client_conversations(db, user):
+    """A signed-in client's own chat threads, newest activity first (for the
+    'past conversations' picker in the chat widget)."""
+    return (db.query(models.Conversation)
+            .filter(models.Conversation.client_id == user.id)
+            .order_by(models.Conversation.last_message_at.desc()).all())
+
+
+def end_conversation(db, conv):
+    """Archive a thread (the client tapped 'start a new conversation'). It's kept
+    and can be resumed later; sending again reopens it."""
+    conv.status = "closed"
+    db.commit()
+    return conv
+
+
+def purge_stale_anonymous_chats(db, days=7):
+    """Delete web chats from visitors who never signed up once they've been idle
+    for `days`. Signed-in clients' threads (client_id set) and the WhatsApp bridge
+    are never touched. Cascades remove the messages + attachments."""
+    cutoff = models.utcnow() - dt.timedelta(days=days)
+    stale = (db.query(models.Conversation)
+             .filter(models.Conversation.client_id.is_(None),
+                     models.Conversation.channel == "web",
+                     models.Conversation.last_message_at < cutoff)
+             .all())
+    for conv in stale:
+        db.delete(conv)
+    if stale:
+        db.commit()
+    return len(stale)
+
+
 def conversation_unread(conv, since_field="admin_read_at", from_senders=("client",)):
     since = getattr(conv, since_field)
     n = 0

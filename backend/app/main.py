@@ -117,6 +117,36 @@ def _start_self_keepalive():
     print("[keepalive] self-ping every 10 min →", url)
 
 
+def _start_chat_janitor():
+    """Delete anonymous (not-signed-up) web chats older than a week, once a day.
+    Signed-in clients' threads are kept so they can be resumed. Runs regardless of
+    the keepalive setting; set CHAT_RETENTION_DAYS=0 to disable."""
+    try:
+        days = int(os.environ.get("CHAT_RETENTION_DAYS", "7"))
+    except ValueError:
+        days = 7
+    if days <= 0:
+        return
+    import threading
+    import time as _time
+
+    def _loop():
+        while True:
+            _time.sleep(24 * 3600)
+            db = SessionLocal()
+            try:
+                n = crud.purge_stale_anonymous_chats(db, days)
+                if n:
+                    print("[janitor] purged", n, "stale anonymous chat(s)")
+            except Exception:
+                pass
+            finally:
+                db.close()
+
+    threading.Thread(target=_loop, daemon=True).start()
+    print("[janitor] anonymous chats older than", days, "day(s) purged daily")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Create tables and seed the admin (developer) account on first run.
@@ -130,9 +160,16 @@ async def lifespan(app: FastAPI):
             print("[seed] created admin account:", config.ADMIN_EMAIL)
         crud.backfill_milestones(db)   # give pre-tracking orders a pipeline
         seo.write_seo_files(db)        # mirror sitemap.xml/robots.txt to disk as real files
+        try:
+            n = crud.purge_stale_anonymous_chats(db)   # clear week-old guest chats on boot
+            if n:
+                print("[janitor] purged", n, "stale anonymous chat(s) on boot")
+        except Exception:
+            pass
     finally:
         db.close()
     _start_self_keepalive()
+    _start_chat_janitor()
     yield
 
 

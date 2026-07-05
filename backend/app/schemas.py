@@ -341,6 +341,15 @@ class ConversationSummary(BaseModel):
     channel: str = "web"
 
 
+class ClientChatSummary(BaseModel):
+    """A signed-in client's own thread, for the 'past conversations' picker."""
+    public_id: str
+    status: str = "open"
+    last_message: str = ""
+    last_message_at: dt.datetime
+    messages: int = 0
+
+
 class DevSendIn(BaseModel):
     body: str = Field(min_length=1, max_length=2000)
     let_bot_resume: bool = False

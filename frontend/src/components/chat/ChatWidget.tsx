@@ -34,6 +34,29 @@ const ICON_CLIP = (
     <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
   </svg>
 );
+const ICON_PLUS = (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+);
+const ICON_HISTORY = (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 3v5h5" /><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" /><path d="M12 7v5l3 2" />
+  </svg>
+);
+const ICON_BACK = (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
+  </svg>
+);
+
+interface ClientChatSummary {
+  public_id: string;
+  status: string;
+  last_message: string;
+  last_message_at: string;
+  messages: number;
+}
 
 function escapeHtml(s: string): string {
   const d = document.createElement("div");
@@ -68,6 +91,9 @@ function ChatWidgetInner() {
   const [unread, setUnread] = useState(0);
   const [typing, setTyping] = useState(false);
   const [text, setText] = useState("");
+  const [view, setView] = useState<"chat" | "list">("chat");
+  const [history, setHistory] = useState<ClientChatSummary[] | null>(null);
+  const loggedIn = !!API.getUser();
 
   // Mutable refs (don't trigger re-render; mirror the vanilla `S` object).
   const conv = useRef<string | null>(null);
@@ -200,6 +226,54 @@ function ChatWidgetInner() {
     }
   }, [api, applyThread, fetchThread]);
 
+  // Archive the current thread (kept server-side) and start a fresh one.
+  const newConversation = useCallback(async () => {
+    if (conv.current) {
+      try {
+        await api("POST", "/api/chat/" + encodeURIComponent(conv.current) + "/end");
+      } catch {
+        /* best effort */
+      }
+    }
+    reset();
+    setView("chat");
+    await ensureStarted();
+    restartPoll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [api, ensureStarted, restartPoll]);
+
+  // Signed-in clients only: list their past threads to resume one.
+  const openHistory = useCallback(async () => {
+    setHistory(null);
+    setView("list");
+    try {
+      setHistory(await api<ClientChatSummary[]>("GET", "/api/chat/mine"));
+    } catch {
+      setHistory([]);
+    }
+  }, [api]);
+
+  const resumeConv = useCallback(
+    async (pid: string) => {
+      conv.current = pid;
+      secret.current = null;
+      started.current = true;
+      setView("chat");
+      try {
+        const res = await api<ChatThread>("GET", "/api/chat/" + encodeURIComponent(pid));
+        if (res.secret) secret.current = res.secret;
+        setDown(false);
+        applyThread(res);
+        save();
+      } catch {
+        setDown(true);
+      }
+      restartPoll();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [api, applyThread, restartPoll],
+  );
+
   const sendText = useCallback(
     async (override?: string) => {
       const msg = (override != null ? override : text).trim();
@@ -256,7 +330,7 @@ function ChatWidgetInner() {
   // Resume idle polling on mount if a saved thread exists.
   useEffect(() => {
     const saved = loadSaved();
-    if (saved && saved.conv && saved.secret) {
+    if (saved && saved.conv && (saved.secret || API.getToken())) {
       conv.current = saved.conv;
       secret.current = saved.secret;
       started.current = true;
@@ -305,12 +379,48 @@ function ChatWidgetInner() {
               <small>{human ? `${CONFIG.name || "Developer"} is in the chat` : CHAT.subtitle || "We usually reply fast"}</small>
             </div>
           </div>
-          <button className="chat-x" aria-label="Close chat" onClick={toggle}>
-            {ICON_CLOSE}
-          </button>
+          <div className="chat-head-actions">
+            {view === "list" ? (
+              <button className="chat-x" aria-label="Back to chat" title="Back" onClick={() => setView("chat")}>
+                {ICON_BACK}
+              </button>
+            ) : (
+              <>
+                <button className="chat-x" aria-label="Start a new conversation" title="New conversation" onClick={newConversation}>
+                  {ICON_PLUS}
+                </button>
+                {loggedIn && (
+                  <button className="chat-x" aria-label="Past conversations" title="Past conversations" onClick={openHistory}>
+                    {ICON_HISTORY}
+                  </button>
+                )}
+              </>
+            )}
+            <button className="chat-x" aria-label="Close chat" onClick={toggle}>
+              {ICON_CLOSE}
+            </button>
+          </div>
         </div>
 
         <div className="chat-body" id="chat-body" ref={bodyRef}>
+          {view === "list" ? (
+            <div className="chat-history">
+              {history === null && <p className="chat-hist-empty">Loading…</p>}
+              {history && history.length === 0 && (
+                <p className="chat-hist-empty">No past conversations yet — start chatting and they'll show up here.</p>
+              )}
+              {history &&
+                history.map((h) => (
+                  <button className="chat-hist-item" key={h.public_id} onClick={() => resumeConv(h.public_id)}>
+                    <span className="chat-hist-msg">{h.last_message || "New conversation"}</span>
+                    <span className="chat-hist-meta">
+                      {h.status === "closed" ? "Ended" : "Active"} · {new Date(h.last_message_at).toLocaleDateString()}
+                    </span>
+                  </button>
+                ))}
+            </div>
+          ) : (
+          <>
           {down ? (
             <div className="chat-msg them">
               <div className="bubble">
@@ -347,8 +457,12 @@ function ChatWidgetInner() {
               </div>
             </div>
           )}
+          </>
+          )}
         </div>
 
+        {view === "chat" && (
+          <>
         <div className="chat-quick" id="chat-quick">
           {down ? (
             <>
@@ -414,6 +528,8 @@ function ChatWidgetInner() {
           </button>
         </form>
         <div className="chat-foot">Files: images &amp; PDF only · powered by {CONFIG.brand || "us"}</div>
+          </>
+        )}
       </div>
     </>
   );

@@ -590,6 +590,42 @@ with TestClient(app) as c:
     check("deleted client is no longer listed",
           not any(u["id"] == nid for u in c.get("/api/admin/users", headers=AH).json()))
 
+    print("== Chat retention (anonymous purge + client archive/resume) ==")
+    rc = c.post("/api/auth/register", json={"email": "chatuser@example.com",
+                                            "password": "secret123", "name": "Chat User"})
+    CT = {"Authorization": "Bearer " + rc.json()["access_token"]}
+    th = c.post("/api/chat/start", headers=CT, json={}).json()
+    cpid, csec = th["public_id"], th["secret"]
+    c.post("/api/chat/%s/messages" % cpid, headers={**CT, "X-Chat-Secret": csec},
+           json={"body": "hi, a question about dashboards"})
+    check("client sees their thread in /mine",
+          any(m["public_id"] == cpid for m in c.get("/api/chat/mine", headers=CT).json()))
+    check("/mine requires login (401 anon)", c.get("/api/chat/mine").status_code == 401)
+    check("client can end (archive) a conversation",
+          c.post("/api/chat/%s/end" % cpid, headers=CT).json()["status"] == "closed")
+    check("owner fetch returns the secret (so a past thread can resume)",
+          bool(c.get("/api/chat/%s" % cpid, headers=CT).json().get("secret")))
+    c.post("/api/chat/%s/messages" % cpid, headers=CT, json={"body": "resuming this"})
+    check("sending reopens an ended conversation",
+          c.get("/api/chat/%s" % cpid, headers=CT).json()["status"] == "open")
+
+    from app import crud as _crud, models as _models  # noqa: E402
+    from app.database import SessionLocal as _SL  # noqa: E402
+    import datetime as _dt  # noqa: E402
+    anon = c.post("/api/chat/start", json={}).json()
+    apid = anon["public_id"]
+    s2 = _SL()
+    old = _crud.get_conversation(s2, apid)
+    old.last_message_at = _models.utcnow() - _dt.timedelta(days=9)
+    s2.commit()
+    purged = _crud.purge_stale_anonymous_chats(s2, 7)
+    s2.close()
+    check("stale anonymous chat purged", purged >= 1)
+    check("purged anonymous chat is gone (404)",
+          c.get("/api/chat/%s" % apid, params={"s": anon["secret"]}).status_code == 404)
+    check("a signed-in client's chat survives the purge",
+          c.get("/api/chat/%s" % cpid, headers=CT).status_code == 200)
+
 print("\n==== RESULT: %d passed, %d failed ====" % (ok, fail))
 if os.path.exists(_DB):
     try:

@@ -54,6 +54,19 @@
 }
 .chat-x { background: none; border: none; color: var(--muted); cursor: pointer; padding: 4px; border-radius: 8px; display: grid; place-items: center; }
 .chat-x:hover { color: var(--text); background: var(--surface-2); }
+.chat-head-actions { display: flex; align-items: center; gap: .1rem; }
+
+/* Past-conversations list (signed-in clients) */
+.chat-history { display: flex; flex-direction: column; gap: .5rem; }
+.chat-hist-item {
+  text-align: left; display: grid; gap: .2rem; padding: .7rem .8rem; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2);
+  transition: border-color .2s, transform .1s;
+}
+.chat-hist-item:hover { border-color: var(--accent); transform: translateY(-1px); }
+.chat-hist-msg { font-size: .88rem; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-hist-meta { font-size: .72rem; color: var(--muted-2); }
+.chat-hist-empty { color: var(--muted); text-align: center; padding: 2rem 1rem; font-size: .9rem; }
 
 /* ---- Messages ------------------------------------------------------------ */
 .chat-body {

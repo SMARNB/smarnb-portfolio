@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from .. import bot, config, crud, crypto, models, notify, schemas, whatsapp
 from ..database import get_db
-from ..deps import get_current_admin, get_optional_user
+from ..deps import get_current_admin, get_current_user, get_optional_user
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 admin_router = APIRouter(prefix="/api/admin/chat", tags=["chat-admin"],
@@ -188,6 +188,23 @@ def start(data: schemas.ChatStartIn, db: Session = Depends(get_db),
     return _thread(conv, include_secret=True)
 
 
+@router.get("/mine", response_model=List[schemas.ClientChatSummary])
+def my_conversations(db: Session = Depends(get_db), user=Depends(get_current_user)):
+    """A signed-in client's own chat threads, so they can resume a past one.
+    Declared before /{public_id} so 'mine' isn't matched as a conversation id."""
+    out = []
+    for conv in crud.list_client_conversations(db, user):
+        last = conv.messages[-1].body if conv.messages else ""
+        out.append({
+            "public_id": conv.public_id,
+            "status": conv.status,
+            "last_message": (last or "")[:80],
+            "last_message_at": conv.last_message_at,
+            "messages": len(conv.messages),
+        })
+    return out
+
+
 @router.get("/{public_id}", response_model=schemas.ChatThreadOut)
 def fetch(public_id: str, s: Optional[str] = None,
           x_chat_secret: Optional[str] = Header(None),
@@ -195,7 +212,10 @@ def fetch(public_id: str, s: Optional[str] = None,
     conv = _authed_conv(db, public_id, x_chat_secret or s, user)
     conv.client_read_at = models.utcnow()
     db.commit()
-    return _thread(conv)
+    # The owning signed-in client gets the secret back so they can resume a past
+    # thread (needed for attachment URLs + browser-restore) — they own it anyway.
+    owns = bool(user and conv.client_id == user.id)
+    return _thread(conv, include_secret=owns)
 
 
 @router.post("/{public_id}/messages", response_model=schemas.ChatThreadOut)
@@ -220,6 +240,16 @@ def send(public_id: str, data: schemas.ChatSendIn,
     if conv.needs_human and not was_needs_human:
         _ping_owner_handoff(conv, body)
     return _thread(conv)
+
+
+@router.post("/{public_id}/end")
+def end(public_id: str, x_chat_secret: Optional[str] = Header(None),
+        db: Session = Depends(get_db), user=Depends(get_optional_user)):
+    """Archive this thread ('start a new conversation'). It's kept and can be
+    resumed later; sending again reopens it."""
+    conv = _authed_conv(db, public_id, x_chat_secret, user)
+    crud.end_conversation(db, conv)
+    return {"ok": True, "status": conv.status}
 
 
 def _admin_link():
