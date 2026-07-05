@@ -316,6 +316,29 @@ h2.section-title { font-size: clamp(1.8rem, 4.4vw, 2.8rem); }
 .work-card:hover .media-art, .product-card:hover .media-shot { transform: scale(1.04); }
 .modal-media { height: 180px; border-radius: var(--r); border: 1px solid var(--border); }
 
+/* ---- Feature showcase (Z-pattern problem / solution / result) ------------ */
+.feature-list { display: grid; gap: clamp(2.5rem, 6vw, 4.5rem); }
+.feature-row { display: grid; gap: clamp(1.4rem, 4vw, 3rem); align-items: center; }
+@media (min-width: 900px) {
+  .feature-row { grid-template-columns: 1fr 1fr; }
+  .feature-row.rev .feature-media { order: 2; }
+}
+.fs-media { height: clamp(220px, 32vw, 300px); border-radius: var(--r-lg); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.feature-body h3 { font-size: clamp(1.4rem, 3vw, 1.9rem); margin: .2rem 0 1.15rem; }
+.ps-grid { display: grid; gap: .95rem; margin-bottom: 1.2rem; }
+.ps { display: grid; gap: .25rem; }
+.ps-label { font-size: .7rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted-2); }
+.ps-label.ps-result { color: var(--accent); }
+.ps p { color: var(--muted); font-size: .96rem; line-height: 1.6; }
+.feature-body .tag-row { margin-top: 0; }
+.feature-body .btn { margin-top: 1.3rem; }
+/* compact variant (store): tighter strip above the shop grid */
+.showcase.compact { padding-block: clamp(2.5rem, 6vw, 4rem); }
+.showcase.compact .feature-list { gap: clamp(1.8rem, 4vw, 2.6rem); }
+.showcase.compact .fs-media { height: clamp(160px, 24vw, 210px); }
+.showcase.compact .feature-body h3 { font-size: clamp(1.2rem, 2.4vw, 1.5rem); margin-bottom: .85rem; }
+.showcase.compact .ps p { font-size: .9rem; }
+
 /* service card */
 .service-card { padding-top: 0; }
 .svc-media { height: 150px; margin: 0 -1.5rem 1.2rem; border-bottom: 1px solid var(--border); }

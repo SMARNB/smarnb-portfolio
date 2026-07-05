@@ -6,6 +6,7 @@ import { useLocation } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { useCatalog } from "../context/CatalogContext";
 import { ServiceCard } from "../components/ui/ServiceCard";
+import { FeatureShowcase } from "../components/sections/FeatureShowcase";
 import { Pricing } from "../components/sections/Pricing";
 import { Products } from "../components/sections/Products";
 import { PaymentsSection } from "../components/sections/staticSections";
@@ -52,6 +53,8 @@ export function Store() {
           </Reveal>
         </div>
       </section>
+
+      <FeatureShowcase compact heading={false} />
 
       <section id="services" style={{ paddingTop: 0 }}>
         <div className="container">
