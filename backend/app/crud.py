@@ -36,6 +36,60 @@ def create_user(db, email, password, name="", whatsapp="", role="client", email_
     return user
 
 
+# --- Admin: client-account management (the "Clients" tab) ---------------------
+def get_user(db, uid):
+    return db.query(models.User).filter(models.User.id == uid).first()
+
+
+def list_client_users(db):
+    """All registered client accounts, newest first (admin visibility)."""
+    return (db.query(models.User)
+            .filter(models.User.role == "client")
+            .order_by(models.User.created_at.desc())
+            .all())
+
+
+def serialize_user_admin(db, u):
+    orders = db.query(models.Order).filter(models.Order.client_id == u.id).count()
+    return {
+        "id": u.id,
+        "email": u.email or "",
+        "name": u.name or "",
+        "whatsapp": u.whatsapp or "",
+        "role": u.role,
+        "created_at": u.created_at,
+        "email_verified": bool(u.email_verified),
+        "totp_enabled": bool(u.totp_enabled),
+        "orders": orders,
+    }
+
+
+def set_user_password(db, u, password):
+    """Admin-initiated password reset so the owner can regain access to a client
+    account (e.g. a forgotten test login)."""
+    u.hashed_password = security.hash_password(password)
+    db.commit()
+    return u
+
+
+def set_user_verified(db, u, verified=True):
+    u.email_verified = bool(verified)
+    if verified:
+        u.verify_code_hash = ""
+        u.verify_expires = None
+    db.commit()
+    return u
+
+
+def delete_user(db, u):
+    """Delete a client account. Their orders are kept but detached (become guest
+    orders) so order history/records aren't lost."""
+    db.query(models.Order).filter(models.Order.client_id == u.id).update(
+        {"client_id": None}, synchronize_session=False)
+    db.delete(u)
+    db.commit()
+
+
 # --- Email verification (anti-spam) -------------------------------------------
 def set_verification_code(db, user):
     """Generate a fresh 6-digit code, store its hash + a short expiry, reset the

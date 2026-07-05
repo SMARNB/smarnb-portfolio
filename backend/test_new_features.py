@@ -563,6 +563,33 @@ with TestClient(app) as c:
           c.post("/api/orders/%s/proof" % mpid,
                  files={"file": ("y.png", _png, "image/png")}).status_code == 400)
 
+    print("== Clients tab (admin visibility + account recovery) ==")
+    r = c.post("/api/auth/register", json={"email": "NewClient@Example.com",
+                                           "password": "secret123", "name": "New Client"})
+    check("a client can register", r.status_code == 200)
+    check("Clients list is admin-gated (401)", c.get("/api/admin/users").status_code == 401)
+    nc = [u for u in c.get("/api/admin/users", headers=AH).json()
+          if u["email"].lower() == "newclient@example.com"]
+    check("registered client appears in the admin Clients list", len(nc) == 1)
+    nid = nc[0]["id"]
+    check("admin can reset a client's password",
+          c.post("/api/admin/users/%d/password" % nid, headers=AH,
+                 json={"password": "reset-pw-1"}).status_code == 200)
+    check("client can log in with the reset password (regains access)",
+          bool(c.post("/api/auth/login",
+                      json={"email": "newclient@example.com", "password": "reset-pw-1"}).json().get("access_token")))
+    check("too-short reset is rejected (422)",
+          c.post("/api/admin/users/%d/password" % nid, headers=AH,
+                 json={"password": "x"}).status_code == 422)
+    check("admin can mark a client verified",
+          c.post("/api/admin/users/%d/verify" % nid, headers=AH).json().get("email_verified") is True)
+    check("unknown user id → 404",
+          c.post("/api/admin/users/999999/verify", headers=AH).status_code == 404)
+    check("admin can delete a client account",
+          c.delete("/api/admin/users/%d" % nid, headers=AH).status_code == 200)
+    check("deleted client is no longer listed",
+          not any(u["id"] == nid for u in c.get("/api/admin/users", headers=AH).json()))
+
 print("\n==== RESULT: %d passed, %d failed ====" % (ok, fail))
 if os.path.exists(_DB):
     try:

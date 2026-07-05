@@ -11,6 +11,7 @@ import { useDashBody } from "../lib/useDashBody";
 import { DashTopbar } from "../components/dash/DashTopbar";
 import { AdminLogin } from "../components/dash/admin/AdminLogin";
 import { OrdersTab } from "../components/dash/admin/OrdersTab";
+import { ClientsTab } from "../components/dash/admin/ClientsTab";
 import { InboxTab } from "../components/dash/admin/InboxTab";
 import { ReviewsTab } from "../components/dash/admin/ReviewsTab";
 import { ServicesTab } from "../components/dash/admin/ServicesTab";
@@ -19,8 +20,8 @@ import { SeoTab } from "../components/dash/admin/SeoTab";
 import { BlogTab } from "../components/dash/admin/BlogTab";
 import { ResumeTab } from "../components/dash/admin/ResumeTab";
 
-type Tab = "orders" | "inbox" | "reviews" | "services" | "blog" | "bot" | "seo" | "resume";
-const HASH_TAB: Record<string, Tab> = { "#services": "services", "#blog": "blog", "#inbox": "inbox", "#reviews": "reviews", "#bot": "bot", "#seo": "seo", "#resume": "resume" };
+type Tab = "orders" | "clients" | "inbox" | "reviews" | "services" | "blog" | "bot" | "seo" | "resume";
+const HASH_TAB: Record<string, Tab> = { "#clients": "clients", "#services": "services", "#blog": "blog", "#inbox": "inbox", "#reviews": "reviews", "#bot": "bot", "#seo": "seo", "#resume": "resume" };
 
 export function AdminDashboard() {
   useDashBody();
@@ -99,6 +100,7 @@ function AdminShell({ onUnauth }: { onUnauth: () => void }) {
 
   const TABS: { id: Tab; label: string; badge?: number }[] = [
     { id: "orders", label: "Orders" },
+    { id: "clients", label: "Clients" },
     { id: "inbox", label: "Inbox", badge: inboxBadge },
     { id: "reviews", label: "Reviews", badge: reviewsBadge },
     { id: "services", label: "Services" },
@@ -128,6 +130,7 @@ function AdminShell({ onUnauth }: { onUnauth: () => void }) {
 
       <div id="tabBody">
         {tab === "orders" && <OrdersTab onUnauth={onUnauth} onStatsChange={pollBadges} />}
+        {tab === "clients" && <ClientsTab onUnauth={onUnauth} />}
         {tab === "inbox" && (
           <InboxTab onUnauth={onUnauth} list={convs} reloadList={pollBadges} onActivity={pollBadges} />
         )}

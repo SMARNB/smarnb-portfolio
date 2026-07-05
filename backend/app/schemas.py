@@ -52,6 +52,25 @@ class LoginResult(BaseModel):
     must_setup_2fa: bool = False
 
 
+class UserAdminOut(BaseModel):
+    """A registered client account, as seen by the admin (Clients tab). `email` is
+    a plain str (not EmailStr) so a legacy/undecryptable value can still be listed
+    instead of crashing the endpoint."""
+    id: int
+    email: str
+    name: str = ""
+    whatsapp: str = ""
+    role: str
+    created_at: dt.datetime
+    email_verified: bool = False
+    totp_enabled: bool = False
+    orders: int = 0
+
+
+class AdminPasswordSet(BaseModel):
+    password: str = Field(min_length=6, max_length=200)
+
+
 class VerifyEmailIn(BaseModel):
     code: str = Field(min_length=4, max_length=10)
 

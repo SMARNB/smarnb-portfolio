@@ -22,6 +22,47 @@ def payment_proof_image(proof_id: int, db: Session = Depends(get_db)):
                              "X-Content-Type-Options": "nosniff"})
 
 
+# ---- Clients (registered user accounts) --------------------------------------
+@router.get("/users", response_model=List[schemas.UserAdminOut])
+def list_client_accounts(db: Session = Depends(get_db)):
+    """Every registered client account — proves accounts are stored, and shows
+    whether each is email-verified / has 2FA / how many orders it has."""
+    return [crud.serialize_user_admin(db, u) for u in crud.list_client_users(db)]
+
+
+def _client_or_404(db, uid):
+    u = crud.get_user(db, uid)
+    if not u or u.role != "client":
+        raise HTTPException(404, "Client account not found.")
+    return u
+
+
+@router.post("/users/{uid}/password", response_model=schemas.UserAdminOut)
+def reset_client_password(uid: int, data: schemas.AdminPasswordSet, db: Session = Depends(get_db)):
+    """Set a new password for a client so the owner can regain access to it."""
+    u = _client_or_404(db, uid)
+    crud.set_user_password(db, u, data.password)
+    return crud.serialize_user_admin(db, u)
+
+
+@router.post("/users/{uid}/verify", response_model=schemas.UserAdminOut)
+def mark_client_verified(uid: int, db: Session = Depends(get_db)):
+    """Manually mark a client's email as verified (unsticks an account whose code
+    email never arrived)."""
+    u = _client_or_404(db, uid)
+    crud.set_user_verified(db, u, True)
+    return crud.serialize_user_admin(db, u)
+
+
+@router.delete("/users/{uid}")
+def delete_client_account(uid: int, db: Session = Depends(get_db)):
+    """Delete a client account (e.g. a throwaway test user). Orders are kept but
+    detached to guest orders."""
+    u = _client_or_404(db, uid)
+    crud.delete_user(db, u)
+    return {"ok": True}
+
+
 # ---- Orders ------------------------------------------------------------------
 @router.get("/orders", response_model=List[schemas.OrderOut])
 def list_orders(db: Session = Depends(get_db)):
