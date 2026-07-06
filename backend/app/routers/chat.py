@@ -182,7 +182,7 @@ def _order_from_chat(db, conv, action):
 def start(data: schemas.ChatStartIn, db: Session = Depends(get_db),
           user=Depends(get_optional_user)):
     conv = crud.create_conversation(db, name=data.name, email=data.email, client=user)
-    crud.add_message(db, conv, "bot", bot._greeting())
+    crud.add_message(db, conv, "bot", bot._greeting(conv.customer_name))
     crud.save_state(db, conv, {"_quick": ["See services", "Get a quote", "Talk to a human"]})
     db.refresh(conv)
     return _thread(conv, include_secret=True)
@@ -326,6 +326,7 @@ def admin_conversations(db: Session = Depends(get_db)):
             "needs_human": c.needs_human,
             "human_takeover": c.human_takeover,
             "channel": c.channel or "web",
+            "is_client": c.client_id is not None,
         })
     return out
 
@@ -345,6 +346,7 @@ def admin_thread(public_id: str, db: Session = Depends(get_db)):
         "human_takeover": conv.human_takeover,
         "needs_human": conv.needs_human,
         "channel": conv.channel or "web",
+        "is_client": conv.client_id is not None,
         "messages": [_msg_out(m) for m in conv.messages],
     }
 

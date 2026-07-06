@@ -339,6 +339,7 @@ class ConversationSummary(BaseModel):
     needs_human: bool = False
     human_takeover: bool = False
     channel: str = "web"
+    is_client: bool = False   # True = signed-up account; False = guest (show its id)
 
 
 class ClientChatSummary(BaseModel):

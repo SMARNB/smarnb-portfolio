@@ -19,7 +19,15 @@ interface AdminThread {
   status: string;
   human_takeover: boolean;
   needs_human: boolean;
+  is_client?: boolean;
   messages: ChatMessage[];
+}
+
+/** How a conversation is labelled in the Inbox: a signed-up client shows by name;
+ *  a guest shows as "Guest · <their conversation id>". */
+function convWho(c: { is_client?: boolean; customer_name?: string; customer_email?: string; public_id: string }): string {
+  if (c.is_client) return c.customer_name || c.customer_email || "Client";
+  return "Guest · " + c.public_id;
 }
 
 function mdLite(s: string): string {
@@ -105,7 +113,7 @@ export function InboxTab({
               <div className="r1">
                 <span className="oid">
                   {c.channel === "whatsapp" && <span className="wa-chip" title="via WhatsApp">WhatsApp</span>}
-                  {c.customer_name || c.customer_email || "Visitor"}
+                  {convWho(c)}
                 </span>
                 {c.unread ? (
                   <span className="status-chip" style={{ background: "var(--accent-3)", color: "#fff" }}>
@@ -196,7 +204,7 @@ function ConvThread({
   return (
     <div className="card manage">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: ".5rem", flexWrap: "wrap" }}>
-        <h3 style={{ margin: 0 }}>{thread.customer_name || "Visitor"}</h3>
+        <h3 style={{ margin: 0 }}>{convWho(thread)}</h3>
         <button className="btn btn-outline btn-sm" onClick={toggleBot}>
           Bot: {thread.human_takeover ? "paused" : "active"}
         </button>

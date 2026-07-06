@@ -626,6 +626,18 @@ with TestClient(app) as c:
     check("a signed-in client's chat survives the purge",
           c.get("/api/chat/%s" % cpid, headers=CT).status_code == 200)
 
+    print("== Chat identity (guest id vs named client + bot greets by name) ==")
+    gth = c.post("/api/chat/start", json={}).json()          # a guest thread
+    gpid = gth["public_id"]
+    check("guest greeting is generic", gth["messages"][0]["body"].startswith("Hi!"))
+    check("bot greets a signed-in client by first name",
+          th["messages"][0]["body"].startswith("Hi Chat"))
+    summ = c.get("/api/admin/chat/conversations", headers=AH).json()
+    gsum = [s for s in summ if s["public_id"] == gpid]
+    csum = [s for s in summ if s["public_id"] == cpid]
+    check("guest conversation flagged is_client=false", bool(gsum) and gsum[0]["is_client"] is False)
+    check("client conversation flagged is_client=true", bool(csum) and csum[0]["is_client"] is True)
+
 print("\n==== RESULT: %d passed, %d failed ====" % (ok, fail))
 if os.path.exists(_DB):
     try:

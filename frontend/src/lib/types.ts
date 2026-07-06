@@ -204,6 +204,7 @@ export interface ConversationSummary {
   needs_human: boolean;
   human_takeover: boolean;
   channel?: string; // "web" | "whatsapp"
+  is_client?: boolean; // true = signed-up account; false = guest
 }
 
 export interface BotKnowledge {

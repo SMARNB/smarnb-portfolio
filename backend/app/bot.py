@@ -248,9 +248,16 @@ def _explain_service(s):
     return "\n".join(parts)
 
 
-def _greeting():
-    return ("Hi! 👋 I'm {}'s assistant. I can explain the services, share pricing, "
-            "and even start your order. What are you looking to build?").format(_dev())
+def _first_name(name):
+    """A friendly first name to address a signed-in client by (safe if blank)."""
+    return (str(name or "").strip().split() or [""])[0][:40]
+
+
+def _greeting(name=""):
+    fn = _first_name(name)
+    hi = "Hi {}! 👋".format(fn) if fn else "Hi! 👋"
+    return ("{} I'm {}'s assistant. I can explain the services, share pricing, "
+            "and even start your order. What are you looking to build?").format(hi, _dev())
 
 
 # --- Built-in knowledge (common-language Q&A) ---------------------------------
@@ -532,7 +539,7 @@ def respond(state, text, services, *, knowledge=None, logged_in_name="", logged_
         return finish("Let's get you a quote! Which service is it for? 👇", _service_titles(services))
 
     if _has(t, GREETINGS) and len(t) <= 28:
-        return finish(_greeting(), ["See services", "Get a quote", "Talk to a human"])
+        return finish(_greeting(logged_in_name), ["See services", "Get a quote", "Talk to a human"])
 
     if _has(t, THANKS):
         return finish("You're welcome! 🙌 Anything else I can help with?",
@@ -544,7 +551,7 @@ def respond(state, text, services, *, knowledge=None, logged_in_name="", logged_
                                lambda x: [x.get("question", "")] +
                                          [k for k in re.split(r"[,\n;]+", x.get("keywords", "")) if k.strip()])
         if e and score >= 0.78:
-            return finish(e.get("answer", "").strip() or _greeting(),
+            return finish(e.get("answer", "").strip() or _greeting(logged_in_name),
                           ["See services", "Get a quote", "Talk to a human"],
                           knowledge_id=e.get("id"))
 
