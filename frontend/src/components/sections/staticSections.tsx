@@ -104,7 +104,7 @@ export function AboutSection() {
         <Reveal delay={0.12}>
           <span className="eyebrow">About me</span>
           <h2 className="section-title">
-            Hi, I'm <span>{CONFIG.name}</span> 👋
+            Hi, I'm <span className="text-grad">{CONFIG.name}</span>
           </h2>
           <p className="lead">{CONFIG.bio}</p>
           <p className="lead mt-4" style={{ color: "var(--muted-2)" }}>{CONFIG.location}</p>

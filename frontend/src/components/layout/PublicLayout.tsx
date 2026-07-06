@@ -21,6 +21,7 @@ import { CheckoutModal } from "../panels/CheckoutModal";
 import { TrackModal } from "../panels/TrackModal";
 import { ProjectModal } from "../panels/ProjectModal";
 import { ChatWidget } from "../chat/ChatWidget";
+import { CustomCursor } from "./CustomCursor";
 
 export function PublicLayout() {
   return (
@@ -83,6 +84,7 @@ function Shell() {
       <ProjectModal />
 
       <ChatWidget />
+      <CustomCursor />
     </>
   );
 }

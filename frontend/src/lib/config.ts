@@ -115,11 +115,10 @@ export const CONFIG: SiteConfig = {
     ],
   },
 
-  // --- Hero trust stats ---
+  // --- Hero trust stats (3 honest signals; numbers count up) ---
   stats: [
     { value: 10, suffix: "", label: "Services offered", auto: "services" },
     { value: 100, suffix: "%", label: "Source & rights to you" },
-    { value: 0, suffix: "%", label: "Cancellation rate" },
     { value: 24, suffix: "h", label: "Avg. response time" },
   ],
 

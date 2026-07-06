@@ -32,13 +32,9 @@ export const FEATURED: Featured[] = [
       "Blocks photo / screen / replay spoofs at ~3.6 ms per face and runs live across multiple camera feeds.",
     stack: ["Python", "PyTorch", "InsightFace", "YOLO", "Django REST", "React"],
     serviceId: "ai-cv",
-    media: {
-      kind: "cv",
-      image: "/assets/img/codewatch-admin.jpg",
-      alt: "CodeWatch AI surveillance dashboard",
-      logo: "/assets/img/codewatch-logo.svg",
-      logoText: "CodeWatch",
-    },
+    // Monochrome CV motif here — the real CodeWatch screenshot already leads the
+    // hero and the /projects feature, so the showcase stays clean (no duplicate).
+    media: { kind: "cv" },
   },
   {
     id: "saas-dashboards",
@@ -49,7 +45,7 @@ export const FEATURED: Featured[] = [
     solution:
       "I build production dashboards in Python (FastAPI / Django + React): real-time metrics, Stripe billing, multi-tenant auth and role-based access, with live charts over your own data.",
     result:
-      "[Result — add your real metric, e.g. “cut reporting from hours to seconds” or “onboarded N tenants”]",
+      "You get a real product your team logs into daily — auth, billing, roles and live charts over your own data — not a throwaway prototype.",
     stack: ["FastAPI", "Django", "React", "PostgreSQL", "Stripe"],
     serviceId: "saas-dashboard",
     media: { kind: "dashboard" },
@@ -63,7 +59,7 @@ export const FEATURED: Featured[] = [
     solution:
       "I build Selenium bots with OCR that log in, handle pagination and proxy rotation, extract invoice and lead data, then export clean CSV / Excel / JSON on a schedule.",
     result:
-      "[Result — add your real metric, e.g. “N records/day” or “removed X manual hours/week”]",
+      "Clean CSV / Excel / JSON delivered on a schedule — the manual copying and stale spreadsheets are gone.",
     stack: ["Python", "Selenium", "OCR", "Pandas"],
     serviceId: "selenium-bots",
     media: { kind: "code" },

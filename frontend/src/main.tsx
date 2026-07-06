@@ -5,6 +5,13 @@ import { router } from "./router";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
 import "./lib/prefetch"; // fire /api/services + /api/testimonials in parallel, ASAP
+// Self-hosted type system (bundled by Vite → hashed, same-origin /assets, immutable
+// cache). First-party: no fonts.googleapis.com / gstatic runtime load, so the strict
+// CSP (font-src 'self') is satisfied without any change. Roman-only (wght) — italics
+// are not used. Subsets are unicode-range gated, so only Latin actually downloads.
+import "@fontsource-variable/space-grotesk/wght.css"; // display / headings
+import "@fontsource-variable/hanken-grotesk/wght.css"; // body / UI
+import "@fontsource-variable/jetbrains-mono/wght.css"; // labels / prices / stats (signature)
 import "./styles/global.css";
 import "./styles/chat.css";
 // dashboard.css is imported by the lazy /app + /admin chunks (not on the landing
