@@ -49,9 +49,11 @@ export interface SiteConfig {
 
 export const CONFIG: SiteConfig = {
   // --- Identity ---
+  // `name` = the person (About, résumé, SEO); `brand`/`initials` = the studio mark
+  // shown in the nav/footer/splash logo.
   name: "Muhammad Ali Raza",
-  brand: "Muhammad Ali Raza",
-  initials: "MAR",
+  brand: "SMARNB",
+  initials: "S",
   role: "Full-Stack Dev · Automation Engineer · UI/UX & Packaging Designer",
   tagline: "I design, build, and automate the products that grow your business.",
   bio:

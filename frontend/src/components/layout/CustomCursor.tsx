@@ -8,6 +8,21 @@ import { useReducedMotion } from "framer-motion";
 
 const INTERACTIVE = "a, button, [role='button'], input, textarea, select, label, summary, .card, .work-card";
 
+// Elements that sit on an accent/coloured background — tinting their text to indigo
+// would make it vanish, so the text-highlight skips anything inside these.
+const NO_TINT =
+  ".btn, .cta-band, .hero-shot, .mark, .media, .price-tab, .badge-pop, .status-chip, .tperson .av, .skip-link, .cart-count, .blog-chip";
+
+/** True when the element directly contains visible text (a text leaf, not a big
+ *  layout container) — so we tint the actual word/line under the cursor. */
+function hasDirectText(el: Element): boolean {
+  for (let i = 0; i < el.childNodes.length; i++) {
+    const n = el.childNodes[i];
+    if (n.nodeType === 3 && (n.textContent || "").trim()) return true;
+  }
+  return false;
+}
+
 export function CustomCursor() {
   const reduce = useReducedMotion();
   const dotRef = useRef<HTMLDivElement>(null);
@@ -28,6 +43,7 @@ export function CustomCursor() {
     let shown = false;
     let raf = 0;
     let running = false;
+    let txtEl: Element | null = null;
 
     const body = document.body;
     const show = () => {
@@ -65,10 +81,23 @@ export function CustomCursor() {
       start();
       const t = e.target as Element | null;
       body.classList.toggle("cursor-hover", !!t?.closest?.(INTERACTIVE));
+      // Tint the single text element under the pointer (accent colour).
+      if (t !== txtEl) {
+        if (txtEl) txtEl.classList.remove("cursor-text");
+        txtEl = null;
+        if (t instanceof HTMLElement && hasDirectText(t) && !t.closest(NO_TINT)) {
+          t.classList.add("cursor-text");
+          txtEl = t;
+        }
+      }
     };
     const onLeave = () => {
       shown = false;
       body.classList.remove("cursor-on");
+      if (txtEl) {
+        txtEl.classList.remove("cursor-text");
+        txtEl = null;
+      }
     };
     const onDown = () => body.classList.add("cursor-press");
     const onUp = () => body.classList.remove("cursor-press");
@@ -84,6 +113,7 @@ export function CustomCursor() {
       document.removeEventListener("mouseleave", onLeave);
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("mouseup", onUp);
+      if (txtEl) txtEl.classList.remove("cursor-text");
       body.classList.remove("cursor-on", "cursor-hover", "cursor-press");
     };
   }, [reduce]);

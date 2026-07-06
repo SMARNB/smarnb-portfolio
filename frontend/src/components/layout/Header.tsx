@@ -96,7 +96,7 @@ export function Header({ onMenu, menuOpen }: { onMenu: () => void; menuOpen: boo
       className={`header${scrolled ? " scrolled" : ""}${expanded ? " nav-expanded" : ""}`}
       id="header"
     >
-      <div className="container nav" ref={navRef as React.RefObject<HTMLDivElement>}>
+      <div className="nav" ref={navRef as React.RefObject<HTMLDivElement>}>
         <Link className="brand" to="/" aria-label="Home">
           <span className="mark">{CONFIG.initials}</span>
           <span className="brand-text">{CONFIG.brand}</span>
@@ -115,7 +115,7 @@ export function Header({ onMenu, menuOpen }: { onMenu: () => void; menuOpen: boo
         </nav>
 
         <div className="nav-actions">
-          <Link className="icon-btn" to="/app" aria-label="Client login / my projects" title="My projects">
+          <Link className="icon-btn hide-sm" to="/app" aria-label="Client login / my projects" title="My projects">
             <Icon name="user" size={20} />
           </Link>
           <button className="icon-btn" id="themeToggle" aria-label="Toggle light/dark theme" onClick={toggle}>

@@ -48,7 +48,7 @@ export function Hero() {
             <span>{CONFIG.availability}</span>
           </motion.span>
           <motion.h1 variants={item}>
-            I design, build &amp; automate <span className="text-grad">production-ready software</span>.
+            I <span className="text-grad">Design, Build &amp; Automate</span> production-ready software.
           </motion.h1>
           <motion.p className="lead" variants={item}>
             SaaS dashboards, Selenium &amp; OCR automation, computer-vision systems, and the
