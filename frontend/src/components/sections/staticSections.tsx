@@ -14,16 +14,22 @@ const TECH = [
 ];
 
 export function Marquee() {
-  const row = TECH.map((t, i) => (
+  const items = TECH.map((t, i) => (
     <span key={i}>
       <Icon name="spark" style={{ display: "inline", width: 14, height: 14, verticalAlign: -2, color: "var(--muted-2)" }} /> {t}
     </span>
   ));
+  // Four identical groups: the track animates by exactly one group (-25%), so the
+  // loop is seamless AND never leaves an empty gap on wide screens (where a single
+  // group is narrower than the viewport). Each group carries its own trailing gap.
   return (
     <div className="marquee" aria-label="Tools and technologies">
       <div className="marquee-track" id="marqueeTrack">
-        {row}
-        {row}
+        {[0, 1, 2, 3].map((g) => (
+          <div className="marquee-group" key={g} aria-hidden={g > 0}>
+            {items}
+          </div>
+        ))}
       </div>
     </div>
   );
