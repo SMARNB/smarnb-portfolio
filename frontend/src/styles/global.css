@@ -50,6 +50,7 @@ ul, ol { list-style: none; padding: 0; }
   --glow: 0 0 0 1px rgba(var(--accent-rgb),.4), 0 8px 30px -8px rgba(var(--accent-rgb),.5);
 
   --r-sm: 10px; --r: 16px; --r-lg: 22px; --r-pill: 999px;
+  --r-btn: 6px; --r-chip: 5px; /* crisp, architectural — buttons/chips are no longer pills */
   --container: 1400px;
   --header-h: 62px;
   --ease: cubic-bezier(.22,1,.36,1);
@@ -127,7 +128,7 @@ h2.section-title { font-size: clamp(1.5rem, 3.4vw, 2.35rem); letter-spacing: -.0
 /* ---- Buttons ------------------------------------------------------------- */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
-  padding: .58rem 1.1rem; border-radius: var(--r-pill); font-weight: 650;
+  padding: .6rem 1.15rem; border-radius: var(--r-btn); font-weight: 650;
   font-size: .9rem; line-height: 1; min-height: 42px;
   transition: transform .25s var(--ease), box-shadow .25s var(--ease), background .25s, border-color .25s, color .25s;
   border: 1px solid transparent; white-space: nowrap;
@@ -235,8 +236,8 @@ h2.section-title { font-size: clamp(1.5rem, 3.4vw, 2.35rem); letter-spacing: -.0
 .hero-grid { display: grid; gap: clamp(1.25rem, 3vw, 2.2rem); align-items: center; }
 @media (min-width: 980px) { .hero-grid { grid-template-columns: 1.05fr .95fr; } }
 .status-pill {
-  display: inline-flex; align-items: center; gap: .55rem; padding: .45rem .9rem;
-  border: 1px solid var(--border-strong); border-radius: var(--r-pill);
+  display: inline-flex; align-items: center; gap: .55rem; padding: .45rem .8rem;
+  border: 1px solid var(--border-strong); border-radius: var(--r-btn);
   background: var(--surface); font-size: .85rem; font-weight: 600; color: var(--muted);
 }
 .status-pill .dot { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
@@ -269,12 +270,23 @@ h2.section-title { font-size: clamp(1.5rem, 3.4vw, 2.35rem); letter-spacing: -.0
 .hero-shot-tag {
   position: absolute; top: .9rem; right: .9rem; z-index: 3;
   font-family: var(--font-mono); font-size: .64rem; font-weight: 600; letter-spacing: .12em;
-  color: var(--on-accent); background: var(--accent); padding: .3rem .6rem; border-radius: var(--r-pill);
+  color: var(--on-accent); background: var(--accent); padding: .3rem .55rem; border-radius: var(--r-chip);
   box-shadow: 0 6px 20px -6px rgba(var(--accent-rgb),.7);
 }
 
 /* ---- Marquee / tech strip ----------------------------------------------- */
-.marquee { overflow: hidden; -webkit-mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); border-block: 1px solid var(--border); padding: .75rem 0; }
+.marquee { position: relative; overflow: hidden; -webkit-mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); border-block: 1px solid var(--border); padding: .75rem 0; }
+/* Animated "lighting" on the top + bottom edges: an indigo light with a brighter
+   core sweeps across each border (top L→R, bottom R→L), leaving a soft glow. */
+.marquee::before, .marquee::after {
+  content: ""; position: absolute; left: 0; right: 0; height: 2px; z-index: 2; pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--accent) 42%, #c7d2fe 50%, var(--accent) 58%, transparent);
+  background-size: 42% 100%; background-repeat: no-repeat;
+  filter: drop-shadow(0 0 5px rgba(var(--accent-rgb), .8));
+}
+.marquee::before { top: -1px; animation: marquee-light 4.8s linear infinite; }
+.marquee::after { bottom: -1px; animation: marquee-light 4.8s linear infinite reverse; animation-delay: -2.4s; }
+@keyframes marquee-light { 0% { background-position: -55% 0; } 100% { background-position: 155% 0; } }
 .marquee-track { display: flex; width: max-content; animation: scrollx 32s linear infinite; }
 .marquee-group { display: flex; gap: 3rem; padding-right: 3rem; flex: none; }
 .marquee:hover .marquee-track { animation-play-state: paused; }
@@ -359,7 +371,7 @@ h2.section-title { font-size: clamp(1.5rem, 3.4vw, 2.35rem); letter-spacing: -.0
   position: absolute; left: .85rem; top: .85rem; z-index: 2;
   font-size: .68rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
   color: var(--text); background: var(--surface); border: 1px solid var(--border-strong);
-  padding: .28rem .6rem; border-radius: var(--r-pill);
+  padding: .28rem .55rem; border-radius: var(--r-chip);
 }
 .card:hover .media-art, .card:hover .media-shot,
 .work-card:hover .media-art, .product-card:hover .media-shot { transform: scale(1.04); }
@@ -395,21 +407,26 @@ h2.section-title { font-size: clamp(1.5rem, 3.4vw, 2.35rem); letter-spacing: -.0
 .svc-cat { font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted-2); }
 .price-chip {
   font-size: .78rem; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border);
-  padding: .26rem .6rem; border-radius: var(--r-pill); white-space: nowrap;
+  padding: .26rem .55rem; border-radius: var(--r-chip); white-space: nowrap;
 }
 .price-chip b { color: var(--text); font-size: .92rem; font-weight: 750; }
 .service-card h3 { font-size: 1.1rem; margin-bottom: .4rem; }
 .service-card p { color: var(--muted); font-size: .9rem; }
 .tag-row { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .8rem; }
-.tag { font-size: .74rem; font-weight: 600; padding: .28rem .6rem; border-radius: var(--r-pill); background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); }
-/* the single accent element on a card is its CTA */
+.tag { font-size: .74rem; font-weight: 600; padding: .28rem .58rem; border-radius: var(--r-chip); background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); }
+/* Card CTA is a text button (no pill): accent label + arrow, with an underline that
+   wipes in on hover — a lighter, less "template" affordance than a bordered pill. */
 .card-link {
-  display: inline-flex; align-items: center; gap: .4rem; margin-top: .8rem;
-  min-height: 38px; padding: 0 .85rem; border-radius: var(--r-pill);
-  border: 1px solid var(--border-strong); color: var(--accent); font-weight: 650; font-size: .9rem;
-  transition: border-color .2s, background .2s, color .2s;
+  display: inline-flex; align-items: center; gap: .4rem; margin-top: .85rem;
+  align-self: flex-start; min-height: 30px; color: var(--accent); font-weight: 650; font-size: .9rem;
+  position: relative;
 }
-.card-link:hover { border-color: var(--accent); background: rgba(var(--accent-rgb),.08); }
+.card-link::after {
+  content: ""; position: absolute; left: 0; right: 1.3rem; bottom: 2px; height: 1.5px;
+  background: var(--accent); transform: scaleX(0); transform-origin: left;
+  transition: transform .3s var(--ease);
+}
+.card-link:hover::after, .card:hover .card-link::after { transform: scaleX(1); }
 .card-link svg { width: 16px; height: 16px; transition: transform .2s; }
 .card:hover .card-link svg, .card-link:hover svg { transform: translateX(4px); }
 
@@ -437,7 +454,7 @@ h2.section-title { font-size: clamp(1.5rem, 3.4vw, 2.35rem); letter-spacing: -.0
 /* ---- Pricing ------------------------------------------------------------- */
 .price-tabs { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; margin-bottom: 2.2rem; }
 .price-tab {
-  padding: .6rem 1.1rem; border-radius: var(--r-pill); border: 1px solid var(--border);
+  padding: .6rem 1.1rem; border-radius: var(--r-btn); border: 1px solid var(--border);
   background: var(--surface); color: var(--muted); font-weight: 600; font-size: .9rem;
   transition: all .25s var(--ease);
 }
@@ -446,7 +463,7 @@ h2.section-title { font-size: clamp(1.5rem, 3.4vw, 2.35rem); letter-spacing: -.0
 @media (min-width: 760px){ .price-grid { grid-template-columns: repeat(3,1fr); } }
 .price-card { display: flex; flex-direction: column; }
 .price-card.popular { border-color: rgba(var(--accent-rgb),.6); box-shadow: var(--glow); }
-.price-card .badge-pop { position: absolute; top: 1.1rem; right: 1.1rem; font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: .3rem .6rem; border-radius: var(--r-pill); background: var(--grad); color: var(--on-accent); }
+.price-card .badge-pop { position: absolute; top: 1.1rem; right: 1.1rem; font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: .3rem .55rem; border-radius: var(--r-chip); background: var(--grad); color: var(--on-accent); }
 .price-card .tier { font-size: .9rem; font-weight: 700; color: var(--muted-2); letter-spacing: .04em; text-transform: uppercase; }
 .price-card .amount { font-size: clamp(2rem,5vw,2.6rem); font-weight: 850; margin: .5rem 0 .1rem; }
 .price-card .amount small { font-size: .9rem; color: var(--muted); font-weight: 600; }
@@ -466,7 +483,7 @@ h2.section-title { font-size: clamp(1.5rem, 3.4vw, 2.35rem); letter-spacing: -.0
 
 /* ---- Portfolio ----------------------------------------------------------- */
 .filter-row { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; margin-bottom: 2rem; }
-.filter-btn { padding: .5rem 1rem; border-radius: var(--r-pill); border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-weight: 600; font-size: .88rem; transition: all .25s; }
+.filter-btn { padding: .5rem 1rem; border-radius: var(--r-btn); border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-weight: 600; font-size: .88rem; transition: all .25s; }
 .filter-btn.active { color: var(--text); border-color: var(--accent); background: rgba(var(--accent-rgb),.1); }
 .work-grid { display: grid; gap: 1.25rem; grid-template-columns: 1fr; }
 @media (min-width:560px){ .work-grid{ grid-template-columns: repeat(2,1fr);} }
@@ -682,7 +699,7 @@ h2.section-title { font-size: clamp(1.5rem, 3.4vw, 2.35rem); letter-spacing: -.0
 .recent-order { display: flex; justify-content: space-between; align-items: center; padding: .8rem 1rem; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); cursor: pointer; transition: border-color .2s; }
 .recent-order:hover { border-color: var(--accent); }
 .recent-order .oid { font-weight: 750; }
-.status-chip { font-size: .76rem; font-weight: 700; padding: .25rem .6rem; border-radius: var(--r-pill); background: rgba(var(--accent-rgb),.14); color: var(--accent-2); }
+.status-chip { font-size: .76rem; font-weight: 700; padding: .25rem .55rem; border-radius: var(--r-chip); background: rgba(var(--accent-rgb),.14); color: var(--accent-2); }
 
 /* ---- Toasts -------------------------------------------------------------- */
 .toasts { position: fixed; bottom: 1.2rem; left: 50%; transform: translateX(-50%); z-index: 300; display: grid; gap: .6rem; width: min(420px, calc(100% - 2rem)); }
@@ -762,7 +779,7 @@ body.cursor-on .cursor-text { color: var(--accent); transition: color .15s var(-
 .xp-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .2rem 1rem; align-items: baseline; }
 .xp-head h3 { font-size: 1.08rem; }
 .xp-org { color: var(--muted); font-weight: 650; font-size: .92rem; }
-.xp-period { font-size: .8rem; color: var(--muted); font-weight: 700; background: var(--surface); border: 1px solid var(--border); padding: .22rem .65rem; border-radius: var(--r-pill); white-space: nowrap; }
+.xp-period { font-size: .8rem; color: var(--muted); font-weight: 700; background: var(--surface); border: 1px solid var(--border); padding: .22rem .6rem; border-radius: var(--r-chip); white-space: nowrap; }
 .xp-desc { color: var(--muted); font-size: .93rem; margin: .5rem 0 .7rem; }
 
 /* ---- Payments band ------------------------------------------------------- */
@@ -811,7 +828,7 @@ body.cursor-on .cursor-text { color: var(--accent); transition: color .15s var(-
   position: absolute; left: .8rem; top: .8rem; z-index: 2; font-size: .68rem; font-weight: 700;
   letter-spacing: .04em; text-transform: uppercase; color: #fff;
   background: rgba(10,13,20,.42); border: 1px solid rgba(255,255,255,.26);
-  padding: .26rem .6rem; border-radius: var(--r-pill); backdrop-filter: blur(5px);
+  padding: .26rem .55rem; border-radius: var(--r-chip); -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px);
 }
 .blog-body { padding: 1.2rem 1.3rem 1.4rem; display: flex; flex-direction: column; gap: .5rem; flex: 1; }
 .blog-body h2 { font-size: 1.12rem; line-height: 1.35; }
