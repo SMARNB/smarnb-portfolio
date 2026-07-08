@@ -3,6 +3,7 @@
 import { Link } from "react-router-dom";
 import { CONFIG } from "../../lib/config";
 import { Icon } from "../../lib/icons";
+import { BrandMark } from "./BrandMark";
 import { shortTitle } from "../../lib/format";
 import { useCatalog } from "../../context/CatalogContext";
 import { useUI } from "../../context/UIContext";
@@ -28,8 +29,8 @@ export function Footer() {
         <div className="footer-grid">
           <div>
             <Link className="brand" to="/">
-              <span className="mark">{CONFIG.initials}</span>
-              <span>{CONFIG.brand}</span>
+              <BrandMark size={34} />
+              <span>{CONFIG.name}</span>
             </Link>
             <p className="desc">{CONFIG.tagline}</p>
             <div className="socials">

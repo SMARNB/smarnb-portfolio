@@ -41,10 +41,9 @@
       opacity: 0; transform: translateY(16px) scale(.68);
       animation: svcFloat var(--dur, 7s) ease-in-out var(--d, 0s) infinite; will-change: transform, opacity; }
     .splash-inner { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: .9rem; }
-    .splash-mark { width: 78px; height: 78px; border-radius: 20px; display: grid; place-items: center;
-      font: 800 1.65rem/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      color: #fff; letter-spacing: .02em; background: #6366f1;
-      box-shadow: 0 14px 44px -8px rgba(99,102,241,.6); animation: splashPop .5s cubic-bezier(.22,1,.36,1); }
+    .splash-mark { display: grid; place-items: center;
+      filter: drop-shadow(0 14px 44px rgba(99,102,241,.55)); animation: splashPop .5s cubic-bezier(.22,1,.36,1); }
+    .splash-mark svg { width: 76px; height: 76px; }
     .splash-name { font: 800 1.15rem/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #eef2f9; }
     .splash-tag { font: 600 .8rem/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #8b95a8; }
     .splash-bar { margin-top: .3rem; width: 150px; height: 3px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; }
@@ -81,8 +80,17 @@
       <span class="svc-chip" style="--x:56%;--y:84%;--d:2.6s;--dur:8s">Web Apps</span>
     </div>
     <div class="splash-inner">
-      <div class="splash-mark">S</div>
-      <div class="splash-name">SMARNB</div>
+      <div class="splash-mark">
+        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="64" height="64" rx="18" fill="#6366f1"/>
+          <g stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 42 L27 31 L34 37 L47 21"/>
+            <path d="M39 21 L47 21 L47 30"/>
+          </g>
+          <circle cx="17" cy="42" r="4" fill="#ffffff"/>
+        </svg>
+      </div>
+      <div class="splash-name">Muhammad Ali Raza</div>
       <div class="splash-tag">Full-Stack · Automation · Design</div>
       <div class="splash-bar"></div>
     </div>

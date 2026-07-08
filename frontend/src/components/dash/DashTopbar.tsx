@@ -2,8 +2,8 @@
    animated theme toggle and logout. */
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { CONFIG } from "../../lib/config";
 import { Icon } from "../../lib/icons";
+import { BrandMark } from "../layout/BrandMark";
 import { useTheme } from "../../context/ThemeContext";
 import type { User } from "../../lib/types";
 
@@ -25,7 +25,7 @@ export function DashTopbar({
     <header className="dash-topbar">
       <div className="container">
         <Link className="brand" to="/">
-          <span className="mark">{CONFIG.initials}</span>
+          <BrandMark size={30} />
           <span className="brand-text">{brandText}</span>
         </Link>
         <span className="dash-title">

@@ -170,15 +170,19 @@ h2.section-title { font-size: clamp(1.5rem, 3.4vw, 2.35rem); letter-spacing: -.0
   box-shadow: 0 18px 44px -16px rgba(0,0,0,.62), inset 0 1px 0 rgba(255,255,255,.06);
 }
 .brand { display: inline-flex; align-items: center; gap: .6rem; font-weight: 800; letter-spacing: -.01em; font-size: 1.1rem; white-space: nowrap; flex: none; }
-.brand .mark {
-  width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center;
-  background: var(--grad); color: var(--on-accent); font-weight: 850; font-size: .9rem;
-  box-shadow: var(--glow);
+/* The logo mark is the SMARNB "growth arrow" glyph (see BrandMark.tsx); the brand
+   title ("Muhammad Ali Raza") sits beside it (hidden on mobile). A soft accent
+   drop-shadow follows the rounded tile's alpha (not its square bounding box). */
+.brand-logo {
+  flex: none; border-radius: 10px;
+  filter: drop-shadow(0 6px 16px rgba(var(--accent-rgb), .38));
+  transition: transform .25s var(--ease);
 }
-.nav-links { display: none; align-items: center; gap: .35rem; margin-left: auto; flex-wrap: nowrap; }
+.brand:hover .brand-logo { transform: translateY(-1px) rotate(-3deg); }
+.nav-links { display: none; align-items: center; gap: .1rem; margin-left: auto; flex-wrap: nowrap; }
 .nav-links a {
-  padding: .5rem .8rem; border-radius: var(--r-pill); color: var(--muted); white-space: nowrap;
-  font-weight: 550; font-size: .92rem; transition: color .2s, background .2s; position: relative;
+  padding: .45rem .62rem; border-radius: var(--r-pill); color: var(--muted); white-space: nowrap;
+  font-weight: 550; font-size: .9rem; transition: color .2s, background .2s; position: relative;
 }
 .nav-links a:hover, .nav-links a.active { color: var(--text); background: var(--surface); }
 .nav-actions { display: flex; align-items: center; gap: .5rem; margin-left: auto; }
@@ -203,12 +207,12 @@ h2.section-title { font-size: clamp(1.5rem, 3.4vw, 2.35rem); letter-spacing: -.0
    Falls back to the hamburger (mobile-first) when JS is off or links overflow. */
 .header.nav-expanded .nav-links { display: flex; }
 .header.nav-expanded .menu-toggle { display: none; }
-/* Mobile: keep the "SMARNB" wordmark visible; drop the redundant login icon (it's
+/* Mobile: keep the SMARNB logo mark visible; drop the redundant login icon (it's
    in the mobile menu) and tighten the pill so everything fits. */
 @media (max-width: 560px) {
   .nav { gap: .5rem; padding-left: .7rem; }
-  .brand { font-size: 1rem; }
-  .brand .mark { width: 34px; height: 34px; border-radius: 10px; }
+  .header .brand-text { display: none; } /* hide the long title; the logo mark stays */
+  .header .brand-logo { width: 30px; height: 30px; }
   .nav-actions { gap: .4rem; }
   .nav-actions .hide-sm { display: none; }
 }
@@ -716,6 +720,10 @@ body.cursor-press .cursor-ring { width: 26px; height: 26px; margin: -13px 0 0 -1
 /* Text the cursor is over gets tinted to the accent (the JS skips elements that sit
    on an accent/coloured background, where indigo-on-indigo would vanish). */
 body.cursor-on .cursor-text { color: var(--accent); transition: color .15s var(--ease); }
+/* Word-by-word: the single word under the cursor is painted via the CSS Custom
+   Highlight API (no DOM changes, no reflow). Falls back to .cursor-text (whole
+   element) where the API is unsupported. */
+::highlight(cursor-word) { color: var(--accent); }
 @media (hover: none), (pointer: coarse) { .cursor-dot, .cursor-ring { display: none !important; } }
 
 /* ---- Profile photo ------------------------------------------------------- */

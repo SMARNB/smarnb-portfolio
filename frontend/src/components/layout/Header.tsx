@@ -9,6 +9,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { useCart } from "../../context/CartContext";
 import { useUI } from "../../context/UIContext";
 import { PRIMARY_NAV } from "./nav";
+import { BrandMark } from "./BrandMark";
 
 function navActive(to: string, pathname: string): boolean {
   if (to === "/") return pathname === "/";
@@ -98,8 +99,8 @@ export function Header({ onMenu, menuOpen }: { onMenu: () => void; menuOpen: boo
     >
       <div className="nav" ref={navRef as React.RefObject<HTMLDivElement>}>
         <Link className="brand" to="/" aria-label="Home">
-          <span className="mark">{CONFIG.initials}</span>
-          <span className="brand-text">{CONFIG.brand}</span>
+          <BrandMark size={32} />
+          <span className="brand-text">{CONFIG.name}</span>
         </Link>
 
         <nav className="nav-links" aria-label="Primary">
