@@ -153,11 +153,18 @@ class MilestonePatch(BaseModel):
     title: Optional[str] = Field(default=None, max_length=200)
 
 
+class OrderInvoiceOut(BaseModel):
+    number: str
+    status: str
+    sent_at: Optional[dt.datetime] = None
+
+
 class OrderOut(BaseModel):
     public_id: str
     customer_name: str
     customer_email: str
     customer_whatsapp: str = ""
+    invoice: Optional[OrderInvoiceOut] = None
     items: List[Any] = []
     total: float
     status: str
@@ -201,6 +208,53 @@ class Stats(BaseModel):
     revenue: float
     clients: int
     by_status: dict
+
+
+# --- Billing: invoices / email / inventory -------------------------------------
+class InvoicePatch(BaseModel):
+    status: Optional[str] = None      # void | draft (un-void)
+    notes: Optional[str] = Field(default=None, max_length=1000)
+
+
+class EmailSettingsIn(BaseModel):
+    from_name: Optional[str] = Field(default=None, max_length=120)
+    from_email: Optional[str] = Field(default=None, max_length=200)
+    reply_to: Optional[str] = Field(default=None, max_length=200)
+    bcc_owner: Optional[bool] = None
+    invoice_footer: Optional[str] = Field(default=None, max_length=600)
+    promo_footer: Optional[str] = Field(default=None, max_length=600)
+
+
+class CampaignIn(BaseModel):
+    subject: str = Field(min_length=1, max_length=200)
+    body_md: str = Field(min_length=1, max_length=20000)
+    test_only: bool = False           # send just to the owner as a preview
+
+
+class InventoryItemIn(BaseModel):
+    sku: str = Field(min_length=1, max_length=60)
+    name: str = Field(min_length=1, max_length=200)
+    kind: str = Field(default="product", max_length=20)
+    stock: Optional[int] = Field(default=None, ge=0)   # None = untracked
+    low_stock_threshold: int = Field(default=1, ge=0)
+    notes: str = Field(default="", max_length=600)
+
+
+class InventoryItemPatch(BaseModel):
+    sku: Optional[str] = Field(default=None, min_length=1, max_length=60)
+    name: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    kind: Optional[str] = Field(default=None, max_length=20)
+    stock: Optional[int] = Field(default=None, ge=0)
+    untrack: bool = False             # true → set stock to None (stop tracking)
+    low_stock_threshold: Optional[int] = Field(default=None, ge=0)
+    active: Optional[bool] = None
+    notes: Optional[str] = Field(default=None, max_length=600)
+
+
+class StockAdjust(BaseModel):
+    delta: int = Field(ge=-100000, le=100000)
+    reason: str = Field(default="manual", max_length=30)
+    note: str = Field(default="", max_length=300)
 
 
 # --- Services (admin-managed) -------------------------------------------------

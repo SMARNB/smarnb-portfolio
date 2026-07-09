@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from . import config, crud, seo
 from .database import Base, SessionLocal, engine, get_db
-from .routers import admin, auth, blog, chat, orders, payments, services, testimonials
+from .routers import admin, auth, billing, blog, chat, orders, payments, services, testimonials
 from .routers import seo as seo_router
 from .routers import whatsapp as whatsapp_router
 
@@ -72,6 +72,7 @@ def _ensure_columns():
             ("verify_attempts", "INTEGER DEFAULT 0"),
             ("totp_secret", "TEXT"),
             ("totp_enabled", "BOOLEAN DEFAULT FALSE"),
+            ("email_opt_out", "BOOLEAN DEFAULT FALSE"),
         ]
         added_verified = False
         with engine.begin() as conn:
@@ -260,6 +261,7 @@ app.include_router(seo_router.router)   # /api/seo, /api/admin/seo, /sitemap.xml
 app.include_router(whatsapp_router.router)  # /api/whatsapp/webhook (WhatsApp Cloud API bridge)
 app.include_router(blog.router)         # /api/blog, /api/blog/{slug}, /api/blog/images/{id}
 app.include_router(blog.admin_router)   # /api/admin/blog CRUD + image upload + preview
+app.include_router(billing.router)      # invoices + email settings/campaigns + inventory
 
 
 @app.get("/api/health")

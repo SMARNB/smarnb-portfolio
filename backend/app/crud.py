@@ -207,6 +207,12 @@ def create_order(db, data, client=None):
     seed_milestones(db, order)
     add_update(db, order, "Order received. I'll confirm the details with you shortly.",
                status="received", progress=0)
+    # Draft invoice snapshot (INV number reserved now; emailed when payment lands).
+    try:
+        from . import invoicing
+        invoicing.ensure_invoice(db, order)
+    except Exception:
+        pass
     return order
 
 
@@ -373,6 +379,13 @@ def mark_paid(db, order, note="Payment received."):
                                    format(order.total or 0, ",.2f"), note))
         except Exception:
             pass
+        # Invoice → paid + receipt emailed (customer + owner copy) + stock consumed.
+        # Inert until email is configured; never breaks the payment path.
+        try:
+            from . import invoicing
+            invoicing.on_order_paid(db, order)
+        except Exception:
+            pass
     return order
 
 
@@ -402,11 +415,16 @@ def serialize_order(order, reveal_final=False):
             "final_url": (d.final_url if unlocked else None),
             "locked": (not paid), "note": d.note, "created_at": d.created_at,
         })
+    invoice = None
+    if order.invoice:
+        invoice = {"number": order.invoice.number, "status": order.invoice.status,
+                   "sent_at": order.invoice.sent_at}
     return {
         "public_id": order.public_id,
         "customer_name": order.customer_name or "",
         "customer_email": order.customer_email or "",
         "customer_whatsapp": order.customer_whatsapp or "",
+        "invoice": invoice,
         "items": order.items,
         "total": order.total,
         "status": order.status,

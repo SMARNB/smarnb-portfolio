@@ -64,11 +64,18 @@ export interface Milestone {
   sort_order: number;
 }
 
+export interface OrderInvoice {
+  number: string;
+  status: string; // draft|sent|paid|void
+  sent_at: string | null;
+}
+
 export interface Order {
   public_id: string;
   customer_name: string;
   customer_email: string;
   customer_whatsapp: string;
+  invoice?: OrderInvoice | null;
   items: OrderItem[];
   total: number;
   status: string; // received|confirmed|in_progress|in_review|delivered|cancelled

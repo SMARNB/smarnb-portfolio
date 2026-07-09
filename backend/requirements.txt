@@ -15,5 +15,7 @@ pg8000>=1.31
 # reject email domains that can't actually receive mail (throwaway-address defence).
 segno>=1.6
 dnspython>=2.6
+# Branded invoice PDFs (pure-python, no native deps).
+fpdf2>=2.7
 # Optional — uncomment to turn on Stripe card payments (then set STRIPE_SECRET_KEY):
 # stripe>=9.0

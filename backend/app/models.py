@@ -54,6 +54,10 @@ class User(Base):
     totp_secret = Column(Encrypted, default="")
     totp_enabled = Column(Boolean, default=False)
 
+    # Marketing consent: promotional campaigns skip anyone who unsubscribed.
+    # Transactional email (invoices, receipts) is unaffected by this flag.
+    email_opt_out = Column(Boolean, default=False)
+
     orders = relationship("Order", back_populates="client")
 
 
@@ -83,6 +87,8 @@ class Order(Base):
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
     client = relationship("User", back_populates="orders")
+    invoice = relationship("Invoice", back_populates="order", uselist=False,
+                           cascade="all, delete-orphan")
     updates = relationship("OrderUpdate", back_populates="order",
                            cascade="all, delete-orphan", order_by="OrderUpdate.created_at")
     deliverables = relationship("Deliverable", back_populates="order",
@@ -388,4 +394,82 @@ class BlogImage(Base):
     content_type = Column(String(100), default="application/octet-stream")
     size = Column(Integer, default=0)
     data = Column(LargeBinary, nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+
+class Invoice(Base):
+    """A customer invoice for an order. Created as a draft snapshot when the order
+    is placed; marked paid + emailed (branded PDF, customer + owner copy) when the
+    order's payment lands. Line items are a JSON snapshot so later catalog edits
+    never rewrite issued invoices."""
+    __tablename__ = "invoices"
+    id = Column(Integer, primary_key=True)
+    number = Column(String(24), unique=True, index=True, nullable=False)  # INV-2026-0001
+    order_id = Column(Integer, ForeignKey("orders.id"), unique=True, nullable=False)
+    currency = Column(String(8), default="$")
+    subtotal = Column(Float, default=0)
+    total = Column(Float, default=0)
+    lines_json = Column(Text, default="[]")     # [{title, qty, unit, amount}]
+    status = Column(String(12), default="draft", index=True)  # draft|sent|paid|void
+    notes = Column(Encrypted, default="")
+    created_at = Column(DateTime, default=utcnow)
+    sent_at = Column(DateTime, nullable=True)
+    paid_at = Column(DateTime, nullable=True)
+
+    order = relationship("Order", back_populates="invoice")
+
+    @property
+    def lines(self):
+        try:
+            return json.loads(self.lines_json or "[]")
+        except Exception:
+            return []
+
+
+class InventoryItem(Base):
+    """A sellable thing whose availability is tracked. `stock` = None means
+    untracked/unlimited (services usually are); a number means each PAID order
+    line whose title matches `name` decrements it. Kept decoupled from the rest of
+    the app (only the order-paid hook touches it) so the module is reusable."""
+    __tablename__ = "inventory_items"
+    id = Column(Integer, primary_key=True)
+    sku = Column(String(60), unique=True, index=True, nullable=False)
+    name = Column(String(200), default="")     # matched against order line titles
+    kind = Column(String(20), default="product")   # product | license | service | other
+    stock = Column(Integer, nullable=True)         # None = untracked / unlimited
+    low_stock_threshold = Column(Integer, default=1)
+    active = Column(Boolean, default=True)
+    notes = Column(Text, default="")
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    moves = relationship("StockMove", back_populates="item",
+                         cascade="all, delete-orphan", order_by="StockMove.created_at.desc()")
+
+
+class StockMove(Base):
+    """The stock ledger: every change is a signed delta with a reason, so counts
+    are auditable (who/what/when) instead of a mutable number."""
+    __tablename__ = "stock_moves"
+    id = Column(Integer, primary_key=True)
+    item_id = Column(Integer, ForeignKey("inventory_items.id"), nullable=False)
+    delta = Column(Integer, default=0)             # negative = consumed
+    reason = Column(String(30), default="manual")  # order_paid | manual | restock | correction
+    ref = Column(String(60), default="")           # e.g. the order public_id
+    note = Column(String(300), default="")
+    created_at = Column(DateTime, default=utcnow)
+
+    item = relationship("InventoryItem", back_populates="moves")
+
+
+class EmailLog(Base):
+    """A row per outbound email (invoice / promo / test) for the admin Email tab —
+    proves what was sent where, and surfaces transport errors without shell access."""
+    __tablename__ = "email_log"
+    id = Column(Integer, primary_key=True)
+    kind = Column(String(20), default="other")   # invoice | promo | test | other
+    to_email = Column(Encrypted, default="")     # PII → encrypted at rest
+    subject = Column(String(300), default="")
+    ok = Column(Boolean, default=False)
+    error = Column(String(300), default="")
     created_at = Column(DateTime, default=utcnow)

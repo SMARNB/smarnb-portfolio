@@ -130,6 +130,18 @@ export function ProjectCard({
       )}
 
       {o.payment_status === "paid" && <div className="paid-badge">✓ Paid — thank you!</div>}
+
+      {o.invoice && o.invoice.status !== "void" && (
+        <a
+          className="btn btn-outline btn-sm"
+          style={{ marginTop: ".7rem", alignSelf: "start" }}
+          href={`/api/orders/${encodeURIComponent(o.public_id)}/invoice.pdf`}
+          target="_blank"
+          rel="noopener"
+        >
+          <Icon name="download" size={15} /> Invoice {o.invoice.number} (PDF)
+        </a>
+      )}
     </article>
   );
 }

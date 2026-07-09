@@ -116,19 +116,27 @@ services:
       #   value: "0"
       # - key: SAFEPAY_FX_MARGIN_PCT
       #   value: "0"
-      # --- Email verification (SendGrid) — anti-spam gate ---
-      # Render blocks SMTP, so verification emails go via SendGrid's HTTPS API.
-      # Email verification + "verified account required to order" stay OFF until BOTH
+      # --- Email (SendGrid) — verification + INVOICES + promotional campaigns ---
+      # Render blocks outbound SMTP ports on every plan, so ON RENDER email must go
+      # via SendGrid's HTTPS API. ALL email (verification gate, invoice PDFs on
+      # payment, promo campaigns from /admin → Email) stays OFF until BOTH
       # SENDGRID_API_KEY and EMAIL_FROM are set (nothing breaks before then). Setup:
       #   1) sendgrid.com → free account → Settings → API Keys → create a "Mail Send" key.
-      #   2) Settings → Sender Authentication → verify a Single Sender (or your domain).
+      #   2) Settings → Sender Authentication → verify a Single Sender (your Gmail works;
+      #      later, verify your custom domain and just update the sender in /admin → Email).
       #   3) Set SENDGRID_API_KEY + EMAIL_FROM (the verified sender) below.
+      # The customer-visible sender name/address/reply-to can be overridden any time
+      # from /admin → Email (stored in the DB) — no redeploy needed for the domain move.
       # - key: SENDGRID_API_KEY
       #   sync: false
       # - key: EMAIL_FROM
-      #   sync: false               # e.g. no-reply@yourdomain.com (must be verified in SendGrid)
+      #   sync: false               # e.g. shahjee975@gmail.com now; no-reply@yourdomain.com later
       # - key: EMAIL_FROM_NAME
       #   value: SMARNB
+      # - key: OWNER_EMAIL
+      #   sync: false               # where owner copies of invoices + low-stock alerts go
+      # (Generic SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS/SMTP_SECURITY exist too, but
+      #  they only work OFF Render — e.g. local runs or another host; see emailer.py.)
       # --- Two-factor auth (TOTP) — required for admin, optional for clients ---
       # Works with Google/Microsoft Authenticator, Authy, etc. No external service.
       # - key: TOTP_ISSUER

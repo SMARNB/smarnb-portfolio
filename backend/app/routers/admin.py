@@ -111,6 +111,12 @@ def patch_order(public_id: str, data: schemas.OrderAdminPatch, db: Session = Dep
         # Marking an order paid confirms the brief — auto-advance the tracker.
         crud.complete_milestone_by_status(db, order, "confirmed",
                                           note="✓ Requirements confirmed (payment received)")
+        # Receipt + inventory (inert until email configured; never raises).
+        try:
+            from .. import invoicing
+            invoicing.on_order_paid(db, order)
+        except Exception:
+            pass
     return crud.serialize_order(order, reveal_final=True)
 
 

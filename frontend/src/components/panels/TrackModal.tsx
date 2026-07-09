@@ -25,6 +25,7 @@ interface TrackResult {
   status: string;
   progress?: number;
   payment_method?: string;
+  invoice?: { number: string; status: string } | null;
   timeline: { status: string | null; note: string; at: string }[];
 }
 
@@ -36,6 +37,7 @@ function normalizeServer(s: Order): TrackResult {
     status: s.status_label || s.status,
     progress: s.progress,
     payment_method: s.payment_method,
+    invoice: s.invoice && s.invoice.status !== "void" ? { number: s.invoice.number, status: s.invoice.status } : null,
     timeline: (s.updates || []).map((u) => ({ status: u.status, note: u.message, at: u.created_at })),
   };
 }
@@ -204,6 +206,17 @@ function ResultView({ order }: { order: TrackResult }) {
         <small>Order</small>
         <div className="id" style={{ fontSize: "1.2rem" }}>{order.id}</div>
         <p className="form-note" style={{ marginTop: ".3rem" }}>{items} · {money(order.total)}</p>
+        {order.invoice && (
+          <a
+            className="btn btn-outline btn-sm"
+            style={{ marginTop: ".55rem" }}
+            href={`/api/orders/${encodeURIComponent(order.id)}/invoice.pdf`}
+            target="_blank"
+            rel="noopener"
+          >
+            <Icon name="download" size={15} /> Invoice {order.invoice.number} (PDF)
+          </a>
+        )}
       </div>
 
       {cancelled ? (
