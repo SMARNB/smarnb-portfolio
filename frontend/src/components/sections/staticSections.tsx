@@ -61,111 +61,133 @@ export function ProcessSection() {
   );
 }
 
-export function PerksSection() {
+/* ---- About page blocks (sticky portrait + stacking content cards) -------- */
+
+/** Sticky column: the portrait stays put while the content moves; visitors can
+ *  download the CV from here. (The PDF is a static asset — regenerate it from
+ *  /admin → Résumé and replace frontend/public/assets/cv/ when facts change.) */
+export function AboutPortrait() {
   return (
-    <section id="why" style={{ paddingTop: 0 }}>
-      <div className="container">
-        <div className="grid cols-4" id="perksGrid">
-          {perks.map((p, i) => (
-            <Reveal className="perk" key={p.title} delay={i * 0.07}>
-              <div className="ic"><Icon name={p.icon} /></div>
-              <div>
-                <h3>{p.title}</h3>
-                <p>{p.desc}</p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
+    <div>
+      <Reveal className="about-photo">
+        <svg className="avatar" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 21a8 8 0 0 1 16 0" />
+        </svg>
+        <img
+          className="photo-img"
+          src={CONFIG.photo}
+          alt={CONFIG.name}
+          width={760}
+          height={892}
+          loading="lazy"
+          decoding="async"
+        />
+      </Reveal>
+      <div className="about-cv">
+        <a
+          className="btn btn-ghost"
+          href="/assets/cv/Muhammad-Ali-Raza-CV.pdf"
+          download="Muhammad-Ali-Raza-CV.pdf"
+        >
+          <Icon name="download" size={18} />
+          Download CV (PDF)
+        </a>
       </div>
-    </section>
+    </div>
   );
 }
 
-export function AboutSection() {
+export function AboutIntroBlock() {
+  return (
+    <div className="about-block">
+      <span className="eyebrow">About me</span>
+      <h2 className="section-title">
+        Hi, I'm <span className="text-grad">{CONFIG.name}</span>
+      </h2>
+      <p className="lead mt-2">{CONFIG.bio}</p>
+      <p className="lead mt-4" style={{ color: "var(--muted-2)" }}>{CONFIG.location}</p>
+    </div>
+  );
+}
+
+export function AboutSkillsBlock() {
   const reduce = useReducedMotion();
   return (
-    <section id="about">
-      <div className="container about-grid">
-        <Reveal className="about-photo">
-          <svg className="avatar" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
-            <circle cx="12" cy="8" r="4" />
-            <path d="M4 21a8 8 0 0 1 16 0" />
-          </svg>
-          <img
-            className="photo-img"
-            src={CONFIG.photo}
-            alt={CONFIG.name}
-            width={760}
-            height={892}
-            loading="lazy"
-            decoding="async"
-          />
-        </Reveal>
-        <Reveal delay={0.12}>
-          <span className="eyebrow">About me</span>
-          <h2 className="section-title">
-            Hi, I'm <span className="text-grad">{CONFIG.name}</span>
-          </h2>
-          <p className="lead">{CONFIG.bio}</p>
-          <p className="lead mt-4" style={{ color: "var(--muted-2)" }}>{CONFIG.location}</p>
-          <div className="skills" id="skillsList">
-            {skills.map((s) => (
-              <div className="skill" key={s.name}>
-                <div className="skill-head">
-                  <span>{s.name}</span>
-                  <span>{s.level}%</span>
-                </div>
-                <div className="skill-bar">
-                  <motion.span
-                    className="skill-fill"
-                    initial={reduce ? false : { width: 0 }}
-                    whileInView={{ width: `${s.level}%` }}
-                    viewport={{ once: true, amount: 0.4 }}
-                    transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
-                  />
-                </div>
-              </div>
-            ))}
+    <div className="about-block">
+      <span className="eyebrow">Core skills</span>
+      <h2 className="section-title">What I work in every day</h2>
+      <div className="skills" id="skillsList">
+        {skills.map((s) => (
+          <div className="skill" key={s.name}>
+            <div className="skill-head">
+              <span>{s.name}</span>
+              <span>{s.level}%</span>
+            </div>
+            <div className="skill-bar">
+              <motion.span
+                className="skill-fill"
+                initial={reduce ? false : { width: 0 }}
+                whileInView={{ width: `${s.level}%` }}
+                viewport={{ once: true, amount: 0.4 }}
+                transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+              />
+            </div>
           </div>
-        </Reveal>
+        ))}
       </div>
-    </section>
+    </div>
   );
 }
 
-export function ExperienceSection() {
+export function AboutXpBlock() {
   return (
-    <section id="experience">
-      <div className="container">
-        <Reveal className="section-head">
-          <span className="eyebrow">Experience</span>
-          <h2 className="section-title">Where I've focused my time</h2>
-          <p className="lead">A snapshot of my freelance work, key projects and education.</p>
-        </Reveal>
-        <div className="xp-list" id="experienceList">
-          {experience.map((x, i) => (
-            <Reveal className={`xp-item${x.current ? " current" : ""}`} key={x.role} delay={i * 0.08}>
-              <span className="xp-dot" />
-              <div className="xp-card">
-                <div className="xp-head">
-                  <div>
-                    <h3>{x.role}</h3>
-                    <p className="xp-org">{x.org}</p>
-                  </div>
-                  <span className="xp-period">{x.period}</span>
+    <div className="about-block">
+      <span className="eyebrow">Experience</span>
+      <h2 className="section-title">Where I've focused my time</h2>
+      <div className="xp-list" id="experienceList" style={{ marginTop: "1.1rem" }}>
+        {experience.map((x) => (
+          <div className={`xp-item${x.current ? " current" : ""}`} key={x.role}>
+            <span className="xp-dot" />
+            <div className="xp-card">
+              <div className="xp-head">
+                <div>
+                  <h3>{x.role}</h3>
+                  <p className="xp-org">{x.org}</p>
                 </div>
-                <p className="xp-desc">{x.desc}</p>
-                <div className="tag-row">
-                  {(x.tags || []).map((t) => (
-                    <span className="tag" key={t}>{t}</span>
-                  ))}
-                </div>
+                <span className="xp-period">{x.period}</span>
               </div>
-            </Reveal>
-          ))}
-        </div>
+              <p className="xp-desc">{x.desc}</p>
+              <div className="tag-row">
+                {(x.tags || []).map((t) => (
+                  <span className="tag" key={t}>{t}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
-    </section>
+    </div>
+  );
+}
+
+export function AboutPerksBlock() {
+  return (
+    <div className="about-block">
+      <span className="eyebrow">What you get</span>
+      <h2 className="section-title">How I work with clients</h2>
+      <div className="grid cols-2" id="perksGrid" style={{ marginTop: "1.1rem" }}>
+        {perks.map((p) => (
+          <div className="perk" key={p.title}>
+            <div className="ic"><Icon name={p.icon} /></div>
+            <div>
+              <h3>{p.title}</h3>
+              <p>{p.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
