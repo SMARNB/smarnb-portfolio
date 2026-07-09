@@ -815,10 +815,12 @@ body.cursor-on .cursor-text { color: var(--accent); transition: color .15s var(-
 /* Full-view showcase slides: one story on stage at a time. Content is centred in
    the panel; svh keeps the height honest under mobile browser chrome. */
 .feature-slide .container {
-  /* 3.5rem headroom: the slide's own padding must stay INSIDE the pin budget
-     (StoryStack skips pinning for panels taller than viewport - top - 24px). */
-  min-height: calc(100vh - var(--stack-top) - 3.5rem);
-  min-height: calc(100svh - var(--stack-top) - 3.5rem);
+  /* Fill the viewport on small screens but CAP on large ones — uncapped 100svh
+     ballooned the card far past its content on tall monitors (a sea of empty
+     sheet). 3.5rem headroom keeps the slide inside the pin budget (StoryStack
+     skips pinning for panels taller than viewport - top - 24px). */
+  min-height: min(calc(100vh - var(--stack-top) - 3.5rem), 560px);
+  min-height: min(calc(100svh - var(--stack-top) - 3.5rem), 560px);
   display: grid; align-content: center;
 }
 .showcase-head { padding-bottom: .4rem; }
