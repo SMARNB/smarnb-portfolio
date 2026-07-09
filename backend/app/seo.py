@@ -312,6 +312,17 @@ def _esc(s):
     return html.escape(str(s or ""), quote=True)
 
 
+# Bump when the logo/favicon artwork changes so cached tabs pick up the new mark.
+_FAVICON_VERSION = "2"
+
+
+def _versioned_icon(href):
+    href = str(href or "")
+    if href and "?" not in href and not href.startswith("data:"):
+        href += "?v=" + _FAVICON_VERSION
+    return href
+
+
 def _meta(name, content, prop=False):
     if content in (None, ""):
         return ""
@@ -707,8 +718,12 @@ def _emit_head(g, r, graph):
         _meta("google-site-verification", g.get("google_verification")),
         _meta("msvalidate.01", g.get("bing_verification")),
         _meta("yandex-verification", g.get("yandex_verification")),
-        # Icons + manifest
-        '<link rel="icon" href="{}" type="image/svg+xml">'.format(_esc(g.get("favicon"))) if g.get("favicon") else "",
+        # Icons + manifest. The favicon gets a version query when it has none —
+        # browsers cache favicons extremely aggressively, so after a logo change
+        # the old mark would otherwise stick in the tab for weeks.
+        ('<link rel="icon" href="{}" type="image/svg+xml">'.format(
+            _esc(_versioned_icon(g.get("favicon")))) if g.get("favicon") else ""),
+        '<link rel="apple-touch-icon" href="/apple-touch-icon.png">',
         '<link rel="manifest" href="{}">'.format(_esc(g.get("manifest"))) if g.get("manifest") else "",
     ]
     # Marketing/analytics loader + verification meta — only when ids are set.

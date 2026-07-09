@@ -812,6 +812,32 @@ body.cursor-on .cursor-text { color: var(--accent); transition: color .15s var(-
   will-change: transform;
 }
 .story-panel.no-pin { position: relative; top: auto; }
+/* Full-view showcase slides: one story on stage at a time. Content is centred in
+   the panel; svh keeps the height honest under mobile browser chrome. */
+.feature-slide .container {
+  /* 3.5rem headroom: the slide's own padding must stay INSIDE the pin budget
+     (StoryStack skips pinning for panels taller than viewport - top - 24px). */
+  min-height: calc(100vh - var(--stack-top) - 3.5rem);
+  min-height: calc(100svh - var(--stack-top) - 3.5rem);
+  display: grid; align-content: center;
+}
+.showcase-head { padding-bottom: .4rem; }
+/* Slides carry their height via the container min-height — slim section padding
+   keeps the total inside the pin budget on every viewport. */
+.feature-slide { padding-block: .8rem; }
+/* Compress the slides on phones so each story FITS the viewport budget and can
+   pin (taller-than-viewport panels skip pinning by design). */
+@media (max-width: 640px) {
+  .feature-slide { padding-block: .6rem; }
+  .feature-slide .feature-row { gap: .9rem; }
+  .feature-slide .fs-media { height: 118px; }
+  .feature-slide .feature-body h3 { font-size: 1.12rem; margin: .1rem 0 .6rem; }
+  .feature-slide .ps-grid { gap: .55rem; margin-bottom: .7rem; }
+  .feature-slide .ps p { font-size: .84rem; line-height: 1.5; }
+  .feature-slide .tag-row { gap: .3rem; }
+  .feature-slide .tag { font-size: .68rem; padding: .2rem .45rem; }
+  .feature-slide .feature-body .btn { margin-top: .8rem; }
+}
 /* Card-shaped variant (About right column). */
 .story-stack.cards .story-panel {
   background: var(--surface); border: 1px solid var(--border);

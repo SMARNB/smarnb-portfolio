@@ -8,11 +8,13 @@
    costs no scroll listeners beyond framer's rAF-batched rect reads.
 
    Safety rails:
-   - Desktop-only: enabled at ≥900px fine-pointer viewports and without
-     prefers-reduced-motion — otherwise children render in plain flow.
+   - Runs on every viewport (mobile included — sticky is cheap); disabled only
+     under prefers-reduced-motion, where children render in plain flow.
    - A panel taller than the viewport budget skips pinning (`no-pin`) so its lower
      content can never be covered before it was seen; the flow still reads well.
-   - The last panel never shrinks (nothing ever covers it). */
+   - The last panel never shrinks (nothing ever covers it).
+   - Covered panels recede by SCALE only — never opacity. (An earlier version also
+     dimmed them; with several panels in view the whole page read washed-out.) */
 import { Children, createRef, useEffect, useMemo, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
@@ -22,15 +24,7 @@ const STACK_TOP_PX = 78;
 
 function useStackEnabled(): boolean {
   const reduce = useReducedMotion();
-  const [capable, setCapable] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 900px) and (hover: hover) and (pointer: fine)");
-    const update = () => setCapable(mq.matches);
-    update();
-    mq.addEventListener?.("change", update);
-    return () => mq.removeEventListener?.("change", update);
-  }, []);
-  return capable && !reduce;
+  return !reduce;
 }
 
 function StoryPanel({
@@ -62,19 +56,20 @@ function StoryPanel({
   }, [panelRef]);
 
   // Outgoing motion, driven by the NEXT panel's top travelling up the viewport.
+  // Scale only (full opacity always) — the covered sheet recedes under the
+  // incoming one without draining the page's colour.
   const { scrollYProgress } = useScroll({
     target: nextRef,
-    offset: ["start 96%", "start 30%"],
+    offset: ["start 92%", "start 25%"],
   });
-  const scale = useTransform(scrollYProgress, [0, 1], [1, 0.955]);
-  const opacity = useTransform(scrollYProgress, [0, 1], [1, 0.45]);
+  const scale = useTransform(scrollYProgress, [0, 1], [1, 0.97]);
 
   const animated = !isLast && !noPin;
   return (
     <motion.div
       ref={panelRef}
       className={`story-panel${noPin ? " no-pin" : ""}`}
-      style={animated ? { scale, opacity } : undefined}
+      style={animated ? { scale } : undefined}
     >
       {children}
     </motion.div>

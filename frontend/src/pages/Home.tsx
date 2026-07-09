@@ -1,8 +1,10 @@
-/* Public Home — hero + tech marquee, then the scroll-story: each section is a
-   sheet that pins and is covered by the next as you scroll (StoryStack). The blog
-   teaser stays outside the stack because it renders nothing until posts exist. */
+/* Public Home — hero + tech marquee, then one continuous scroll-story: each
+   showcase story is its own full-view card, followed by the section sheets
+   (services / work / projects / CTA), every one pinning while the next slides
+   over it. The blog teaser stays outside the stack because it renders nothing
+   until posts exist. */
 import { Hero } from "../components/sections/Hero";
-import { FeatureShowcase } from "../components/sections/FeatureShowcase";
+import { featureSlides, ShowcaseHead } from "../components/sections/FeatureShowcase";
 import { ServicesTeaser } from "../components/sections/ServicesTeaser";
 import { Work } from "../components/sections/Work";
 import { PersonalProjects } from "../components/sections/PersonalProjects";
@@ -15,8 +17,9 @@ export function Home() {
     <>
       <Hero />
       <Marquee />
+      <ShowcaseHead />
       <StoryStack>
-        <FeatureShowcase />
+        {featureSlides()}
         <ServicesTeaser limit={3} />
         <Work home />
         <PersonalProjects home />
