@@ -1,9 +1,8 @@
-/* Public Home — the hero + tech marquee own the first screen (.home-fold), then
-   one continuous scroll-story: each showcase story is its own full-view stage,
-   followed by the section sheets (services / work / projects / CTA), every one
-   pinning while the next slides over it — one information section per screen.
-   The blog teaser stays outside the stack because it renders nothing until
-   posts exist. */
+/* Public Home — ONE continuous scroll-story from the very top: the hero fold
+   (hero + tech marquee) is the first stage and recedes under slide 1, then the
+   showcase stories and section sheets (services / work / projects / CTA) each
+   own a full screen, arriving with varied transitions. The blog teaser stays
+   outside the stack because it renders nothing until posts exist. */
 import { Hero } from "../components/sections/Hero";
 import { featureSlides } from "../components/sections/FeatureShowcase";
 import { ServicesTeaser } from "../components/sections/ServicesTeaser";
@@ -16,11 +15,11 @@ import { StoryStack } from "../components/ui/StoryStack";
 export function Home() {
   return (
     <>
-      <div className="home-fold">
-        <Hero />
-        <Marquee />
-      </div>
-      <StoryStack>
+      <StoryStack className="flush">
+        <div className="home-fold">
+          <Hero />
+          <Marquee />
+        </div>
         {featureSlides(true)}
         <ServicesTeaser limit={3} />
         <Work home />

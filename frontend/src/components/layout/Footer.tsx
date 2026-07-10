@@ -1,6 +1,8 @@
 /* Footer — brand, config-driven social icons (dimmed placeholder when a link is
-   not configured), services list (routes to the store), explore + contact links. */
+   not configured), services list (routes to the store), explore + contact links.
+   Rises into view like the story sections above it (reduced-motion safe). */
 import { Link } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import { CONFIG } from "../../lib/config";
 import { Icon } from "../../lib/icons";
 import { BrandMark } from "./BrandMark";
@@ -21,11 +23,18 @@ const SOCIALS: { key: string; label: string }[] = [
 export function Footer() {
   const { services } = useCatalog();
   const { openTrack } = useUI();
+  const reduce = useReducedMotion();
   const wa = (CONFIG.whatsapp || "").replace(/\D/g, "");
 
   return (
     <footer className="footer">
-      <div className="container">
+      <motion.div
+        className="container"
+        initial={reduce ? false : { opacity: 0, y: 42 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: false, amount: 0.2 }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      >
         <div className="footer-grid">
           <div>
             <Link className="brand" to="/">
@@ -94,7 +103,7 @@ export function Footer() {
           <span>© {new Date().getFullYear()} {CONFIG.name}. All rights reserved.</span>
           <span>Built for speed · accessibility · security</span>
         </div>
-      </div>
+      </motion.div>
     </footer>
   );
 }

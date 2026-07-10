@@ -52,38 +52,48 @@ export function Header({ onMenu, menuOpen }: { onMenu: () => void; menuOpen: boo
   // the nav collapsed on a non-empty cart at ANY width. A border-box rect excludes
   // that overhang. Hysteresis then prevents flapping at the borderline widths:
   // while expanded, collapse only when actions clearly overflow (>1px); while
-  // collapsed, expand only once there is ≥12px of slack. lastVerdict holds the last
-  // committed decision because measure() forces expanded=true to lay the links out.
+  // collapsed, expand only once there is ≥12px of slack. lastVerdict holds the
+  // last committed decision across the probe measurements.
   const lastVerdict = useRef(true);
   useEffect(() => {
     const nav = navRef.current;
     if (!nav) return;
-    let raf = 0;
     const measure = () => {
-      cancelAnimationFrame(raf);
-      setExpanded(true); // reveal links so the flex row reflects its natural width
-      raf = requestAnimationFrame(() => {
-        const el = navRef.current;
-        if (!el || el.clientWidth === 0) return; // not laid out yet — don't collapse
-        const actions = el.querySelector<HTMLElement>(".nav-actions");
-        if (!actions) return;
-        // How far the actions row extends past the nav's client edge. Border-box
-        // rects ignore the overhanging (absolutely-positioned) cart badge.
-        const overflow = actions.getBoundingClientRect().right - el.getBoundingClientRect().right;
-        const next = lastVerdict.current ? overflow <= 1 : overflow <= -12;
-        lastVerdict.current = next;
-        setExpanded(next);
-      });
+      const el = navRef.current;
+      if (!el || el.clientWidth === 0) return; // not laid out yet — don't collapse
+      const links = el.querySelector<HTMLElement>(".nav-links");
+      const actions = el.querySelector<HTMLElement>(".nav-actions");
+      if (!actions) return;
+      // Probe the EXPANDED geometry with a synchronous mutate → read → restore:
+      // the probe state is never painted, so measuring cannot flash the pill.
+      // (The old approach set expanded=true for a frame; once the collapsed
+      // pill became width:fit-content, that flashed it wide on every measure.)
+      const prevLinks = links ? links.style.display : "";
+      const prevWidth = el.style.width;
+      if (links) links.style.display = "flex";
+      el.style.width = "min(100%, 1160px)"; // the expanded pill width
+      // How far the actions row extends past the nav's client edge. Border-box
+      // rects ignore the overhanging (absolutely-positioned) cart badge.
+      const overflow = actions.getBoundingClientRect().right - el.getBoundingClientRect().right;
+      if (links) links.style.display = prevLinks;
+      el.style.width = prevWidth;
+      const next = lastVerdict.current ? overflow <= 1 : overflow <= -12;
+      lastVerdict.current = next;
+      setExpanded(next);
     };
     measure();
     const t1 = window.setTimeout(measure, 120);
     const t2 = window.setTimeout(measure, 450);
     window.addEventListener("resize", measure, { passive: true });
+    // Observe the fixed-width HEADER WRAPPER, never the pill itself: the
+    // collapsed pill is width:fit-content, so measuring (which expands it)
+    // changes its own size — observing the nav made the observer re-fire its
+    // own measurement in a loop (visible flicker). The wrapper only resizes
+    // with the viewport.
     const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
-    ro?.observe(nav);
+    ro?.observe(headerRef.current ?? nav);
     if (document.fonts?.ready) document.fonts.ready.then(measure).catch(() => {});
     return () => {
-      cancelAnimationFrame(raf);
       window.clearTimeout(t1);
       window.clearTimeout(t2);
       window.removeEventListener("resize", measure);

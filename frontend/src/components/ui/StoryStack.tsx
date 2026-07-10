@@ -1,7 +1,7 @@
 /* StoryStack — the scroll-story used on Home / Services / Work / About: each child
-   is a full-view "stage" (min-height 100svh − stack-top, opaque — see .story-panel
-   in global.css) that pins below the floating header while the next arrives over
-   it, so ONE information section is on screen at a time.
+   is a full-view "stage" (min-height 100svh, opaque, pinned at the very top — the
+   floating pill header rides over it; see .story-panel in global.css) so ONE
+   information section owns the screen at a time.
 
    Each panel ENTERS with its own scroll-driven transition (rotating by default,
    overridable per page via the `variants` prop):
@@ -11,22 +11,24 @@
      fade         — cross-fades in over the previous section
      zoom-in / zoom-out       — scales into place while fading in
    All are driven by scroll progress (reversible when scrolling back). Non-cover
-   variants pin the panel visually at the stack top for the whole entry by
+   variants pin the panel visually at the top for the whole entry by
    counter-translating its flow offset; once the entry completes the correction
    is zero and native position:sticky takes over seamlessly. The covered panel
    gently recedes (scale only, never opacity — dimming read washed-out).
 
-   Grounded in classic sticky stacking (each panel `position: sticky` at a shared
-   top inside one flow container), so the browser does the pinning and the effect
-   costs no scroll listeners beyond framer's rAF-batched rect reads.
+   Because entries are scroll-linked, stopping mid-step would freeze a
+   half-open sheet — an idle SNAP settles the page to the nearest fully-open
+   section (via Lenis when active, native smooth otherwise).
 
    Safety rails:
-   - Runs on every viewport (mobile included — sticky is cheap); disabled only
-     under prefers-reduced-motion, where children render in plain flow.
-   - A panel taller than the pinnable area skips pinning AND its entry variant
-     (`no-pin`) so its lower content can never be covered before it was seen.
+   - Runs on every viewport (mobile included); disabled only under
+     prefers-reduced-motion, where children render in plain flow.
+   - A panel taller than the viewport skips pinning (`no-pin`) so its lower
+     content can never be covered before it was seen — it flows and gets a
+     light in-view entrance instead (this keeps LANDSCAPE phones animated,
+     where nothing fits a screen).
    - The last panel never recedes (nothing ever covers it). */
-import { Children, createRef, useEffect, useMemo, useState } from "react";
+import { Children, createRef, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import {
   motion,
@@ -37,9 +39,11 @@ import {
   useTransform,
 } from "framer-motion";
 import type { MotionValue } from "framer-motion";
+import { scrollToTarget } from "../../lib/lenis";
 
-/** Keep in sync with --stack-top in global.css (header 62px + gap). */
-const STACK_TOP_PX = 78;
+/** Stages pin flush to the viewport top (keep in sync with .story-panel top). */
+const STACK_TOP_PX = 0;
+const EASE = [0.22, 1, 0.36, 1] as const;
 
 export type StoryVariant =
   | "cover"
@@ -93,9 +97,8 @@ function StoryPanel({
 }) {
   const vh = useViewportH();
 
-  // Panels taller than the pinnable area must not pin. Stages are exactly
-  // 100svh − stack-top tall (svh ≤ innerHeight), so they pin; the +4px only
-  // absorbs sub-pixel rounding. Content-driven overflow still opts out.
+  // Panels taller than the viewport must not pin (their lower content could
+  // never be seen); the +4px only absorbs sub-pixel rounding.
   const [noPin, setNoPin] = useState(false);
   useEffect(() => {
     const el = panelRef.current;
@@ -119,7 +122,7 @@ function StoryPanel({
     target: panelRef,
     offset: ["start end", "start start"],
   });
-  const pinnedAt = Math.max(0.05, (vh - STACK_TOP_PX) / vh); // progress when top hits 78px
+  const pinnedAt = Math.max(0.05, (vh - STACK_TOP_PX) / vh);
   const enter = useTransform(rawEnter, [0, pinnedAt], [0, 1]); // clamped
 
   // Publish this panel's entry progress so the PREVIOUS sibling can recede in
@@ -174,11 +177,23 @@ function StoryPanel({
   const style: Record<string, unknown> = { y, x, opacity, scale };
   if (isSplit) style.clipPath = clipPath;
 
+  // Taller-than-viewport panels flow instead of pinning — give them a light
+  // in-view entrance so short viewports (landscape phones) still animate.
+  const flowEntrance = noPin
+    ? {
+        initial: { opacity: 0, y: 34 },
+        whileInView: { opacity: 1, y: 0 },
+        viewport: { once: true, amount: 0.12 },
+        transition: { duration: 0.55, ease: EASE },
+      }
+    : {};
+
   return (
     <motion.div
       ref={panelRef}
       className={`story-panel${noPin ? " no-pin" : ""}`}
-      style={style as never}
+      style={noPin ? undefined : (style as never)}
+      {...flowEntrance}
     >
       {children}
     </motion.div>
@@ -191,12 +206,14 @@ export function StoryStack({
   variants,
 }: {
   children: ReactNode;
-  /** "" = full-bleed page sheets; "cards" = card-shaped panels (About column). */
+  /** "" = full-bleed page sheets; "cards" = card-shaped panels (About column);
+   *  add "flush" when the stack opens the page (pulls stage 1 under the pill). */
   className?: string;
   /** Per-panel entry transitions; falls back to a rotating default cycle. */
   variants?: StoryVariant[];
 }) {
   const enabled = useStackEnabled();
+  const stackRef = useRef<HTMLDivElement>(null);
   const items = Children.toArray(children); // drops null/undefined children
   const refs = useMemo(
     () => items.map(() => createRef<HTMLDivElement>()),
@@ -209,10 +226,49 @@ export function StoryStack({
     [items.length],
   );
 
+  // ---- Idle snap: entries are scroll-linked, so stopping mid-step would rest
+  // on a half-open sheet. After scrolling settles, glide to the nearest fully-
+  // open section. Flow tops are derived from the stack's rect + panel heights
+  // (offsetTop lies for stuck sticky elements; rects lie under transforms).
+  useEffect(() => {
+    if (!enabled) return;
+    let t = 0;
+    const onScroll = () => {
+      window.clearTimeout(t);
+      t = window.setTimeout(() => {
+        const stack = stackRef.current;
+        if (!stack) return;
+        const vh = window.innerHeight;
+        const y = window.scrollY;
+        let acc = stack.getBoundingClientRect().top + y;
+        const bounds = refs.map((r) => {
+          const b = acc;
+          acc += r.current?.offsetHeight || 0;
+          return b;
+        });
+        for (let k = 1; k < refs.length; k++) {
+          const el = refs[k].current;
+          if (!el || el.classList.contains("no-pin")) continue;
+          const q = 1 - (bounds[k] - y) / vh; // panel k's entry progress
+          if (q > 0.12 && q < 0.88) {
+            const target = q > 0.5 ? bounds[k] : bounds[k] - vh;
+            if (Math.abs(target - y) > 6 && target >= 0) scrollToTarget(target);
+            return;
+          }
+        }
+      }, 190);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [enabled, refs]);
+
   if (!enabled) return <>{children}</>;
 
   return (
-    <div className={`story-stack ${className}`.trim()}>
+    <div className={`story-stack ${className}`.trim()} ref={stackRef}>
       {items.map((child, i) => (
         <StoryPanel
           key={i}

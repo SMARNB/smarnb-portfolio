@@ -809,13 +809,17 @@ body.cursor-on .cursor-text { color: var(--accent); transition: color .15s var(-
    stage bg matches the page, spare room reads as whitespace, not as an empty
    ballooned card (the earlier complaint with full-height *cards*). Disabled
    only under prefers-reduced-motion (plain flow). */
-:root { --stack-top: calc(var(--header-h) + 1rem); } /* keep in sync with STACK_TOP_PX */
+:root { --stack-top: calc(var(--header-h) + 1rem); } /* the floating pill's band (About portrait uses it) */
 .story-stack { position: relative; }
 .story-panel {
-  position: sticky; top: var(--stack-top);
-  min-height: calc(100vh - var(--stack-top));
-  min-height: calc(100svh - var(--stack-top));
+  /* Stages pin at the VERY top (the pill floats over them) and fill the whole
+     viewport — no strip of the previous sheet ever peeks around the header. */
+  position: sticky; top: 0;
+  min-height: 100vh;
+  min-height: 100svh;
   display: grid; align-content: center;
+  padding-top: calc(var(--header-h) + 1rem); /* centred content clears the pill */
+  padding-bottom: .9rem;
   background:
     radial-gradient(60vw 60vw at 80% -10%, rgba(var(--accent-rgb),.14), transparent 60%),
     radial-gradient(50vw 50vw at -10% 10%, rgba(var(--accent-rgb),.08), transparent 60%),
@@ -826,44 +830,67 @@ body.cursor-on .cursor-text { color: var(--accent); transition: color .15s var(-
   transform-origin: top center;
 }
 .story-panel.no-pin { position: relative; top: auto; }
+/* A stack that OPENS the page (Home, /services): pull the first stage up under
+   the pill so there is no page-bg band above it at load. */
+.story-stack.flush > .story-panel:first-child { margin-top: calc(-1 * (var(--header-h) + 1rem)); }
 /* Full-view showcase slides — the stage carries the height; the slide just
    centres. The heading rides the FIRST slide (no in-flow head to bleed into
    the screen before it). */
 .feature-slide { padding-block: .8rem; }
-.feature-slide .section-head { margin-bottom: clamp(1.1rem, 2.5vh, 1.8rem); }
+.feature-slide .section-head { margin-bottom: clamp(1.1rem, 2.5vh, 2rem); }
+/* A stage owns the whole screen — let the story use it: wide container, media
+   stretched to the text column, and type that scales with the viewport. */
+.feature-slide .container { width: min(100% - 3rem, 1720px); }
 @media (min-width: 900px) {
-  /* Fill the stage: media stretches to the text column and grows with the
-     viewport; type steps up so a story occupies its screen instead of
-     floating in whitespace. */
-  .feature-slide .feature-row { align-items: stretch; gap: clamp(2rem, 4vw, 3.6rem); }
+  .feature-slide .feature-row { align-items: stretch; gap: clamp(2.5rem, 5vw, 5rem); }
   .feature-slide .feature-media { display: grid; }
-  .feature-slide .fs-media { height: 100%; min-height: clamp(280px, 40svh, 520px); }
+  .feature-slide .fs-media { height: 100%; min-height: clamp(300px, 52svh, 640px); }
   .feature-slide .feature-body { display: flex; flex-direction: column; justify-content: center; }
-  .feature-slide .feature-body h3 { font-size: clamp(1.55rem, 2.4vw, 2.15rem); }
-  .feature-slide .ps p { font-size: clamp(.93rem, 1vw, 1.05rem); }
-  .feature-slide .ps-grid { gap: 1rem; }
+  .feature-slide .feature-body h3 { font-size: clamp(1.7rem, 2.9vw, 2.7rem); }
+  .feature-slide .ps p { font-size: clamp(1rem, 1.15vw, 1.18rem); line-height: 1.65; }
+  .feature-slide .ps-grid { gap: 1.15rem; }
+  .feature-slide .ps-label { font-size: .8rem; }
+  .feature-slide .tag { font-size: .8rem; padding: .3rem .6rem; }
+  .feature-slide .section-title { font-size: clamp(1.7rem, 3vw, 2.9rem); }
 }
 /* Stage fill for the section sheets: cards and bands scale with the screen so a
    full-view stage reads as content, not whitespace. (Scoped to .story-panel —
    the store grid and other in-flow uses keep their compact sizes.) */
-.story-panel .svc-media { height: clamp(120px, 22svh, 250px); }
-.story-panel .grid.cols-3 { gap: clamp(.9rem, 1.6vw, 1.4rem); }
-.story-panel .section-head .section-title { font-size: clamp(1.55rem, 2.6vw, 2.6rem); }
-.story-panel .steps { gap: clamp(.9rem, 1.8vh, 1.5rem); margin-top: clamp(1rem, 3vh, 2rem); }
-.story-panel .step .ic { width: clamp(50px, 6.5vh, 64px); height: clamp(50px, 6.5vh, 64px); }
-.story-panel .cta-band { padding: clamp(2rem, 12svh, 6rem) clamp(1.3rem, 4vw, 3rem); }
-.story-panel .cta-band h2 { font-size: clamp(1.8rem, 4.4vw, 3rem); }
-.story-panel .project-feature .pf-visual { min-height: clamp(220px, 32svh, 400px); }
+.story-panel section { padding-block: clamp(.8rem, 1.6vh, 1.5rem); } /* the stage centres — big section padding just overflows it */
+.story-panel .svc-media { height: clamp(120px, 21svh, 260px); }
+.story-panel .grid.cols-3 { gap: clamp(1rem, 1.8vw, 1.6rem); }
+.story-panel .section-head .section-title { font-size: clamp(1.7rem, 3vw, 3rem); }
+.story-panel .section-head .lead { font-size: clamp(1rem, 1.25vw, 1.2rem); }
+.svc-slide .container { width: min(100% - 3rem, 1600px); }
+.svc-slide .card { padding: 1.35rem; }
+.svc-slide .svc-media { margin: 0 -1.35rem .9rem; }
+.svc-slide .card h3 { font-size: 1.2rem; }
+.story-panel .steps { gap: clamp(1rem, 2vh, 1.8rem); margin-top: clamp(1.2rem, 3.5vh, 2.4rem); }
+.story-panel .step .ic { width: clamp(50px, 7vh, 72px); height: clamp(50px, 7vh, 72px); }
+.story-panel .step h3 { font-size: clamp(1rem, 1.2vw, 1.25rem); }
+.story-panel .step p { font-size: clamp(.9rem, 1vw, 1.02rem); }
+.story-panel .cta-band { padding: clamp(2.5rem, 16svh, 8rem) clamp(1.3rem, 4vw, 3rem); }
+.story-panel .cta-band h2 { font-size: clamp(2rem, 5vw, 3.6rem); }
+.story-panel .cta-band p { font-size: clamp(1rem, 1.3vw, 1.25rem); }
+.story-panel .project-feature .pf-visual { min-height: clamp(240px, 38svh, 480px); }
+/* Work cards keep 16/10 thumbs in flow, but on a stage the row must fit the
+   screen — trade the fixed aspect for a viewport-scaled height. */
+.story-panel .work-thumb { aspect-ratio: auto; height: clamp(160px, 24svh, 300px); }
 /* Compress the slides on phones so each story FITS the viewport budget and can
    pin (taller-than-viewport panels skip pinning by design). */
 @media (max-width: 640px) {
-  .feature-slide { padding-block: .4rem; }
+  /* the phone pill is lower-profile than the desktop one — reclaim stage padding */
+  .story-panel { padding-top: calc(var(--header-h) + .4rem); }
+  .feature-slide { padding-block: .3rem; }
+  /* one line of stack tags is plenty on a phone */
+  .feature-slide .tag-row .tag:nth-child(n+5) { display: none; }
   /* the heading rides slide 1 — keep it lean so the slide stays inside the pin
      budget on phones (the lead is decorative; the story itself is the content) */
-  .feature-slide .section-head { margin-bottom: .6rem; }
+  .feature-slide .section-head { margin-bottom: .5rem; }
   .feature-slide .section-head .lead { display: none; }
-  .feature-slide .section-title { font-size: 1.3rem; }
-  .feature-slide .feature-row { gap: .9rem; }
+  .feature-slide .section-title { font-size: 1.24rem; }
+  .feature-slide .ps p { font-size: .8rem; line-height: 1.45; }
+  .feature-slide .feature-row { gap: .8rem; }
   .feature-slide .fs-media { height: 112px; }
   .feature-slide .feature-body h3 { font-size: 1.12rem; margin: .1rem 0 .6rem; }
   .feature-slide .ps-grid { gap: .55rem; margin-bottom: .7rem; }
@@ -887,14 +914,46 @@ body.cursor-on .cursor-text { color: var(--accent); transition: color .15s var(-
 .svc-slide .section-head { margin-bottom: 1.2rem; }
 .svc-slide .svc-slide-note { display: block; margin-bottom: .9rem; }
 
-/* First screen on Home: hero fills the fold with the tech marquee as its base,
-   so the story stack starts on the NEXT screen instead of bleeding into it. */
+/* First screen on Home: the hero + tech marquee are the stack's FIRST stage
+   (they recede under slide 1 like every other section). The fold fills the
+   stage's content box so the marquee sits at the fold's base. */
 .home-fold {
-  min-height: calc(100vh - var(--header-h) - 1rem);
-  min-height: calc(100svh - var(--header-h) - 1rem);
+  min-height: calc(100vh - var(--header-h) - 2rem);
+  min-height: calc(100svh - var(--header-h) - 2rem);
   display: flex; flex-direction: column;
 }
 .home-fold .hero { flex: 1; display: grid; align-content: center; }
+.home-fold .container { width: min(100% - 3rem, 1680px); }
+.hero h1 { font-size: clamp(2.1rem, 5.4vw, 4.1rem); }
+.hero .lead { font-size: clamp(1rem, 1.6vw, 1.28rem); }
+
+/* SHORT desktop viewports (≤ ~820px tall — 720/768p laptops): moderate the fill
+   so the fold and the story slides still fit one screen and keep pinning; the
+   no-pin fallback should be the exception, not the norm. (This block must stay
+   AFTER the fill rules above — same specificity, cascade order decides.) */
+@media (min-width: 900px) and (max-height: 820px) {
+  .hero h1 { font-size: clamp(1.9rem, 4vw, 2.9rem); }
+  .hero .lead { font-size: 1.02rem; }
+  .hero-cta { margin-top: 1rem; }
+  .hero-stats { margin-top: 1.1rem; }
+  .feature-slide .section-head { margin-bottom: .9rem; }
+  .feature-slide .section-head .lead { display: none; }
+  .feature-slide .section-title { font-size: clamp(1.4rem, 2.2vw, 1.9rem); }
+  .feature-slide .feature-body h3 { font-size: clamp(1.35rem, 2vw, 1.8rem); }
+  .feature-slide .ps p { font-size: .95rem; line-height: 1.55; }
+  .feature-slide .ps-grid { gap: .8rem; }
+  .feature-slide .fs-media { min-height: clamp(220px, 42svh, 400px); }
+  .story-panel section { padding-block: .8rem; }
+  .story-panel .section-head { margin-bottom: 1rem; }
+  .story-panel .section-head .section-title { font-size: clamp(1.4rem, 2.2vw, 2rem); }
+  .story-panel .section-head .lead { font-size: .95rem; }
+  .story-panel .svc-media { height: clamp(110px, 18svh, 190px); }
+  .story-panel .grid.cols-3 { gap: .9rem; }
+  .story-panel .steps { margin-top: 1rem; gap: .9rem; }
+  .story-panel .step .ic { width: 48px; height: 48px; }
+  .story-panel .cta-band { padding: clamp(1.6rem, 9svh, 3.5rem) clamp(1.3rem, 4vw, 3rem); }
+  .story-panel .cta-band h2 { font-size: clamp(1.7rem, 3.6vw, 2.4rem); }
+}
 
 /* ---- About story (sticky portrait + stacking content) -------------------- */
 .about-story { display: grid; gap: clamp(1.25rem, 3vw, 2.2rem); align-items: start; }

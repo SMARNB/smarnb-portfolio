@@ -24,7 +24,7 @@ export function ServicesPage() {
   for (let i = 0; i < services.length; i += ROW) rows.push(services.slice(i, i + ROW));
 
   return (
-    <StoryStack>
+    <StoryStack className="flush">
       {featureSlides(true)}
       {rows.map((row, ri) => (
         <section className="svc-slide" key={ri} id={ri === 0 ? "services" : undefined}>
