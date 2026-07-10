@@ -36,12 +36,17 @@ export function Hero() {
   return (
     <section className="hero" id="hero" aria-label="Intro" ref={ref}>
       <div className="container hero-grid">
+        {/* whileInView, NOT animate: a mount-time animation started in a
+            background tab runs against a frozen rAF and can strand the whole
+            hero at opacity 0 (blank first screen). In-view triggering only
+            fires once the page is actually visible. */}
         <motion.div
           className="hero-copy"
           style={{ opacity: copyOpacity }}
           variants={container}
           initial="hidden"
-          animate="show"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.2 }}
         >
           <motion.span className="status-pill" variants={item}>
             <span className="dot" />
@@ -82,7 +87,8 @@ export function Hero() {
           className="hero-visual"
           style={{ y: visualY }}
           initial={reduce ? false : { opacity: 0, y: 24, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
+          whileInView={{ opacity: 1, y: 0, scale: 1 }}
+          viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.8, ease: EASE, delay: 0.12 }}
         >
           <Link className="hero-shot" to="/projects" aria-label="See CodeWatch and other projects">

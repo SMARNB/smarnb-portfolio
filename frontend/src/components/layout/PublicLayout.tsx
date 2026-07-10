@@ -16,6 +16,7 @@ import { Header } from "./Header";
 import { MobileMenu } from "./MobileMenu";
 import { Footer } from "./Footer";
 import { BackToTop } from "./BackToTop";
+import { StoryStack } from "../ui/StoryStack";
 import { CartDrawer } from "../panels/CartDrawer";
 import { CheckoutModal } from "../panels/CheckoutModal";
 import { TrackModal } from "../panels/TrackModal";
@@ -69,7 +70,11 @@ function Shell() {
         </motion.div>
       </main>
 
-      <Footer />
+      {/* The footer is its own full-screen stage: when it appears, nothing else
+          shares the screen (it pins and the idle snap settles on it alone). */}
+      <StoryStack className="footer-stage">
+        <Footer />
+      </StoryStack>
       <BackToTop />
 
       {/* Overlay + panels */}

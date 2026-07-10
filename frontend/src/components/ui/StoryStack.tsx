@@ -246,12 +246,15 @@ export function StoryStack({
           acc += r.current?.offsetHeight || 0;
           return b;
         });
-        for (let k = 1; k < refs.length; k++) {
+        for (let k = 0; k < refs.length; k++) {
           const el = refs[k].current;
           if (!el || el.classList.contains("no-pin")) continue;
           const q = 1 - (bounds[k] - y) / vh; // panel k's entry progress
           if (q > 0.12 && q < 0.88) {
-            const target = q > 0.5 ? bounds[k] : bounds[k] - vh;
+            // Land at the panel's PIN position (cards pin below the header, the
+            // full-bleed stages at 0) so nothing peeks in at rest.
+            const stickyTop = parseFloat(getComputedStyle(el).top) || 0;
+            const target = q > 0.5 ? bounds[k] - stickyTop : bounds[k] - vh;
             if (Math.abs(target - y) > 6 && target >= 0) scrollToTarget(target);
             return;
           }

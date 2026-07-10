@@ -17,7 +17,10 @@ export function AboutPage() {
         <div className="about-photo-col">
           <AboutPortrait />
         </div>
-        <StoryStack className="cards">
+        {/* cover-only: the cards pin BELOW the header (top: --stack-top), and
+            non-cover variants counter-translate against a top-0 pin — their
+            correction would never unwind here, parking cards 78px too high. */}
+        <StoryStack className="cards" variants={["cover", "cover", "cover", "cover"]}>
           <AboutIntroBlock />
           <AboutSkillsBlock />
           <AboutXpBlock />
