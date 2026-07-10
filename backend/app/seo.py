@@ -312,8 +312,9 @@ def _esc(s):
     return html.escape(str(s or ""), quote=True)
 
 
-# Bump when the logo/favicon artwork changes so cached tabs pick up the new mark.
-_FAVICON_VERSION = "2"
+# Bump when the logo/favicon artwork OR the manifest/touch-icon set changes so
+# cached tabs and home-screen tiles pick up the new mark.
+_FAVICON_VERSION = "3"
 
 
 def _versioned_icon(href):
@@ -718,13 +719,19 @@ def _emit_head(g, r, graph):
         _meta("google-site-verification", g.get("google_verification")),
         _meta("msvalidate.01", g.get("bing_verification")),
         _meta("yandex-verification", g.get("yandex_verification")),
-        # Icons + manifest. The favicon gets a version query when it has none —
-        # browsers cache favicons extremely aggressively, so after a logo change
-        # the old mark would otherwise stick in the tab for weeks.
+        # Icons + manifest. Every icon-ish URL gets a version query when it has
+        # none — browsers (and iOS home screens) cache these extremely
+        # aggressively, so after a logo change the old mark would otherwise
+        # stick for weeks. The touch icon + manifest drive the iPhone/Android
+        # "Add to Home Screen" tile; the manifest lists PNG sizes (iOS ignores
+        # SVG icons and falls back to a letter tile without a usable PNG).
         ('<link rel="icon" href="{}" type="image/svg+xml">'.format(
             _esc(_versioned_icon(g.get("favicon")))) if g.get("favicon") else ""),
-        '<link rel="apple-touch-icon" href="/apple-touch-icon.png">',
-        '<link rel="manifest" href="{}">'.format(_esc(g.get("manifest"))) if g.get("manifest") else "",
+        '<link rel="apple-touch-icon" sizes="180x180" href="{}">'.format(
+            _esc(_versioned_icon("/apple-touch-icon.png"))),
+        _meta("apple-mobile-web-app-title", "SMARNB"),  # short home-screen label (matches manifest short_name)
+        '<link rel="manifest" href="{}">'.format(
+            _esc(_versioned_icon(g.get("manifest")))) if g.get("manifest") else "",
     ]
     # Marketing/analytics loader + verification meta — only when ids are set.
     parts.extend(_marketing_head(g))
