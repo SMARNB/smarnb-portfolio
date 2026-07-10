@@ -2,9 +2,11 @@
    story with a neutral media panel and a CTA into the store.
 
    Two forms:
-   • featureSlides() — one FULL-VIEW slide per story, meant to be spread into a
-     <StoryStack> (Home + /services): each card pins and the next slides over it,
-     so exactly one story is on stage at a time.
+   • featureSlides(withHead) — one FULL-VIEW slide per story, meant to be spread
+     into a <StoryStack> (Home + /services): each card pins and the next slides
+     over it, so exactly one story is on stage at a time. `withHead` puts the
+     "Proof, not promises" heading INSIDE the first slide (an in-flow heading
+     would bleed into the screen before the stack).
    • <FeatureShowcase compact/> — the original in-flow strip (used on /store).
    Reduced-motion safe (reveals via <Reveal>; the stack itself degrades in
    StoryStack). */
@@ -70,23 +72,13 @@ function FeatureRow({ f, flip }: { f: Featured; flip: boolean }) {
   );
 }
 
-/** The "Proof, not promises" heading as its own in-flow section — placed BEFORE
- *  the StoryStack so slides stay short enough to pin on phones too. */
-export function ShowcaseHead() {
-  return (
-    <section className="showcase-head" id="showcase">
-      <div className="container">
-        <Head />
-      </div>
-    </section>
-  );
-}
-
-/** One full-view story per panel — spread these into a StoryStack. */
-export function featureSlides() {
+/** One full-view story per panel — spread these into a StoryStack. Pass
+ *  withHead to carry the section heading on the first slide. */
+export function featureSlides(withHead = false) {
   return FEATURED.map((f, i) => (
-    <section className="showcase feature-slide" key={f.id}>
+    <section className="showcase feature-slide" key={f.id} id={i === 0 ? "showcase" : undefined}>
       <div className="container">
+        {withHead && i === 0 && <Head />}
         <FeatureRow f={f} flip={i % 2 === 1} />
       </div>
     </section>

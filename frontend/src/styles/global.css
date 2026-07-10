@@ -211,6 +211,10 @@ h2.section-title { font-size: clamp(1.5rem, 3.4vw, 2.35rem); letter-spacing: -.0
    Falls back to the hamburger (mobile-first) when JS is off or links overflow. */
 .header.nav-expanded .nav-links { display: flex; }
 .header.nav-expanded .menu-toggle { display: none; }
+/* Collapsed nav = a compact centred "dynamic island": the pill hugs its content
+   (brand + icons) instead of spanning the row and leaving dead space — the
+   header wrapper already centres it. */
+.header:not(.nav-expanded) .nav { width: fit-content; }
 /* Mobile: keep the SMARNB logo mark visible; drop the redundant login icon (it's
    in the mobile menu) and tighten the pill so everything fits. */
 @media (max-width: 560px) {
@@ -797,57 +801,100 @@ body.cursor-on .cursor-text { color: var(--accent); transition: color .15s var(-
 .pay-chip svg { width: 18px; height: 18px; color: var(--muted); flex: none; }
 
 /* ---- Story stack (scroll-story sheets) ----------------------------------- */
-/* Panels pin below the floating header; the next one slides over the previous
-   (scale/dim driven from StoryStack.tsx). Mounted on desktop only — on mobile /
-   reduced motion the component renders plain flow and none of this applies. */
+/* ONE information section per screen: every panel is a full-view "stage" that
+   pins below the floating header while the next slides up over it. Stages are
+   OPAQUE (page bg + the same ambient glow as body::before) so the incoming
+   sheet fully wipes the one beneath — at rest no two sections ever share the
+   screen. Content is centred in the stage and hugs its own height; because the
+   stage bg matches the page, spare room reads as whitespace, not as an empty
+   ballooned card (the earlier complaint with full-height *cards*). Disabled
+   only under prefers-reduced-motion (plain flow). */
 :root { --stack-top: calc(var(--header-h) + 1rem); } /* keep in sync with STACK_TOP_PX */
 .story-stack { position: relative; }
 .story-panel {
   position: sticky; top: var(--stack-top);
-  background: var(--bg-2);
+  min-height: calc(100vh - var(--stack-top));
+  min-height: calc(100svh - var(--stack-top));
+  display: grid; align-content: center;
+  background:
+    radial-gradient(60vw 60vw at 80% -10%, rgba(var(--accent-rgb),.14), transparent 60%),
+    radial-gradient(50vw 50vw at -10% 10%, rgba(var(--accent-rgb),.08), transparent 60%),
+    var(--bg);
   border-top: 1px solid var(--border);
   border-radius: var(--r-lg) var(--r-lg) 0 0;
   box-shadow: 0 -24px 48px -28px rgba(0, 0, 0, .55);
   transform-origin: top center;
-  will-change: transform;
 }
 .story-panel.no-pin { position: relative; top: auto; }
-/* Full-view showcase slides: one story on stage at a time. Content is centred in
-   the panel; svh keeps the height honest under mobile browser chrome. */
-.feature-slide .container {
-  /* Fill the viewport on small screens but CAP on large ones — uncapped 100svh
-     ballooned the card far past its content on tall monitors (a sea of empty
-     sheet). 3.5rem headroom keeps the slide inside the pin budget (StoryStack
-     skips pinning for panels taller than viewport - top - 24px). */
-  min-height: min(calc(100vh - var(--stack-top) - 3.5rem), 560px);
-  min-height: min(calc(100svh - var(--stack-top) - 3.5rem), 560px);
-  display: grid; align-content: center;
-}
-.showcase-head { padding-bottom: .4rem; }
-/* Slides carry their height via the container min-height — slim section padding
-   keeps the total inside the pin budget on every viewport. */
+/* Full-view showcase slides — the stage carries the height; the slide just
+   centres. The heading rides the FIRST slide (no in-flow head to bleed into
+   the screen before it). */
 .feature-slide { padding-block: .8rem; }
+.feature-slide .section-head { margin-bottom: clamp(1.1rem, 2.5vh, 1.8rem); }
+@media (min-width: 900px) {
+  /* Fill the stage: media stretches to the text column and grows with the
+     viewport; type steps up so a story occupies its screen instead of
+     floating in whitespace. */
+  .feature-slide .feature-row { align-items: stretch; gap: clamp(2rem, 4vw, 3.6rem); }
+  .feature-slide .feature-media { display: grid; }
+  .feature-slide .fs-media { height: 100%; min-height: clamp(280px, 40svh, 520px); }
+  .feature-slide .feature-body { display: flex; flex-direction: column; justify-content: center; }
+  .feature-slide .feature-body h3 { font-size: clamp(1.55rem, 2.4vw, 2.15rem); }
+  .feature-slide .ps p { font-size: clamp(.93rem, 1vw, 1.05rem); }
+  .feature-slide .ps-grid { gap: 1rem; }
+}
+/* Stage fill for the section sheets: cards and bands scale with the screen so a
+   full-view stage reads as content, not whitespace. (Scoped to .story-panel —
+   the store grid and other in-flow uses keep their compact sizes.) */
+.story-panel .svc-media { height: clamp(120px, 22svh, 250px); }
+.story-panel .grid.cols-3 { gap: clamp(.9rem, 1.6vw, 1.4rem); }
+.story-panel .section-head .section-title { font-size: clamp(1.55rem, 2.6vw, 2.6rem); }
+.story-panel .steps { gap: clamp(.9rem, 1.8vh, 1.5rem); margin-top: clamp(1rem, 3vh, 2rem); }
+.story-panel .step .ic { width: clamp(50px, 6.5vh, 64px); height: clamp(50px, 6.5vh, 64px); }
+.story-panel .cta-band { padding: clamp(2rem, 12svh, 6rem) clamp(1.3rem, 4vw, 3rem); }
+.story-panel .cta-band h2 { font-size: clamp(1.8rem, 4.4vw, 3rem); }
+.story-panel .project-feature .pf-visual { min-height: clamp(220px, 32svh, 400px); }
 /* Compress the slides on phones so each story FITS the viewport budget and can
    pin (taller-than-viewport panels skip pinning by design). */
 @media (max-width: 640px) {
-  .feature-slide { padding-block: .6rem; }
+  .feature-slide { padding-block: .4rem; }
+  /* the heading rides slide 1 — keep it lean so the slide stays inside the pin
+     budget on phones (the lead is decorative; the story itself is the content) */
+  .feature-slide .section-head { margin-bottom: .6rem; }
+  .feature-slide .section-head .lead { display: none; }
+  .feature-slide .section-title { font-size: 1.3rem; }
   .feature-slide .feature-row { gap: .9rem; }
-  .feature-slide .fs-media { height: 118px; }
+  .feature-slide .fs-media { height: 112px; }
   .feature-slide .feature-body h3 { font-size: 1.12rem; margin: .1rem 0 .6rem; }
   .feature-slide .ps-grid { gap: .55rem; margin-bottom: .7rem; }
-  .feature-slide .ps p { font-size: .84rem; line-height: 1.5; }
+  .feature-slide .ps p { font-size: .84rem; line-height: 1.45; }
   .feature-slide .tag-row { gap: .3rem; }
   .feature-slide .tag { font-size: .68rem; padding: .2rem .45rem; }
   .feature-slide .feature-body .btn { margin-top: .8rem; }
 }
-/* Card-shaped variant (About right column). */
-.story-stack.cards .story-panel {
+/* Card-shaped variant (About right column): the stage stays invisible (page
+   bg, no sheet chrome) and the block INSIDE carries the card — so each card
+   hugs its content, centred on its own screen beside the sticky portrait. */
+.story-stack.cards .story-panel { border: 0; border-radius: 0; box-shadow: none; }
+.story-stack.cards .story-panel > * {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--r-lg); padding: 1.5rem;
   box-shadow: var(--shadow);
 }
-.story-stack.cards .story-panel + .story-panel { margin-top: 1rem; }
 .story-stack.cards .story-panel section { padding: 0; }
+
+/* Catalogue slides (/services): the grid arrives one row per screen. */
+.svc-slide .section-head { margin-bottom: 1.2rem; }
+.svc-slide .svc-slide-note { display: block; margin-bottom: .9rem; }
+
+/* First screen on Home: hero fills the fold with the tech marquee as its base,
+   so the story stack starts on the NEXT screen instead of bleeding into it. */
+.home-fold {
+  min-height: calc(100vh - var(--header-h) - 1rem);
+  min-height: calc(100svh - var(--header-h) - 1rem);
+  display: flex; flex-direction: column;
+}
+.home-fold .hero { flex: 1; display: grid; align-content: center; }
 
 /* ---- About story (sticky portrait + stacking content) -------------------- */
 .about-story { display: grid; gap: clamp(1.25rem, 3vw, 2.2rem); align-items: start; }
