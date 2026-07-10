@@ -130,6 +130,18 @@ python test_invoicing.py      #  42   → total 331
   catalogue one ROW (3 cards) per screen + process + CTA; `/about` = sticky
   portrait + one card per screen (`cards` variant). `flush` class pulls stage 1
   under the pill on stack-opening pages.
+- The FOOTER is a full-screen stage of its own (a single-panel StoryStack in
+  `PublicLayout`) — at rest it owns the screen alone on every public page; the
+  snap scans from panel 0 and lands at each panel's real pin position.
+- `/about` is ZERO-TRAVEL: `#about` starts flush at the body padding, the
+  portrait pins at `--stack-top` (= its load position, never shifts) and the
+  card stages pin there too. Cards are **cover-only** (non-cover variants
+  counter-translate against a top-0 pin and would park cards ~78px high).
+- Hero entrance is `whileInView`, NOT mount-time `animate` — a mount animation
+  started in a background tab runs against a frozen rAF and stranded the hero
+  at opacity 0 (blank first screen). Prefer whileInView for any entrance.
+- The page scrollbar is hidden for visitors (`scrollbar-width:none` +
+  `::-webkit-scrollbar` on html); inner scrollers keep theirs.
 - Size tiers keep every stage inside its pin budget: desktop fill (≥900px
   wide), SHORT desktop (≤820px tall), phone (≤640px wide). If a stage stops
   pinning after a content change, measure `panel.offsetHeight` vs
