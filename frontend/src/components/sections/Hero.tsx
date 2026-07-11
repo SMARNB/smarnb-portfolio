@@ -1,6 +1,14 @@
 /* Hero — a proof-first thesis: a sharp value line with ONE primary action, and a
-   real product (CodeWatch) framed as the visual instead of a fake IDE mockup. One
-   restrained entrance + a gentle scroll drift; reduced-motion safe. */
+   real product (CodeWatch) framed as the visual instead of a fake IDE mockup.
+
+   The entrance is PURE CSS (.hero-enter keyframes in global.css): both JS
+   approaches stranded the first screen blank in the wild — a mount-time
+   `animate` froze against a background tab's paused rAF, and the whileInView
+   replacement still stalled its stagger orchestration on real fresh loads.
+   CSS animations complete by declaration, so the hero can never be stuck
+   hidden. Framer only drives the value-based scroll drift here (MotionValues
+   have correct initial values and no animation lifecycle). Reduced-motion is
+   handled in CSS for the entrance and inline for the drift. */
 import { useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
@@ -8,8 +16,6 @@ import { CONFIG } from "../../lib/config";
 import { Icon } from "../../lib/icons";
 import { CountUp } from "../ui/CountUp";
 import { useCatalog } from "../../context/CatalogContext";
-
-const EASE = [0.22, 1, 0.36, 1] as const;
 
 export function Hero() {
   const { services } = useCatalog();
@@ -24,42 +30,22 @@ export function Hero() {
   const visualY = useTransform(scrollYProgress, [0, 1], [0, reduce ? 0 : -28]);
   const copyOpacity = useTransform(scrollYProgress, [0, 0.9], [1, reduce ? 1 : 0.6]);
 
-  const container = {
-    hidden: {},
-    show: { transition: { staggerChildren: 0.08, delayChildren: 0.04 } },
-  };
-  const item = {
-    hidden: reduce ? {} : { opacity: 0, y: 22 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE } },
-  };
-
   return (
     <section className="hero" id="hero" aria-label="Intro" ref={ref}>
       <div className="container hero-grid">
-        {/* whileInView, NOT animate: a mount-time animation started in a
-            background tab runs against a frozen rAF and can strand the whole
-            hero at opacity 0 (blank first screen). In-view triggering only
-            fires once the page is actually visible. */}
-        <motion.div
-          className="hero-copy"
-          style={{ opacity: copyOpacity }}
-          variants={container}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.2 }}
-        >
-          <motion.span className="status-pill" variants={item}>
+        <motion.div className="hero-copy hero-enter" style={{ opacity: copyOpacity }}>
+          <span className="status-pill">
             <span className="dot" />
             <span>{CONFIG.availability}</span>
-          </motion.span>
-          <motion.h1 variants={item}>
+          </span>
+          <h1>
             I <span className="text-grad">Design, Build &amp; Automate</span> production-ready software.
-          </motion.h1>
-          <motion.p className="lead" variants={item}>
+          </h1>
+          <p className="lead">
             SaaS dashboards, Selenium &amp; OCR automation, computer-vision systems, and the
             interfaces &amp; packaging to match — taken from idea to delivery, on time.
-          </motion.p>
-          <motion.div className="hero-cta" variants={item}>
+          </p>
+          <div className="hero-cta">
             <Link className="btn btn-primary" to="/store">
               Browse services &amp; pricing
               <Icon name="arrow" size={18} />
@@ -67,8 +53,8 @@ export function Hero() {
             <Link className="btn btn-ghost" to="/work">
               See my work
             </Link>
-          </motion.div>
-          <motion.div className="hero-stats" id="heroStats" variants={item}>
+          </div>
+          <div className="hero-stats" id="heroStats">
             {CONFIG.stats.map((s, i) => {
               const val = s.auto === "services" ? services.length : s.value;
               return (
@@ -80,17 +66,10 @@ export function Hero() {
                 </div>
               );
             })}
-          </motion.div>
+          </div>
         </motion.div>
 
-        <motion.div
-          className="hero-visual"
-          style={{ y: visualY }}
-          initial={reduce ? false : { opacity: 0, y: 24, scale: 0.98 }}
-          whileInView={{ opacity: 1, y: 0, scale: 1 }}
-          viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 0.8, ease: EASE, delay: 0.12 }}
-        >
+        <motion.div className="hero-visual hero-enter-visual" style={{ y: visualY }}>
           <Link className="hero-shot" to="/projects" aria-label="See CodeWatch and other projects">
             <img
               src="/assets/img/codewatch-admin.jpg"

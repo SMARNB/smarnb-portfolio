@@ -264,6 +264,25 @@ h2.section-title { font-size: clamp(1.5rem, 3.4vw, 2.35rem); letter-spacing: -.0
 .hero-stats .stat-num { font-size: clamp(1.35rem, 2.6vw, 1.8rem); font-weight: 700; letter-spacing: -.02em; color: var(--text); }
 .hero-stats .stat-label { font-size: .8rem; color: var(--muted); }
 
+/* Hero entrance — PURE CSS. Both JS entrances stranded the first screen blank
+   in the wild (mount-time `animate` vs frozen background-tab rAF; whileInView's
+   stagger stalled on real fresh loads). Keyframes with `both` fill complete by
+   declaration, so the hero always ends visible. The visual animates OPACITY
+   only — its transform belongs to framer's scroll drift (a transform keyframe
+   with `both` fill would override that inline transform forever). */
+@keyframes hero-rise { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes hero-fade { from { opacity: 0; } to { opacity: 1; } }
+.hero-enter > * { animation: hero-rise .6s var(--ease) both; }
+.hero-enter > *:nth-child(1) { animation-delay: .04s; }
+.hero-enter > *:nth-child(2) { animation-delay: .12s; }
+.hero-enter > *:nth-child(3) { animation-delay: .2s; }
+.hero-enter > *:nth-child(4) { animation-delay: .28s; }
+.hero-enter > *:nth-child(5) { animation-delay: .36s; }
+.hero-enter-visual { animation: hero-fade .8s var(--ease) .15s both; }
+@media (prefers-reduced-motion: reduce) {
+  .hero-enter > *, .hero-enter-visual { animation: none; }
+}
+
 /* hero visual — a real product (CodeWatch) framed as proof, not a fake IDE mockup */
 .hero-visual { position: relative; }
 .hero-shot {
@@ -912,9 +931,9 @@ body.cursor-on .cursor-text { color: var(--accent); transition: color .15s var(-
    the portrait and the first card hold their load spacing. */
 .story-stack.cards .story-panel {
   border: 0; border-radius: 0; box-shadow: none;
-  top: var(--stack-top);
-  min-height: calc(100vh - var(--stack-top));
-  min-height: calc(100svh - var(--stack-top));
+  top: calc(var(--stack-top) + var(--about-gap));
+  min-height: calc(100vh - var(--stack-top) - var(--about-gap));
+  min-height: calc(100svh - var(--stack-top) - var(--about-gap));
   padding-top: .25rem;
 }
 .story-stack.cards .story-panel > * {
@@ -970,14 +989,17 @@ body.cursor-on .cursor-text { color: var(--accent); transition: color .15s var(-
 }
 
 /* ---- About story (sticky portrait + stacking content) -------------------- */
-/* Zero-travel page: content begins exactly where it pins (portrait sticky at
-   --stack-top == its load position; card stages likewise), so scrolling never
-   shifts the image or the first card upward. */
-#about { padding-block: 0 1rem; }
+/* Zero-travel page: content begins exactly where it pins, so scrolling never
+   shifts the image or the first card upward. --about-gap breathes 50px between
+   the floating pill and the content (it felt like it budged into the navbar);
+   the sticky pins move by the SAME amount as the load padding, so the
+   zero-travel invariant holds: load position == pin position. */
+:root { --about-gap: 50px; }
+#about { padding-block: var(--about-gap); }
 .about-story { display: grid; gap: clamp(1.25rem, 3vw, 2.2rem); align-items: start; }
 @media (min-width: 900px) {
   .about-story { grid-template-columns: .85fr 1.15fr; }
-  .about-story .about-photo-col { position: sticky; top: var(--stack-top); }
+  .about-story .about-photo-col { position: sticky; top: calc(var(--stack-top) + var(--about-gap)); }
 }
 .about-cv { margin-top: 1rem; display: flex; }
 .about-cv .btn { width: 100%; }

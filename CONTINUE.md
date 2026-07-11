@@ -137,9 +137,18 @@ python test_invoicing.py      #  42   → total 331
   portrait pins at `--stack-top` (= its load position, never shifts) and the
   card stages pin there too. Cards are **cover-only** (non-cover variants
   counter-translate against a top-0 pin and would park cards ~78px high).
-- Hero entrance is `whileInView`, NOT mount-time `animate` — a mount animation
-  started in a background tab runs against a frozen rAF and stranded the hero
-  at opacity 0 (blank first screen). Prefer whileInView for any entrance.
+- Hero entrance is PURE CSS (`.hero-enter` keyframes) — BOTH JS approaches
+  stranded the first screen blank in the wild (mount-time `animate` vs frozen
+  background-tab rAF; whileInView's stagger stalled on real fresh loads too).
+  CSS keyframes with `both` fill complete by declaration. RULE: first-screen
+  entrances must be CSS; framer is fine for scroll-driven MotionValues and
+  below-the-fold whileInView reveals. (The visual's keyframe animates opacity
+  ONLY — a transform keyframe with `both` fill would permanently override
+  framer's inline scroll-drift transform.)
+- `/about` breathes via `--about-gap` (50px): `#about` padding AND the sticky
+  pins (portrait + card stages) shift by the same amount, so the zero-travel
+  invariant (load position == pin position) still holds; stage min-heights
+  subtract the gap.
 - The page scrollbar is hidden for visitors (`scrollbar-width:none` +
   `::-webkit-scrollbar` on html); inner scrollers keep theirs.
 - Size tiers keep every stage inside its pin budget: desktop fill (≥900px
