@@ -23,11 +23,9 @@ when ``background=False`` (and always synchronous under the test capture hook).
 import base64
 import json
 import re
-import smtplib
-import ssl
+import asyncio
+import httpx
 import threading
-from email.message import EmailMessage
-from email.utils import formataddr
 
 from . import config, models
 
@@ -85,13 +83,13 @@ def save_settings(db, data: dict) -> dict:
 # --- Transport state ------------------------------------------------------------
 
 def transport() -> str:
-    """Which transport would be used: 'test' | 'sendgrid' | 'smtp' | ''(off)."""
+    """Which transport would be used: 'test' | 'sendgrid' | 'brevo' | ''(off)."""
     if _test_capture:
         return "test"
     if config.SENDGRID_API_KEY:
         return "sendgrid"
-    if config.SMTP_HOST:
-        return "smtp"
+    if config.BREVO_API_KEY:
+        return "brevo"
     return ""
 
 
@@ -115,13 +113,11 @@ def status(db) -> dict:
         "enabled": enabled(db),
         "transport": transport() or "none",
         "sendgrid_configured": bool(config.SENDGRID_API_KEY),
-        "smtp_configured": bool(config.SMTP_HOST),
-        "smtp_host": (config.SMTP_HOST[:3] + "…" if config.SMTP_HOST else ""),
+        "brevo_configured": bool(config.BREVO_API_KEY),
         "env_from": config.EMAIL_FROM or "",
         "settings": doc,
         "note": ("Render blocks outbound SMTP ports, so on the live site use the "
-                 "SendGrid transport (SENDGRID_API_KEY + EMAIL_FROM env vars). "
-                 "SMTP works locally / on other hosts."),
+                 "SendGrid or Brevo transport (SENDGRID_API_KEY/BREVO_API_KEY + EMAIL_FROM env vars)."),
     }
 
 
@@ -162,39 +158,36 @@ def _send_sendgrid(msg: dict) -> bool:
         return 200 <= getattr(resp, "status", 200) < 300
 
 
-def _send_smtp(msg: dict) -> bool:
-    em = EmailMessage()
-    em["From"] = formataddr((msg["from_name"], msg["from_email"]))
-    em["To"] = msg["to"]
-    em["Subject"] = msg["subject"]
-    if msg.get("reply_to"):
-        em["Reply-To"] = msg["reply_to"]
-    recipients = [msg["to"]]
+async def _send_brevo(msg: dict) -> bool:
+    payload = {
+        "sender": {"email": msg["from_email"], "name": msg["from_name"]},
+        "to": [{"email": msg["to"]}],
+        "subject": msg["subject"],
+        "htmlContent": msg["html"],
+        "textContent": msg["text"],
+    }
     if msg.get("bcc") and msg["bcc"].lower() != msg["to"].lower():
-        recipients.append(msg["bcc"])  # bcc: extra RCPT, not a header
-    em.set_content(msg["text"])
-    em.add_alternative(msg["html"], subtype="html")
-    for (name, blob, mime) in msg.get("attachments") or []:
-        maintype, _, subtype = (mime or "application/octet-stream").partition("/")
-        em.add_attachment(blob, maintype=maintype, subtype=subtype or "octet-stream", filename=name)
-
-    if config.SMTP_SECURITY == "ssl":
-        server = smtplib.SMTP_SSL(config.SMTP_HOST, config.SMTP_PORT, timeout=20,
-                                  context=ssl.create_default_context())
-    else:
-        server = smtplib.SMTP(config.SMTP_HOST, config.SMTP_PORT, timeout=20)
-    try:
-        if config.SMTP_SECURITY == "tls":
-            server.starttls(context=ssl.create_default_context())
-        if config.SMTP_USER:
-            server.login(config.SMTP_USER, config.SMTP_PASS)
-        server.send_message(em, to_addrs=recipients)
-    finally:
-        try:
-            server.quit()
-        except Exception:
-            pass
-    return True
+        payload["bcc"] = [{"email": msg["bcc"]}]
+    if msg.get("reply_to"):
+        payload["replyTo"] = {"email": msg["reply_to"]}
+    if msg.get("attachments"):
+        payload["attachment"] = [
+            {"content": base64.b64encode(blob).decode("ascii"), "name": name}
+            for (name, blob, mime) in msg["attachments"]
+        ]
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            "https://api.brevo.com/v3/smtp/email",
+            json=payload,
+            headers={
+                "api-key": config.BREVO_API_KEY,
+                "accept": "application/json",
+                "content-type": "application/json"
+            },
+            timeout=20.0
+        )
+        resp.raise_for_status()
+        return True
 
 
 def _log(db, kind: str, to: str, subject: str, ok: bool, error: str = ""):
@@ -221,8 +214,8 @@ def _deliver(msg: dict) -> bool:
         t = transport()
         if t == "sendgrid":
             return _send_sendgrid(msg)
-        if t == "smtp":
-            return _send_smtp(msg)
+        if t == "brevo":
+            return asyncio.run(_send_brevo(msg))
         _last_error = "no email transport configured"
         return False
     except Exception as e:

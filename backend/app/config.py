@@ -147,23 +147,17 @@ SAFEPAY_EMBED_BASE = (os.environ.get("SAFEPAY_EMBED_BASE", "")
 #   • SendGrid HTTPS API — REQUIRED on Render (Render blocks outbound SMTP ports
 #     25/465/587 on every plan, so raw SMTP cannot leave a Render instance).
 #     Free tier ≈100 mails/day; EMAIL_FROM must be a SendGrid-verified sender.
-#   • Generic SMTP — works locally / on any host that allows SMTP (kept so the
-#     email + invoice module is reusable in other projects). For Gmail use an App
-#     Password (myaccount.google.com/apppasswords) with smtp.gmail.com:587 tls.
+#   • Brevo REST API — works locally / on Render via HTTPS API instead of SMTP.
 # UNTIL a transport + EMAIL_FROM are set, ALL email stays INACTIVE and the site
 # behaves exactly as before — nothing breaks, nothing sends.
 # The SENDER shown to customers (name / from / reply-to) can be overridden later
 # from /admin → Email without code changes (stored in the DB; see emailer.py) —
 # e.g. when the custom domain arrives, update it there.
 SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
+BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 EMAIL_FROM = os.environ.get("EMAIL_FROM", "")
 EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME", ADMIN_NAME or "SMARNB")
 EMAIL_REPLY_TO = os.environ.get("EMAIL_REPLY_TO", "")
-SMTP_HOST = os.environ.get("SMTP_HOST", "")
-SMTP_PORT = int(os.environ.get("SMTP_PORT", "587") or "587")
-SMTP_USER = os.environ.get("SMTP_USER", "")
-SMTP_PASS = os.environ.get("SMTP_PASS", "")
-SMTP_SECURITY = (os.environ.get("SMTP_SECURITY", "tls") or "tls").lower()  # tls | ssl | none
 # Where owner copies of invoices + low-stock alerts go.
 OWNER_EMAIL = os.environ.get("OWNER_EMAIL", ADMIN_EMAIL)
 EMAIL_VERIFY_TTL_MIN = int(os.environ.get("EMAIL_VERIFY_TTL_MIN", "15"))

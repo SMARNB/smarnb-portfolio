@@ -19,3 +19,4 @@ dnspython>=2.6
 fpdf2>=2.7
 # Optional — uncomment to turn on Stripe card payments (then set STRIPE_SECRET_KEY):
 # stripe>=9.0
+httpx>=0.27.0
