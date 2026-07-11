@@ -159,8 +159,13 @@ def _send_sendgrid(msg: dict) -> bool:
 
 
 async def _send_brevo(msg: dict) -> bool:
+    import email.utils
+    parsed_name, parsed_email = email.utils.parseaddr(msg["from_email"])
+    sender_email = parsed_email if parsed_email else msg["from_email"]
+    sender_name = parsed_name if parsed_name else msg["from_name"]
+
     payload = {
-        "sender": {"email": msg["from_email"], "name": msg["from_name"]},
+        "sender": {"email": sender_email, "name": sender_name},
         "to": [{"email": msg["to"]}],
         "subject": msg["subject"],
         "htmlContent": msg["html"],
