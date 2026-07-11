@@ -22,14 +22,17 @@ export function Marquee() {
   // Four identical groups: the track animates by exactly one group (-25%), so the
   // loop is seamless AND never leaves an empty gap on wide screens (where a single
   // group is narrower than the viewport). Each group carries its own trailing gap.
+  // .marquee-clip fades the text at the edges without masking the pulse lines.
   return (
     <div className="marquee" aria-label="Tools and technologies">
-      <div className="marquee-track" id="marqueeTrack">
-        {[0, 1, 2, 3].map((g) => (
-          <div className="marquee-group" key={g} aria-hidden={g > 0}>
-            {items}
-          </div>
-        ))}
+      <div className="marquee-clip">
+        <div className="marquee-track" id="marqueeTrack">
+          {[0, 1, 2, 3].map((g) => (
+            <div className="marquee-group" key={g} aria-hidden={g > 0}>
+              {items}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

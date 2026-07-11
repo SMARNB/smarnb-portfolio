@@ -305,20 +305,40 @@ h2.section-title { font-size: clamp(1.5rem, 3.4vw, 2.35rem); letter-spacing: -.0
   box-shadow: 0 6px 20px -6px rgba(var(--accent-rgb),.7);
 }
 
-/* ---- Marquee / tech strip ----------------------------------------------- */
-.marquee { position: relative; overflow: hidden; -webkit-mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); border-block: 1px solid var(--border); padding: .75rem 0; }
-/* Animated "lighting" on the top + bottom edges: an indigo→green light with a
-   bright core sweeps each border. Top runs L→R while bottom mirrors it R→L in the
-   same phase (identical duration, no offset), so the two are symmetrical. */
+/* ---- Marquee / tech strip ------------------------------------------------ */
+/* Site chrome, like the nav pill: a FIXED bar at the viewport bottom, visible
+   on every public page regardless of which story card is on stage. */
+:root { --marquee-h: 40px; }
+.marquee {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 95;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--bg) 84%, transparent);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4); backdrop-filter: blur(12px) saturate(1.4);
+  border-top: 1px solid var(--border);
+  padding: .6rem 0;
+}
+/* Edge lights: BOTH lines carry the light across their full width and breathe
+   in sync — lighting up and dimming down together (no travelling sweeps from
+   opposite sides). */
 .marquee::before, .marquee::after {
   content: ""; position: absolute; left: 0; right: 0; height: 2px; z-index: 2; pointer-events: none;
-  background: linear-gradient(90deg, transparent, var(--accent) 28%, #c7d2fe 50%, var(--ok) 72%, transparent);
-  background-size: 46% 100%; background-repeat: no-repeat;
+  background: linear-gradient(90deg, transparent, var(--accent) 18%, #c7d2fe 38%, var(--ok) 62%, var(--accent) 82%, transparent);
   filter: drop-shadow(0 0 5px rgba(var(--accent-rgb), .7)) drop-shadow(0 0 9px rgba(52, 211, 153, .35));
+  animation: marquee-glow 3.4s ease-in-out infinite;
 }
-.marquee::before { top: -1px; animation: marquee-light 5.2s linear infinite; }
-.marquee::after { bottom: -1px; animation: marquee-light 5.2s linear infinite reverse; }
-@keyframes marquee-light { 0% { background-position: -60% 0; } 100% { background-position: 160% 0; } }
+.marquee::before { top: 0; }
+.marquee::after { bottom: 0; }
+@keyframes marquee-glow { 0%, 100% { opacity: .28; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .marquee::before, .marquee::after { animation: none; opacity: .55; }
+}
+/* The edge-fade mask lives on a viewport-sized CLIP wrapper (text only), so
+   the pulse lines above run the full viewport width. */
+.marquee-clip {
+  overflow: hidden;
+  -webkit-mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
 .marquee-track { display: flex; width: max-content; animation: scrollx 32s linear infinite; }
 .marquee-group { display: flex; gap: 3rem; padding-right: 3rem; flex: none; }
 .marquee:hover .marquee-track { animation-play-state: paused; }
@@ -329,12 +349,10 @@ h2.section-title { font-size: clamp(1.5rem, 3.4vw, 2.35rem); letter-spacing: -.0
   section { padding-block: clamp(1.4rem, 6vw, 2.2rem); }
   .grid { gap: 1.25rem; }
   .card { padding: 1.35rem; }
-  /* static, wrapped tech strip: stop scrolling + show a single group only */
-  .marquee { -webkit-mask: none; mask: none; padding: .7rem 0; }
-  .marquee-track { animation: none; width: auto; }
-  .marquee-group:nth-child(n+2) { display: none; }
-  .marquee-group { flex-wrap: wrap; justify-content: center; padding-right: 0; gap: .45rem 1rem; }
-  .marquee-track span { font-size: .9rem; }
+  /* the fixed tech bar stays a single scrolling line on phones (it is site
+     chrome now — a wrapped strip would eat the small screen) */
+  .marquee { padding: .5rem 0; }
+  .marquee-track span { font-size: .74rem; }
   /* lead with the two most important trust stats only */
   .hero-stats .stat:nth-child(n+3) { display: none; }
   /* drop purely-decorative chrome (chat launcher stays) */
@@ -740,7 +758,7 @@ h2.section-title { font-size: clamp(1.5rem, 3.4vw, 2.35rem); letter-spacing: -.0
 .toast.leaving { animation: toastOut .3s var(--ease) forwards; }
 
 /* ---- Back to top --------------------------------------------------------- */
-.to-top { position: fixed; bottom: 1.2rem; right: 1.2rem; z-index: 90; width: 48px; height: 48px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border-strong); color: var(--text); display: grid; place-items: center; box-shadow: var(--shadow); opacity: 0; visibility: hidden; transform: translateY(10px); transition: .3s var(--ease); }
+.to-top { position: fixed; bottom: calc(var(--marquee-h) + .8rem); right: 1.2rem; z-index: 90; width: 48px; height: 48px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border-strong); color: var(--text); display: grid; place-items: center; box-shadow: var(--shadow); opacity: 0; visibility: hidden; transform: translateY(10px); transition: .3s var(--ease); }
 .to-top.show { opacity: 1; visibility: visible; transform: none; }
 .to-top:hover { border-color: var(--accent); transform: translateY(-3px); }
 
@@ -837,20 +855,21 @@ body.cursor-on .cursor-text { color: var(--accent); transition: color .15s var(-
 .story-stack { position: relative; }
 .story-panel {
   /* Stages pin at the VERY top (the pill floats over them) and fill the whole
-     viewport — no strip of the previous sheet ever peeks around the header. */
+     viewport — no strip of the previous sheet ever peeks around the header.
+     NO sheet chrome (radius/border/shadow): a pinned sheet's top edge sits at
+     the exact viewport top, where rounded corners + a border line read as a
+     visible "separation of screen and cards". Identical stage backgrounds make
+     the cover seamless; the recede-scale supplies the depth cue. */
   position: sticky; top: 0;
   min-height: 100vh;
   min-height: 100svh;
   display: grid; align-content: center;
   padding-top: calc(var(--header-h) + 1rem); /* centred content clears the pill */
-  padding-bottom: .9rem;
+  padding-bottom: calc(var(--marquee-h) + .4rem); /* …and the fixed tech bar */
   background:
     radial-gradient(60vw 60vw at 80% -10%, rgba(var(--accent-rgb),.14), transparent 60%),
     radial-gradient(50vw 50vw at -10% 10%, rgba(var(--accent-rgb),.08), transparent 60%),
     var(--bg);
-  border-top: 1px solid var(--border);
-  border-radius: var(--r-lg) var(--r-lg) 0 0;
-  box-shadow: 0 -24px 48px -28px rgba(0, 0, 0, .55);
   transform-origin: top center;
 }
 .story-panel.no-pin { position: relative; top: auto; }
@@ -903,8 +922,11 @@ body.cursor-on .cursor-text { color: var(--accent); transition: color .15s var(-
 /* Compress the slides on phones so each story FITS the viewport budget and can
    pin (taller-than-viewport panels skip pinning by design). */
 @media (max-width: 640px) {
-  /* the phone pill is lower-profile than the desktop one — reclaim stage padding */
+  /* the phone pill + tech bar are lower-profile than desktop — reclaim stage padding */
+  :root { --marquee-h: 36px; }
   .story-panel { padding-top: calc(var(--header-h) + .4rem); }
+  /* slide-1's heading sheds its eyebrow on phones (the title carries it) */
+  .feature-slide .section-head .eyebrow { display: none; }
   .feature-slide { padding-block: .3rem; }
   /* one line of stack tags is plenty on a phone */
   .feature-slide .tag-row .tag:nth-child(n+5) { display: none; }
@@ -930,7 +952,6 @@ body.cursor-on .cursor-text { color: var(--accent); transition: color .15s var(-
    starts flush at the body padding), so nothing shifts upward on scroll —
    the portrait and the first card hold their load spacing. */
 .story-stack.cards .story-panel {
-  border: 0; border-radius: 0; box-shadow: none;
   top: calc(var(--stack-top) + var(--about-gap));
   min-height: calc(100vh - var(--stack-top) - var(--about-gap));
   min-height: calc(100svh - var(--stack-top) - var(--about-gap));
@@ -947,12 +968,12 @@ body.cursor-on .cursor-text { color: var(--accent); transition: color .15s var(-
 .svc-slide .section-head { margin-bottom: 1.2rem; }
 .svc-slide .svc-slide-note { display: block; margin-bottom: .9rem; }
 
-/* First screen on Home: the hero + tech marquee are the stack's FIRST stage
-   (they recede under slide 1 like every other section). The fold fills the
-   stage's content box so the marquee sits at the fold's base. */
+/* First screen on Home: the hero is the stack's FIRST stage (it recedes under
+   slide 1 like every other section). The fold fills the stage's content box —
+   the tech bar is fixed site chrome now, not part of the fold. */
 .home-fold {
-  min-height: calc(100vh - var(--header-h) - 2rem);
-  min-height: calc(100svh - var(--header-h) - 2rem);
+  min-height: calc(100vh - var(--header-h) - 1.4rem - var(--marquee-h));
+  min-height: calc(100svh - var(--header-h) - 1.4rem - var(--marquee-h));
   display: flex; flex-direction: column;
 }
 .home-fold .hero { flex: 1; display: grid; align-content: center; }

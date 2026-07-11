@@ -151,6 +151,14 @@ python test_invoicing.py      #  42   → total 331
   subtract the gap.
 - The page scrollbar is hidden for visitors (`scrollbar-width:none` +
   `::-webkit-scrollbar` on html); inner scrollers keep theirs.
+- Sheets have NO chrome (no radius/border/shadow) — pinned sheets sit at the
+  exact viewport top where corners/borders read as a visible seam; identical
+  stage backgrounds keep covers seamless (the recede-scale is the depth cue).
+- The tech MARQUEE is fixed site chrome at the viewport bottom (rendered in
+  PublicLayout, z-95, `--marquee-h`; stages pad their bottom by it; the ≤640
+  tier re-declares the token at 36px). Its edge lights are full-width on BOTH
+  lines and PULSE in sync (`marquee-glow` opacity breathing — no travelling
+  sweeps).
 - Size tiers keep every stage inside its pin budget: desktop fill (≥900px
   wide), SHORT desktop (≤820px tall), phone (≤640px wide). If a stage stops
   pinning after a content change, measure `panel.offsetHeight` vs

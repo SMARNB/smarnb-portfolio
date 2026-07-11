@@ -15,6 +15,7 @@ import { scrollToHash, scrollToTarget } from "../../lib/lenis";
 import { Header } from "./Header";
 import { MobileMenu } from "./MobileMenu";
 import { Footer } from "./Footer";
+import { Marquee } from "../sections/staticSections";
 import { BackToTop } from "./BackToTop";
 import { StoryStack } from "../ui/StoryStack";
 import { CartDrawer } from "../panels/CartDrawer";
@@ -75,6 +76,9 @@ function Shell() {
       <StoryStack className="footer-stage">
         <Footer />
       </StoryStack>
+      {/* Fixed tech bar at the viewport bottom — site chrome like the nav pill,
+          visible on every public page regardless of which card is on stage. */}
+      <Marquee />
       <BackToTop />
 
       {/* Overlay + panels */}

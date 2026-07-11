@@ -9,7 +9,7 @@ import { ServicesTeaser } from "../components/sections/ServicesTeaser";
 import { Work } from "../components/sections/Work";
 import { PersonalProjects } from "../components/sections/PersonalProjects";
 import { BlogList } from "./BlogList";
-import { Marquee, CtaBand } from "../components/sections/staticSections";
+import { CtaBand } from "../components/sections/staticSections";
 import { StoryStack } from "../components/ui/StoryStack";
 
 export function Home() {
@@ -18,7 +18,6 @@ export function Home() {
       <StoryStack className="flush">
         <div className="home-fold">
           <Hero />
-          <Marquee />
         </div>
         {featureSlides(true)}
         <ServicesTeaser limit={3} />
