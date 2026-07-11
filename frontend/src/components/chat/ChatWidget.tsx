@@ -4,6 +4,7 @@
    for replies, and degrades to WhatsApp/email when the backend is unreachable.
    A single instance lives in the layout (no double-mount, no stacked pollers). */
 import { useCallback, useEffect, useRef, useState } from "react";
+import { motion, useMotionValue } from "framer-motion";
 import { CONFIG } from "../../lib/config";
 import { API } from "../../lib/api";
 import type { ApiError, ChatMessage, ChatThread } from "../../lib/types";
@@ -94,6 +95,18 @@ function ChatWidgetInner() {
   const [view, setView] = useState<"chat" | "list">("chat");
   const [history, setHistory] = useState<ClientChatSummary[] | null>(null);
   const loggedIn = !!API.getUser();
+
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.innerWidth <= 480
+  );
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 480);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Mutable refs (don't trigger re-render; mirror the vanilla `S` object).
   const conv = useRef<string | null>(null);
@@ -365,12 +378,25 @@ function ChatWidgetInner() {
 
   return (
     <>
-      <button className={`chat-launcher${open ? " open" : ""}`} aria-label="Open chat" onClick={toggle}>
+      <motion.button 
+        className={`chat-launcher${open ? " open" : ""}`} 
+        aria-label="Open chat" 
+        onClick={toggle}
+        drag
+        dragMomentum={false}
+        style={{ x, y }}
+      >
         {open ? ICON_CLOSE : ICON_CHAT}
         {!open && unread > 0 && <span className="chat-dot">{unread > 9 ? "9+" : unread}</span>}
-      </button>
+      </motion.button>
 
-      <div className="chat-panel" role="dialog" aria-label="Chat" hidden={!open}>
+      <motion.div 
+        className="chat-panel" 
+        role="dialog" 
+        aria-label="Chat" 
+        hidden={!open}
+        style={isMobile ? undefined : { x, y }}
+      >
         <div className="chat-head">
           <div className="chat-head-main">
             <span className="chat-avatar">{CONFIG.initials || "AI"}</span>
@@ -530,7 +556,7 @@ function ChatWidgetInner() {
         <div className="chat-foot">Files: images &amp; PDF only · powered by {CONFIG.brand || "us"}</div>
           </>
         )}
-      </div>
+      </motion.div>
     </>
   );
 }

@@ -7,7 +7,7 @@
 .chat-launcher {
   /* Sits above the "back to top" button (which appears on scroll at bottom:1.2rem,
      48px tall) so the two never overlap. */
-  position: fixed; right: 22px; bottom: 80px; z-index: 1200;
+  position: fixed; right: 22px; bottom: 110px; z-index: 1200;
   width: 60px; height: 60px; border-radius: var(--r-pill);
   display: grid; place-items: center; cursor: pointer;
   color: #fff; border: none; background: var(--grad);
@@ -26,7 +26,7 @@
 
 /* ---- Panel --------------------------------------------------------------- */
 .chat-panel {
-  position: fixed; right: 22px; bottom: 150px; z-index: 1200;
+  position: fixed; right: 22px; bottom: 180px; z-index: 1200;
   width: 380px; max-width: calc(100vw - 32px); height: 560px; max-height: calc(100vh - 120px);
   display: flex; flex-direction: column; overflow: hidden;
   background: var(--surface); color: var(--text);
@@ -131,7 +131,7 @@
 /* ---- Mobile: full screen ------------------------------------------------- */
 @media (max-width: 480px) {
   .chat-panel { right: 0; bottom: 0; width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; }
-  .chat-launcher { right: 16px; bottom: 78px; }
+  .chat-launcher { right: 16px; bottom: 108px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .chat-panel, .chat-launcher, .chat-chip, .chat-toast { animation: none !important; transition: none !important; }
