@@ -17,6 +17,10 @@ if os.path.exists(_DB):
 os.environ["DATABASE_URL"] = "sqlite:///" + _DB
 os.environ["ADMIN_EMAIL"] = "admin@example.com"
 os.environ["ADMIN_PASSWORD"] = "test-admin-123"
+# Neutralize any real email creds from backend/.env — config's dotenv setdefault
+# would refill popped keys, so set them to empty instead.
+for _var in ("SENDGRID_API_KEY", "BREVO_API_KEY", "SMTP_HOST", "EMAIL_FROM"):
+    os.environ[_var] = ""
 
 from fastapi.testclient import TestClient  # noqa: E402
 from app.main import app  # noqa: E402

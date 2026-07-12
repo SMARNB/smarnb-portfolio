@@ -17,6 +17,10 @@ export interface CartItem {
   price: number;
   delivery: string;
   qty: number;
+  // Work-scope snapshot (package summary + "what you get" bullets), captured at
+  // add-to-cart so the invoice email describes exactly what was purchased.
+  summary?: string;
+  scope?: string[];
 }
 
 export interface LocalOrder {
@@ -176,7 +180,10 @@ export function placeOrder(customer: Customer): LocalOrder {
 export async function placeOrderViaApi(customer: Customer): Promise<LocalOrder> {
   const base = CONFIG.apiBase || "";
   const snapshot = getCart();
-  const items = snapshot.map((i) => ({ service: i.service, tier: i.tier, price: i.price, qty: i.qty }));
+  const items = snapshot.map((i) => ({
+    service: i.service, tier: i.tier, price: i.price, qty: i.qty,
+    summary: i.summary || "", delivery: i.delivery || "", scope: i.scope || [],
+  }));
   const r = await fetch(base + "/api/orders", {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },

@@ -34,7 +34,7 @@ def _verification_active() -> bool:
 
 def _send_code(email: str, code: str) -> bool:
     ttl = config.EMAIL_VERIFY_TTL_MIN
-    brand = config.TOTP_ISSUER
+    brand = config.EMAIL_FROM_NAME or config.TOTP_ISSUER
     html = (
         '<div style="font-family:Inter,Segoe UI,Arial,sans-serif;max-width:480px;margin:auto;'
         'padding:28px;border:1px solid #e6e8ee;border-radius:14px;color:#0f172a">'

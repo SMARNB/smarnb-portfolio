@@ -17,8 +17,10 @@ os.environ["DATABASE_URL"] = "sqlite:///" + _DB
 os.environ["ADMIN_EMAIL"] = "admin@example.com"
 os.environ["ADMIN_PASSWORD"] = "test-admin-123"
 os.environ["OWNER_EMAIL"] = "owner@example.com"
-for var in ("SENDGRID_API_KEY", "SMTP_HOST", "EMAIL_FROM"):
-    os.environ.pop(var, None)
+# Set to empty (not pop) — config's dotenv setdefault would refill popped keys
+# from a real backend/.env.
+for var in ("SENDGRID_API_KEY", "BREVO_API_KEY", "SMTP_HOST", "EMAIL_FROM"):
+    os.environ[var] = ""
 
 from fastapi.testclient import TestClient  # noqa: E402
 from app.main import app  # noqa: E402
@@ -149,6 +151,28 @@ with TestClient(app) as c:
     check("invoice voided", r.json()["status"] == "void")
     check("void invoice hides the public PDF",
           c.get("/api/orders/%s/invoice.pdf" % o2["public_id"]).status_code == 404)
+
+    print("== Invoice email carries the work scope + the client's brief ==")
+    sent.clear()
+    o4 = c.post("/api/orders", json={
+        "customer_name": "Zara Khan", "customer_email": "zara@example.com",
+        "notes": "Brand: Zaralux. Need product catalog, cart, Stripe checkout and an admin panel.",
+        "items": [{"service": "E-commerce Store", "tier": "Premium", "price": 1200, "qty": 1,
+                   "summary": "A full online store, ready to launch.",
+                   "delivery": "21 days",
+                   "scope": ["Product catalog & cart", "Stripe checkout", "Admin dashboard"]}],
+    }).json()
+    r = c.post("/api/admin/orders/%s/invoice/send" % o4["public_id"], headers=AH)
+    html = sent[-1]["html"] if sent else ""
+    check("scope section present", "What you're getting" in html)
+    check("package summary rendered", "A full online store, ready to launch." in html)
+    check("scope bullets rendered",
+          "Stripe checkout" in html and "Admin dashboard" in html)
+    check("client brief echoed back",
+          "Your project brief" in html and "Zaralux" in html)
+    check("greets the client by name", "Hi Zara Khan," in html)
+    check("html-escapes the brief (no raw injection)",
+          "<script" not in html.lower())
 
     print("== Promo campaign + unsubscribe ==")
     c.post("/api/auth/register", json={"email": "clienta@example.com", "password": "pass12345",

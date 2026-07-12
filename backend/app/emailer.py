@@ -45,7 +45,7 @@ def last_error() -> str:
 
 def default_settings() -> dict:
     return {
-        "from_name": config.EMAIL_FROM_NAME or "SMARNB",
+        "from_name": config.EMAIL_FROM_NAME or "Muhammad Ali Raza",
         "from_email": config.EMAIL_FROM or "",
         "reply_to": config.EMAIL_REPLY_TO or "",
         "bcc_owner": True,          # send the owner a copy of every invoice

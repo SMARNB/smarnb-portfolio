@@ -174,33 +174,51 @@ scrolls never move; verify with DOM geometry (`getBoundingClientRect`), not
 pixels. `body`/`html` must keep `overflow-x: clip` (NOT `hidden` — hidden
 silently kills every `position: sticky`).
 
-## 8. Email / SMTP status (2026-07-10)
+## 8. Email status (updated 2026-07-13 — LIVE via Brevo)
 
-`backend/app/emailer.py`: two transports — SendGrid HTTPS (REQUIRED on Render:
-Render blocks outbound SMTP ports on every plan) + generic SMTP (works
-locally/elsewhere). Everything is INERT until creds exist; the SMTP transport
-was proven end-to-end against a local sink (correct From/To/HTML/PDF attach).
-**To go live:** create a free SendGrid account, verify shahjee975@gmail.com as
-single sender, then in Render → Environment set `SENDGRID_API_KEY` +
-`EMAIL_FROM=shahjee975@gmail.com` (optional `OWNER_EMAIL`). Invoices, receipts,
-verification codes and promos switch on automatically. Test from
-`/admin → Email → Send test email` (`POST /api/admin/email/test` → owner).
-For local Gmail SMTP tests: `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`,
-`SMTP_SECURITY=tls`, `SMTP_USER=shahjee975@gmail.com`, `SMTP_PASS=<Gmail App
-Password>` (needs 2-Step Verification; a normal password will NOT work).
+Two modules, both transport-agnostic (SendGrid HTTPS **or** Brevo REST, first
+configured wins; Render blocks outbound SMTP on every plan so HTTPS is required):
+- `backend/app/emailer.py` — invoices, receipts, promo campaigns (+ generic SMTP
+  for local).
+- `backend/app/email_send.py` — verification / security codes. Its `enabled()` is
+  ALSO the switch that turns on the **mandatory signup+verify order gate**
+  (`routers/orders.py`): once email is configured, anonymous `POST /api/orders`
+  → 401 and unverified → 403, so every order carries a verified name/email.
+
+Owner uses **Brevo** (free tier 300/day), sending from **shahjee975@gmail.com**
+(name "Muhammad Ali Raza") until a domain is bought. Locally `backend/.env` has
+`BREVO_API_KEY` + `EMAIL_FROM=shahjee975@gmail.com` + `EMAIL_FROM_NAME=Muhammad
+Ali Raza`; test email + invoices verified delivering 2026-07-13.
+**To turn it on for the LIVE site:** set those three vars in Render → Environment
+(this also activates mandatory signup for real visitors). Test from
+`/admin → Email → Send test email`.
+
+Invoice email + PDF (`invoicing.py`) are branded with the **favicon logo**
+(`frontend/public/email-logo.png`, served at `/email-logo.png`) — NO "SMARNB"
+wordmark. Email = "Hi {client}," + warm welcome + **What you're getting**
+(per-service price/delivery/work-scope) + **Your project brief** (echoes the
+client's checkout `notes`) + invoice table + Track button + "Warm regards,
+Muhammad Ali Raza". Header text is pinned `#fffffe !important` for dark-mode
+legibility. The work-scope is snapshotted onto each order item at checkout
+(`OrderItem.summary/scope/delivery`; Pricing.tsx passes `p.summary`/`p.features`).
 
 ## 9. Open items (top = next)
 
-1. **Safepay end-to-end in a real browser:** embedded checkout with test card
-   `4242…`, confirm the webhook marks the order paid (Safepay dashboard →
-   Webhook Logs), then delete the ALR-* test orders in `/admin → Orders`.
-2. **Go-live payments:** production Safepay keys + `SAFEPAY_ENVIRONMENT=production`
-   + production webhook secret (Render env).
-3. **Email go-live:** SendGrid key + `EMAIL_FROM` (see §8).
+1. **iPhone animation lag:** scroll-story animations lag badly on iPhone ("feels
+   like something is crashing" — likely WebKit compositor pressure). Suspects:
+   backdrop-filter/blur glows, the infinite `max-content` marquee track,
+   marquee-glow pulse. Not yet investigated.
+2. **Safepay — ON HOLD (owner):** blocked until the company is registered +
+   trademark + business name decided (owner now has a partner; business won't be
+   under his personal name). Do NOT push Safepay go-live until he confirms. When
+   unblocked: end-to-end test card `4242…` → webhook marks order paid → delete
+   ALR-* test orders; then production keys + `SAFEPAY_ENVIRONMENT=production`.
+3. **Email go-live on Render:** add the 3 Brevo env vars (see §8) — also flips
+   mandatory signup on for the live site.
 4. **Blog content roadmap** (first post: CodeWatch build story).
 5. GSC housekeeping (submit `sitemap.xml`, request indexing on key pages).
-6. Custom domain (when bought): consider Render Starter (~$7/mo) to kill the
-   cold start; set `PUBLIC_BASE_URL`; see render.yaml comments.
+6. Custom domain (when bought): unlocks a proper email sender domain; consider
+   Render Starter (~$7/mo) to kill the cold start; set `PUBLIC_BASE_URL`.
 7. 3D redesign track continues separately in `portfolio-3d` (branch
    `design-3d`, NOT pushed) on the original machine.
 

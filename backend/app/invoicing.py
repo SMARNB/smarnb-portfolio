@@ -12,7 +12,10 @@ All email goes through emailer.py, so this whole flow is INERT until email is
 configured; everything is best-effort and never breaks the payment path.
 """
 import datetime as dt
+import io
 import json
+import os
+import re
 
 from . import config, models
 from .database import SessionLocal
@@ -33,12 +36,15 @@ def _lines_for(order) -> list:
     for it in (order.items or []):
         qty = int(it.get("qty") or 1)
         unit = float(it.get("price") or 0)
-        title = (it.get("service") or "Service").strip()
+        service = (it.get("service") or "Service").strip()
         tier = (it.get("tier") or "").strip()
-        if tier:
-            title = "%s — %s" % (title, tier)
-        lines.append({"title": title, "qty": qty, "unit": unit,
-                      "amount": round(qty * unit, 2)})
+        title = "%s — %s" % (service, tier) if tier else service
+        scope = [str(x).strip() for x in (it.get("scope") or []) if str(x).strip()][:20]
+        lines.append({"title": title, "service": service, "tier": tier,
+                      "qty": qty, "unit": unit, "amount": round(qty * unit, 2),
+                      "summary": (it.get("summary") or "").strip(),
+                      "delivery": (it.get("delivery") or "").strip(),
+                      "scope": scope})
     return lines
 
 
@@ -80,9 +86,18 @@ _MUTED = (100, 108, 130)
 _LINE = (226, 229, 240)
 
 
+# Common punctuation outside latin-1 → closest safe equivalent (em/en dash,
+# arrow, curly quotes, ellipsis). Anything else still falls back to "?".
+_LATIN_MAP = str.maketrans({
+    "—": "-", "–": "-", "→": "->",
+    "‘": "'", "’": "'", "“": '"', "”": '"',
+    "…": "...",
+})
+
+
 def _latin(s: str) -> str:
     """fpdf core fonts are latin-1 — replace anything outside it."""
-    return (s or "").encode("latin-1", "replace").decode("latin-1")
+    return (s or "").translate(_LATIN_MAP).encode("latin-1", "replace").decode("latin-1")
 
 
 def _money(inv, amount: float) -> str:
@@ -97,26 +112,29 @@ def build_pdf(inv: models.Invoice) -> bytes:
     pdf.set_auto_page_break(auto=True, margin=18)
     pdf.add_page()
 
-    # Header band: brand mark (rounded tile + growth arrow) + INVOICE title.
+    # Header band: favicon brand tile (vector, minus its tiny caption) + owner
+    # name + INVOICE title.
     pdf.set_fill_color(*_INDIGO)
     pdf.rect(0, 0, 210, 34, style="F")
-    pdf.set_draw_color(255, 255, 255)
-    pdf.set_line_width(1.1)
-    # growth-arrow glyph (mirrors the site's BrandMark)
-    pdf.line(14, 22, 19, 16.5)
-    pdf.line(19, 16.5, 22.5, 19.5)
-    pdf.line(22.5, 19.5, 28, 12.5)
-    pdf.line(24.5, 12.5, 28, 12.5)
-    pdf.line(28, 12.5, 28, 16)
-    pdf.set_fill_color(255, 255, 255)
-    pdf.ellipse(13, 21, 2.4, 2.4, style="F")
+    try:
+        with open(os.path.join(config.SITE_DIR, "frontend", "public", "favicon.svg"), "rb") as fh:
+            mark = re.sub(rb"<text[^>]*>.*?</text>", b"", fh.read(), flags=re.S)
+        pdf.image(io.BytesIO(mark), x=12, y=8, w=18, h=18)
+    except Exception:
+        # growth-arrow glyph (the pre-favicon fallback, e.g. if the file moves)
+        pdf.set_draw_color(255, 255, 255)
+        pdf.set_line_width(1.1)
+        pdf.line(14, 22, 19, 16.5)
+        pdf.line(19, 16.5, 22.5, 19.5)
+        pdf.line(22.5, 19.5, 28, 12.5)
+        pdf.line(24.5, 12.5, 28, 12.5)
+        pdf.line(28, 12.5, 28, 16)
+        pdf.set_fill_color(255, 255, 255)
+        pdf.ellipse(13, 21, 2.4, 2.4, style="F")
     pdf.set_text_color(255, 255, 255)
-    pdf.set_font("helvetica", "B", 15)
-    pdf.set_xy(33, 11)
-    pdf.cell(80, 8, _latin("SMARNB"))
-    pdf.set_font("helvetica", "", 8.5)
-    pdf.set_xy(33, 18.5)
-    pdf.cell(90, 5, _latin(config.ADMIN_NAME or "Muhammad Ali Raza"))
+    pdf.set_font("helvetica", "B", 13.5)
+    pdf.set_xy(33, 13)
+    pdf.cell(100, 8, _latin(config.ADMIN_NAME or "Muhammad Ali Raza"))
     pdf.set_font("helvetica", "B", 21)
     pdf.set_xy(150, 11)
     pdf.cell(46, 10, "INVOICE", align="R")
@@ -228,6 +246,77 @@ def build_pdf(inv: models.Invoice) -> bytes:
 
 # --- Email -----------------------------------------------------------------------
 
+def _esc(s: str) -> str:
+    """Minimal HTML-escape for values interpolated into the email body (the
+    client-supplied project brief, service names, scope bullets)."""
+    return (str(s or "").replace("&", "&amp;").replace("<", "&lt;")
+            .replace(">", "&gt;").replace('"', "&quot;"))
+
+
+def _money_html(inv, amount) -> str:
+    return "%s%s" % (inv.currency, format(amount or 0, ",.2f"))
+
+
+def _scope_section(inv) -> str:
+    """Per-service 'what you're getting' cards: service — tier, delivery, price,
+    the package summary, and the tier's 'what you get' bullets. Built from the
+    work-scope snapshot captured on each order item at checkout."""
+    cards = []
+    for line in inv.lines:
+        service = _esc(line.get("service") or line.get("title") or "Service")
+        tier = _esc(line.get("tier") or "")
+        qty = int(line.get("qty") or 1)
+        head = service + ((" — <span style='color:#6366f1'>%s</span>" % tier) if tier else "")
+        if qty > 1:
+            head += " <span style='color:#646c82;font-weight:500'>×%d</span>" % qty
+        meta = []
+        if line.get("delivery"):
+            meta.append("⏱ %s" % _esc(line["delivery"]))
+        meta.append("<b style='color:#171723'>%s</b>" % _money_html(inv, line.get("amount")))
+        summary = ("<p style='margin:6px 0 0;color:#646c82;font-size:13px'>%s</p>"
+                   % _esc(line["summary"])) if line.get("summary") else ""
+        bullets = ""
+        if line.get("scope"):
+            items = "".join(
+                "<tr><td style='vertical-align:top;color:#6366f1;padding:2px 8px 2px 0;"
+                "font-size:13px'>✓</td>"
+                "<td style='color:#171723;font-size:13px;padding:2px 0'>%s</td></tr>" % _esc(s)
+                for s in line["scope"])
+            bullets = ("<table role='presentation' style='border-collapse:collapse;"
+                       "margin:10px 0 0'>%s</table>" % items)
+        cards.append(
+            "<div style='border:1px solid #e8eaf3;border-radius:10px;padding:14px 16px;"
+            "margin:0 0 10px'>"
+            "<table role='presentation' style='width:100%%;border-collapse:collapse'><tr>"
+            "<td style='font-size:15px;font-weight:700;color:#171723'>%s</td>"
+            "<td style='text-align:right;font-size:13px;color:#646c82;white-space:nowrap;"
+            "padding-left:10px'>%s</td></tr></table>%s%s</div>"
+            % (head, " &nbsp;·&nbsp; ".join(meta), summary, bullets))
+    return (
+        "<div style='margin:4px 0 18px'>"
+        "<div style='font-size:12px;letter-spacing:.06em;text-transform:uppercase;"
+        "color:#9aa1b5;font-weight:700;margin:0 0 10px'>What you're getting</div>%s</div>"
+        % "".join(cards))
+
+
+def _brief_section(order) -> str:
+    """Echo the client's own project brief (functional requirements, brand name,
+    links…) back to them so they know it's captured."""
+    notes = (order.notes or "").strip()
+    if not notes:
+        return ""
+    body = _esc(notes).replace("\n", "<br>")
+    return (
+        "<div style='margin:0 0 18px'>"
+        "<div style='font-size:12px;letter-spacing:.06em;text-transform:uppercase;"
+        "color:#9aa1b5;font-weight:700;margin:0 0 8px'>Your project brief</div>"
+        "<div style='border-left:3px solid #6366f1;background:#f6f7fe;border-radius:0 8px 8px 0;"
+        "padding:12px 14px;color:#3f4257;font-size:13.5px;line-height:1.55'>%s</div>"
+        "<p style='margin:8px 0 0;color:#9aa1b5;font-size:12px'>"
+        "I'll confirm these details with you before starting — reply if anything's changed.</p>"
+        "</div>" % body)
+
+
 def _email_html(inv: models.Invoice, paid: bool, footer: str) -> str:
     order = inv.order
     rows = "".join(
@@ -236,46 +325,60 @@ def _email_html(inv: models.Invoice, paid: bool, footer: str) -> str:
         "<td style='padding:9px 12px;border-bottom:1px solid #e8eaf3;color:#646c82;text-align:center'>%s</td>"
         "<td style='padding:9px 12px;border-bottom:1px solid #e8eaf3;color:#171723;text-align:right'>%s%s</td>"
         "</tr>"
-        % (line.get("title") or "", line.get("qty") or 1,
+        % (_esc(line.get("title") or ""), line.get("qty") or 1,
            inv.currency, format(line.get("amount") or 0, ",.2f"))
         for line in inv.lines
     )
     base = config.PUBLIC_BASE_URL or "https://smarnb.onrender.com"
-    headline = ("Thanks — payment received!" if paid
-                else "Your invoice from SMARNB")
-    sub = (("Here's your receipt for order %s. The PDF is attached for your records."
-            if paid else
-            "Here's the invoice for order %s. The PDF is attached; payment details are below.")
-           % order.public_id)
+    me = config.ADMIN_NAME or "Muhammad Ali Raza"
+    client = _esc((order.customer_name or "").strip() or "there")
+    total_html = _money_html(inv, inv.total)
+    welcome = (("Thank you for your payment — it's a pleasure working with you. "
+                "Here's your receipt for order %s; the full breakdown is below and the "
+                "PDF is attached for your records."
+                if paid else
+                "Welcome aboard, and thank you for your order (%s) — I'm glad to be working "
+                "with you. Here's exactly what you're getting and what it comes to; the "
+                "invoice PDF is attached and payment details are below.")
+               % _esc(order.public_id))
+    # Colors are pinned with #fffffe + !important so dark-mode email clients
+    # don't invert the band text into illegibility.
     return (
         "<div style='font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;"
         "max-width:560px;margin:0 auto;color:#171723'>"
-        "<div style='background:#6366f1;border-radius:12px 12px 0 0;padding:18px 22px;color:#fff'>"
-        "<div style='font-size:18px;font-weight:800'>SMARNB</div>"
-        "<div style='font-size:12px;opacity:.85'>%s</div></div>"
+        "<div style='background:#6366f1 !important;border-radius:12px 12px 0 0;padding:16px 22px'>"
+        "<table role='presentation' style='border-collapse:collapse'><tr>"
+        "<td><img src='%s/email-logo.png' width='38' height='38' alt='' "
+        "style='display:block;border-radius:9px'></td>"
+        "<td style='padding-left:12px;font-size:16px;font-weight:800;"
+        "color:#fffffe !important'>%s</td>"
+        "</tr></table></div>"
         "<div style='border:1px solid #e8eaf3;border-top:0;border-radius:0 0 12px 12px;padding:22px'>"
-        "<h2 style='margin:0 0 6px;font-size:19px'>%s</h2>"
-        "<p style='margin:0 0 16px;color:#646c82;font-size:14px'>%s</p>"
+        "<h2 style='margin:0 0 6px;font-size:19px'>Hi %s,</h2>"
+        "<p style='margin:0 0 18px;color:#646c82;font-size:14px;line-height:1.55'>%s</p>"
+        "%s"   # what-you're-getting scope cards
+        "%s"   # your project brief (notes)
         "<div style='font-size:13px;color:#646c82;margin-bottom:14px'>"
         "Invoice <b style='color:#171723'>%s</b> · %s</div>"
         "<table style='width:100%%;border-collapse:collapse;font-size:14px'>%s"
         "<tr><td style='padding:12px'></td>"
         "<td style='padding:12px;text-align:right;font-weight:700'>Total</td>"
-        "<td style='padding:12px;text-align:right;font-weight:800;color:#6366f1'>%s%s</td></tr>"
+        "<td style='padding:12px;text-align:right;font-weight:800;color:#6366f1'>%s</td></tr>"
         "</table>"
         "%s"
         "<a href='%s' style='display:inline-block;margin-top:16px;background:#6366f1;color:#fff;"
         "padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px'>"
         "Track your order</a>"
-        "<p style='margin:18px 0 0;color:#9aa1b5;font-size:12px'>%s</p>"
+        "<p style='margin:22px 0 0;font-size:14px;color:#171723'>Warm regards,<br><b>%s</b></p>"
+        "<p style='margin:14px 0 0;color:#9aa1b5;font-size:12px'>Questions? Just reply to this email.</p>"
         "</div></div>"
-        % (config.ADMIN_NAME or "", headline, sub, inv.number,
-           ("PAID" if paid else "PAYMENT DUE"), rows,
-           inv.currency, format(inv.total or 0, ",.2f"),
+        % (base, me, client, welcome,
+           _scope_section(inv), _brief_section(order),
+           inv.number, ("PAID" if paid else "PAYMENT DUE"), rows,
+           total_html,
            ("" if paid else
-            "<p style='margin:14px 0 0;color:#646c82;font-size:13px'>%s</p>" % footer),
-           base, footer if paid else
-           "Questions? Just reply to this email.")
+            "<p style='margin:14px 0 0;color:#646c82;font-size:13px'>%s</p>" % _esc(footer)),
+           base, me)
     )
 
 
@@ -285,13 +388,14 @@ def send_invoice(db, order, *, background: bool = True) -> bool:
     from . import emailer
     inv = ensure_invoice(db, order)
     paid = order.payment_status == "paid"
-    footer = emailer.get_settings(db).get("invoice_footer") or ""
+    doc = emailer.get_settings(db)
+    footer = doc.get("invoice_footer") or ""
     try:
         pdf = build_pdf(inv)
     except Exception:
         pdf = b""
-    subject = ("Receipt %s — thanks for your payment" if paid
-               else "Invoice %s from SMARNB") % inv.number
+    subject = (("Receipt %s — thanks for your payment" % inv.number) if paid
+               else "Invoice %s from %s" % (inv.number, doc.get("from_name") or "Muhammad Ali Raza"))
     ok = emailer.send(
         db, order.customer_email or "", subject,
         _email_html(inv, paid, footer),

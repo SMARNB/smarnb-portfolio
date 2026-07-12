@@ -81,7 +81,7 @@ export function Pricing({
                 <button
                   className={`btn ${p.popular ? "btn-primary" : "btn-outline"} btn-block`}
                   onClick={() => {
-                    add({ serviceId: s.id, service: s.title, tier: p.tier, price: p.price, delivery: p.delivery });
+                    add({ serviceId: s.id, service: s.title, tier: p.tier, price: p.price, delivery: p.delivery, summary: p.summary, scope: p.features });
                     toast(`${p.tier} package added to cart`);
                     openCart();
                   }}

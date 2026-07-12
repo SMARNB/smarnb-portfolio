@@ -2,7 +2,7 @@
 import datetime as dt
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 # --- Auth ---------------------------------------------------------------------
@@ -90,6 +90,17 @@ class OrderItem(BaseModel):
     tier: str = ""
     price: float = 0
     qty: int = Field(default=1, ge=1, le=99)
+    # Work-scope snapshot captured at checkout so invoices/emails describe exactly
+    # what was sold (the package's summary + "what you get" bullets + delivery),
+    # independent of any later catalogue edits. Optional & capped for safety.
+    summary: str = Field(default="", max_length=300)
+    delivery: str = Field(default="", max_length=60)
+    scope: List[str] = Field(default_factory=list)
+
+    @field_validator("scope")
+    @classmethod
+    def _cap_scope(cls, v):
+        return [str(x).strip()[:140] for x in (v or []) if str(x).strip()][:20]
 
 
 class OrderCreate(BaseModel):
