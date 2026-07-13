@@ -114,10 +114,15 @@ function StoryPanel({
   // On iOS the clip/zoom variants are swapped for cheap translate/fade ones.
   const variant = IOS ? IOS_REMAP[rawVariant] ?? rawVariant : rawVariant;
 
-  // Panels taller than the viewport must not pin (their lower content could
-  // never be seen); the +4px only absorbs sub-pixel rounding.
-  const [noPin, setNoPin] = useState(false);
+  // iOS: force every panel to FLOW (no sticky pin, no scroll-scrub) and reveal
+  // once on enter. Scroll-LINKED transforms run on the main thread and iOS Safari
+  // can't keep them compositor-synced with its scroll, so they micro-stutter even
+  // at 60fps (Android/Chrome sync fine). Flow + one-shot whileInView is native-
+  // smooth. Elsewhere, only panels taller than the viewport skip pinning (their
+  // lower content could never be seen); the +4px absorbs sub-pixel rounding.
+  const [noPin, setNoPin] = useState(IOS);
   useEffect(() => {
+    if (IOS) return; // iOS always flows — nothing to measure
     const el = panelRef.current;
     if (!el) return;
     const check = () =>
