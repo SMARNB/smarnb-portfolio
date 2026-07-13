@@ -130,20 +130,24 @@ def _esc_attr(s: str) -> str:
 
 def brand_header_html(from_name: str = "") -> str:
     """The indigo email header band with the favicon brand mark rendered in
-    email-safe HTML/CSS (a white rounded tile + indigo "S" + sparkle) — no raster
-    image, so it renders identically in Gmail/Outlook/Outlook.com without the
-    remote-image blocking those clients apply, and stays first-party. The "S✦"
-    monogram + indigo/#fff palette mirror frontend/public/favicon.svg."""
+    email-safe HTML/CSS (a white rounded tile holding the indigo "S✦" monogram
+    with the "SMARNB" caption beneath it) — no raster image, so it renders
+    identically in Gmail/Outlook/Outlook.com without the remote-image blocking
+    those clients apply, and stays first-party. Mirrors frontend/public/
+    favicon.svg (the "SMARNB" wordmark appears ONLY here, under the logo)."""
     name = _esc_attr(from_name or config.EMAIL_FROM_NAME or "Muhammad Ali Raza")
     return (
         "<div style='background:#6366f1 !important;border-radius:12px 12px 0 0;padding:16px 22px'>"
         "<table role='presentation' cellpadding='0' cellspacing='0' "
         "style='border-collapse:collapse'><tr>"
-        "<td width='40' height='40' style='width:40px;height:40px;background:#ffffff;"
-        "border-radius:11px;text-align:center;vertical-align:middle;"
-        "font-family:Arial,Helvetica,sans-serif;font-size:25px;font-weight:800;"
-        "color:#6366f1;line-height:40px'>S<span style='font-size:12px;font-weight:700;"
-        "vertical-align:top;line-height:1'>&#10022;</span></td>"
+        "<td width='48' height='48' style='width:48px;height:48px;background:#ffffff;"
+        "border-radius:12px;text-align:center;vertical-align:middle;"
+        "font-family:Arial,Helvetica,sans-serif'>"
+        "<div style='font-size:23px;font-weight:800;color:#6366f1;line-height:21px'>"
+        "S<span style='font-size:11px;font-weight:700;vertical-align:top;line-height:1'>"
+        "&#10022;</span></div>"
+        "<div style='font-size:7px;font-weight:700;letter-spacing:1.3px;color:#6366f1;"
+        "line-height:8px;margin-top:1px'>SMARNB</div></td>"
         "<td style='padding-left:12px;font-size:16px;font-weight:800;"
         "color:#fffffe !important'>%s</td>"
         "</tr></table></div>" % name)

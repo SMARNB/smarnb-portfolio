@@ -112,14 +112,16 @@ def build_pdf(inv: models.Invoice) -> bytes:
     pdf.set_auto_page_break(auto=True, margin=18)
     pdf.add_page()
 
-    # Header band: favicon brand tile (vector, minus its tiny caption) + owner
-    # name + INVOICE title.
+    # Header band: favicon brand mark (vector S✦) with the "SMARNB" caption drawn
+    # under it (fpdf2 won't render the SVG's own <text>, so it's stripped and the
+    # caption is drawn below) + owner name + INVOICE title. "SMARNB" appears ONLY
+    # here, under the logo.
     pdf.set_fill_color(*_INDIGO)
     pdf.rect(0, 0, 210, 34, style="F")
     try:
         with open(os.path.join(config.SITE_DIR, "frontend", "public", "favicon.svg"), "rb") as fh:
             mark = re.sub(rb"<text[^>]*>.*?</text>", b"", fh.read(), flags=re.S)
-        pdf.image(io.BytesIO(mark), x=12, y=8, w=18, h=18)
+        pdf.image(io.BytesIO(mark), x=12, y=7, w=18, h=18)
     except Exception:
         # growth-arrow glyph (the pre-favicon fallback, e.g. if the file moves)
         pdf.set_draw_color(255, 255, 255)
@@ -131,9 +133,14 @@ def build_pdf(inv: models.Invoice) -> bytes:
         pdf.line(28, 12.5, 28, 16)
         pdf.set_fill_color(255, 255, 255)
         pdf.ellipse(13, 21, 2.4, 2.4, style="F")
+    # "SMARNB" caption under the logo mark (the only place the wordmark appears).
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("helvetica", "B", 5)
+    pdf.set_xy(12, 22.6)
+    pdf.cell(18, 3, "SMARNB", align="C")
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("helvetica", "B", 13.5)
-    pdf.set_xy(33, 13)
+    pdf.set_xy(35, 13)
     pdf.cell(100, 8, _latin(config.ADMIN_NAME or "Muhammad Ali Raza"))
     pdf.set_font("helvetica", "B", 21)
     pdf.set_xy(150, 11)
