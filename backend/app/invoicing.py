@@ -341,18 +341,14 @@ def _email_html(inv: models.Invoice, paid: bool, footer: str) -> str:
                 "with you. Here's exactly what you're getting and what it comes to; the "
                 "invoice PDF is attached and payment details are below.")
                % _esc(order.public_id))
-    # Colors are pinned with #fffffe + !important so dark-mode email clients
-    # don't invert the band text into illegibility.
+    from . import emailer
+    # Header is a first-party CSS brand mark (no raster image) so it renders in
+    # every client incl. Outlook.com without remote-image blocking. Body colors
+    # are pinned with #fffffe/!important for dark-mode legibility.
     return (
         "<div style='font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;"
         "max-width:560px;margin:0 auto;color:#171723'>"
-        "<div style='background:#6366f1 !important;border-radius:12px 12px 0 0;padding:16px 22px'>"
-        "<table role='presentation' style='border-collapse:collapse'><tr>"
-        "<td><img src='%s/email-logo.png' width='38' height='38' alt='' "
-        "style='display:block;border-radius:9px'></td>"
-        "<td style='padding-left:12px;font-size:16px;font-weight:800;"
-        "color:#fffffe !important'>%s</td>"
-        "</tr></table></div>"
+        "%s"   # brand header band
         "<div style='border:1px solid #e8eaf3;border-top:0;border-radius:0 0 12px 12px;padding:22px'>"
         "<h2 style='margin:0 0 6px;font-size:19px'>Hi %s,</h2>"
         "<p style='margin:0 0 18px;color:#646c82;font-size:14px;line-height:1.55'>%s</p>"
@@ -372,7 +368,7 @@ def _email_html(inv: models.Invoice, paid: bool, footer: str) -> str:
         "<p style='margin:22px 0 0;font-size:14px;color:#171723'>Warm regards,<br><b>%s</b></p>"
         "<p style='margin:14px 0 0;color:#9aa1b5;font-size:12px'>Questions? Just reply to this email.</p>"
         "</div></div>"
-        % (base, me, client, welcome,
+        % (emailer.brand_header_html(me), client, welcome,
            _scope_section(inv), _brief_section(order),
            inv.number, ("PAID" if paid else "PAYMENT DUE"), rows,
            total_html,

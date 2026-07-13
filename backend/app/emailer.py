@@ -121,6 +121,34 @@ def status(db) -> dict:
     }
 
 
+# --- Branding --------------------------------------------------------------------
+
+def _esc_attr(s: str) -> str:
+    return (str(s or "").replace("&", "&amp;").replace("<", "&lt;")
+            .replace(">", "&gt;").replace('"', "&quot;"))
+
+
+def brand_header_html(from_name: str = "") -> str:
+    """The indigo email header band with the favicon brand mark rendered in
+    email-safe HTML/CSS (a white rounded tile + indigo "S" + sparkle) — no raster
+    image, so it renders identically in Gmail/Outlook/Outlook.com without the
+    remote-image blocking those clients apply, and stays first-party. The "S✦"
+    monogram + indigo/#fff palette mirror frontend/public/favicon.svg."""
+    name = _esc_attr(from_name or config.EMAIL_FROM_NAME or "Muhammad Ali Raza")
+    return (
+        "<div style='background:#6366f1 !important;border-radius:12px 12px 0 0;padding:16px 22px'>"
+        "<table role='presentation' cellpadding='0' cellspacing='0' "
+        "style='border-collapse:collapse'><tr>"
+        "<td width='40' height='40' style='width:40px;height:40px;background:#ffffff;"
+        "border-radius:11px;text-align:center;vertical-align:middle;"
+        "font-family:Arial,Helvetica,sans-serif;font-size:25px;font-weight:800;"
+        "color:#6366f1;line-height:40px'>S<span style='font-size:12px;font-weight:700;"
+        "vertical-align:top;line-height:1'>&#10022;</span></td>"
+        "<td style='padding-left:12px;font-size:16px;font-weight:800;"
+        "color:#fffffe !important'>%s</td>"
+        "</tr></table></div>" % name)
+
+
 # --- Sending ---------------------------------------------------------------------
 
 def _text_from_html(html: str) -> str:

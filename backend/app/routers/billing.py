@@ -161,19 +161,13 @@ def _campaign_html(db, body_html: str, user_id: int) -> str:
     return (
         "<div style='font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;"
         "max-width:560px;margin:0 auto;color:#171723'>"
-        "<div style='background:#6366f1 !important;border-radius:12px 12px 0 0;padding:16px 22px'>"
-        "<table role='presentation' style='border-collapse:collapse'><tr>"
-        "<td><img src='%s/email-logo.png' width='34' height='34' alt='' "
-        "style='display:block;border-radius:8px'></td>"
-        "<td style='padding-left:11px;font-size:16px;font-weight:800;"
-        "color:#fffffe !important'>%s</td>"
-        "</tr></table></div>"
+        "%s"   # brand header band (first-party CSS mark, no raster image)
         "<div style='border:1px solid #e8eaf3;border-top:0;border-radius:0 0 12px 12px;"
         "padding:22px;font-size:15px;line-height:1.6'>%s"
         "<p style='margin:22px 0 0;color:#9aa1b5;font-size:12px'>%s · "
         "<a href='%s' style='color:#9aa1b5'>Unsubscribe</a></p>"
         "</div></div>"
-        % (base, doc.get("from_name") or "Muhammad Ali Raza", body_html,
+        % (emailer.brand_header_html(doc.get("from_name")), body_html,
            doc.get("promo_footer") or "", unsub)
     )
 
