@@ -45,6 +45,21 @@ import { scrollToTarget } from "../../lib/lenis";
 const STACK_TOP_PX = 0;
 const EASE = [0.22, 1, 0.36, 1] as const;
 
+/* iOS Safari re-rasterizes clip-path + scale on full-screen layers every frame
+   (Android/Chrome composite them cheaply), which stutters the scroll-story on
+   iPhone. On iOS ONLY, remap the clip/zoom entries to cheap translate/opacity
+   equivalents and drop the covered-panel recede-scale — the motion stays, it's
+   just made GPU-cheap. Same platform probe as the backdrop-filter fix in
+   global.css (-webkit-touch-callout is iOS-Safari-only). */
+const IOS =
+  typeof CSS !== "undefined" && !!CSS.supports && CSS.supports("-webkit-touch-callout", "none");
+const IOS_REMAP: Partial<Record<StoryVariant, StoryVariant>> = {
+  "split-x": "swipe-left",
+  "split-y": "cover",
+  "zoom-in": "fade",
+  "zoom-out": "fade",
+};
+
 export type StoryVariant =
   | "cover"
   | "swipe-left"
@@ -81,7 +96,7 @@ function useStackEnabled(): boolean {
 function StoryPanel({
   panelRef,
   isLast,
-  variant,
+  variant: rawVariant,
   enterOut,
   nextEnter,
   children,
@@ -96,6 +111,8 @@ function StoryPanel({
   children: ReactNode;
 }) {
   const vh = useViewportH();
+  // On iOS the clip/zoom variants are swapped for cheap translate/fade ones.
+  const variant = IOS ? IOS_REMAP[rawVariant] ?? rawVariant : rawVariant;
 
   // Panels taller than the viewport must not pin (their lower content could
   // never be seen); the +4px only absorbs sub-pixel rounding.
@@ -167,15 +184,18 @@ function StoryPanel({
   // ---- Exit: gentle recede, driven by the NEXT panel's shared entry progress
   // (synced to the whole cover). Scale only (full opacity always) — the covered
   // sheet recedes under the incoming one without draining the page's colour.
-  const recede = useTransform(nextEnter, [0, 1], [1, 0.97]);
+  // No recede-scale on iOS (scaling a full-screen layer re-rasters every frame).
+  const recede = useTransform(nextEnter, [0, 1], [1, IOS ? 1 : 0.97]);
   const scale = useTransform(
     [enterScale, recede],
     ([a, b]) => (a as number) * (isLast || noPin ? 1 : (b as number)),
   );
 
+  // iOS: only cheap GPU ops (translate + opacity) — no scale, no clip-path
+  // (the clip/zoom variants were already remapped away above).
   const isSplit = variant === "split-x" || variant === "split-y";
-  const style: Record<string, unknown> = { y, x, opacity, scale };
-  if (isSplit) style.clipPath = clipPath;
+  const style: Record<string, unknown> = IOS ? { y, x, opacity } : { y, x, opacity, scale };
+  if (isSplit && !IOS) style.clipPath = clipPath;
 
   // Taller-than-viewport panels flow instead of pinning — give them a light
   // in-view entrance so short viewports (landscape phones) still animate.
