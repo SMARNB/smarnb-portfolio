@@ -243,6 +243,33 @@ h2.section-title { font-size: clamp(1.5rem, 3.4vw, 2.35rem); letter-spacing: -.0
 .mobile-menu a { padding: 1rem .5rem; font-size: 1.2rem; font-weight: 650; border-bottom: 1px solid var(--border); }
 .mobile-menu .btn { margin-top: 1rem; }
 
+/* ---- iOS Safari scroll fix (backdrop-filter) --------------------------------
+   Why the story scrolls smoothly on Android/Chrome but STUTTERS on iPhone:
+   iOS Safari re-rasterizes `backdrop-filter` over scrolling content on every
+   single frame, while Chrome/Android cache it cheaply. On the FIXED nav pill +
+   tech bar (always sitting over the moving page) that tanks scroll FPS on iOS.
+   Fix: drop the blur for a solid tint on iOS ONLY — no animation is touched and
+   the frosted-glass look is kept on every other platform. The @supports probe
+   matches iOS Safari (and all iOS browsers, which are all WebKit) and nothing
+   else — desktop Safari/Chrome/Firefox/Android don't support -webkit-touch-callout. */
+@supports (-webkit-touch-callout: none) {
+  .nav,
+  .header.scrolled .nav {
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+    /* opaque, lifted off the page bg, but darker than --surface so the active
+       nav-link pill (var(--surface)) still reads on iPad/landscape */
+    background: color-mix(in srgb, var(--bg) 88%, var(--surface));
+  }
+  .marquee {
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+    background: color-mix(in srgb, var(--bg) 88%, var(--surface));
+  }
+  .mobile-menu {
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+    background: var(--bg);
+  }
+}
+
 /* ---- Hero ---------------------------------------------------------------- */
 .hero { padding-top: clamp(1rem, 2.5vw, 1.9rem); overflow: hidden; }
 .hero-grid { display: grid; gap: clamp(1.25rem, 3vw, 2.2rem); align-items: center; }
