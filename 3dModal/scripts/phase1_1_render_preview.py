@@ -11,10 +11,10 @@ def zy_render_preview():
         SCRATCH = r"C:/Users/alira/AppData/Local/Temp/claude/C--Users-alira-Documents-portfolio-3d/599a7627-7a49-4e5e-bc4f-37f7ddc0fa2f/scratchpad"
         OUT = SCRATCH + "/phase1_1_render_status.json"
         views = (
-            {"png": SCRATCH + "/phase1_1_basement.png", "cam": (-34.0, -42.0, 30.0),
+            {"png": SCRATCH + "/phase1_1_basement.png", "cam": (-70.0, -85.0, 55.0),
              "target": (0.0, 0.0, 0.0), "lens": 24, "hide_above": 5.0},
-            {"png": SCRATCH + "/phase1_1_tower.png", "cam": (-78.0, -105.0, 62.0),
-             "target": (0.0, 0.0, 28.0), "lens": 30, "hide_above": None},
+            {"png": SCRATCH + "/phase1_1_tower.png", "cam": (-150.0, -200.0, 110.0),
+             "target": (0.0, 0.0, 30.0), "lens": 30, "hide_above": None},
             {"png": SCRATCH + "/phase1_1_west_portal.png", "cam": (-36.0, 0.0, 9.5),
              "target": (-12.0, 0.0, 1.5), "lens": 32, "hide_above": None},
             {"png": SCRATCH + "/phase1_1_east_portal.png", "cam": (33.0, -6.0, 10.0),
