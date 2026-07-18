@@ -210,6 +210,11 @@ def zy_wing_floors():
                 rbox(pre + "Wall_In_A", iw0, iw1, hy0, -5.0, zw, zt, m_wall, coll)
                 rbox(pre + "Wall_In_H", iw0, iw1, -5.0, -2.0, zb + 3.0, zt, m_wall, coll)
                 rbox(pre + "Wall_In_B", iw0, iw1, -2.0, hy1, zw, zt, m_wall, coll)
+            elif half == "R":
+                # doorway through to the centre-column cubicle floor (center_floors)
+                rbox(pre + "Wall_In_A", iw0, iw1, hy0, 20.0, zw, zt, m_wall, coll)
+                rbox(pre + "Wall_In_H", iw0, iw1, 20.0, 23.0, zb + 3.0, zt, m_wall, coll)
+                rbox(pre + "Wall_In_B", iw0, iw1, 23.0, hy1, zw, zt, m_wall, coll)
             else:
                 rbox(pre + "Wall_In", iw0, iw1, hy0, hy1, zw, zt, m_wall, coll)
             if half == "F":
