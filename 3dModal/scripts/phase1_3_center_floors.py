@@ -234,16 +234,22 @@ def zy_center_floors():
 
             # ---- core enclosure: doorway on the south face onto the lift lobby ----
             n0 = len(created)
+            # NOTE: the doorway sits on the EAST face, not the south one. South of
+            # the core there is only ~0.6 m between the core wall and the floor's
+            # south perimeter - a dead end. The east door opens onto the stair
+            # SE corner platform (x 2.6..4, y 1..2.4) which leads straight to the
+            # lift landing at x -2.6..2.6, y 1..3.2.
+            DA, DB = VY0 + 0.3, VY0 + 1.3
             rbox(pre + "Core_W", VX0, VX0 + 0.3, VY0, VY1, zw, zt, m_wall, cf)
-            rbox(pre + "Core_E", VX1 - 0.3, VX1, VY0, VY1, zw, zt, m_wall, cf)
             rbox(pre + "Core_N", VX0, VX1, VY1 - 0.3, VY1, zw, zt, m_wall, cf)
-            rbox(pre + "Core_S_A", VX0, -1.6, VY0, VY0 + 0.3, zw, zt, m_wall, cf)
-            rbox(pre + "Core_S_B", 1.6, VX1, VY0, VY0 + 0.3, zw, zt, m_wall, cf)
-            rbox(pre + "Core_S_H", -1.6, 1.6, VY0, VY0 + 0.3, zb + 3.35, zt, m_wall, cf)
-            rbox(pre + "Core_Door_JW", -1.74, -1.6, VY0 - 0.08, VY0 + 0.38, zw, zb + 3.5, m_metal, cf)
-            rbox(pre + "Core_Door_JE", 1.6, 1.74, VY0 - 0.08, VY0 + 0.38, zw, zb + 3.5, m_metal, cf)
-            rbox(pre + "Core_Door_HD", -1.74, 1.74, VY0 - 0.08, VY0 + 0.38, zb + 3.35, zb + 3.5, m_metal, cf)
-            rbox(pre + "Core_Sign", -1.2, 1.2, VY0 - 0.14, VY0 - 0.08, zb + 3.6, zb + 4.2, m_amber, cf)
+            rbox(pre + "Core_S", VX0, VX1, VY0, VY0 + 0.3, zw, zt, m_wall, cf)
+            rbox(pre + "Core_E_A", VX1 - 0.3, VX1, VY0, DA, zw, zt, m_wall, cf)
+            rbox(pre + "Core_E_B", VX1 - 0.3, VX1, DB, VY1, zw, zt, m_wall, cf)
+            rbox(pre + "Core_E_H", VX1 - 0.3, VX1, DA, DB, zb + 3.35, zt, m_wall, cf)
+            rbox(pre + "Core_Door_JS", VX1 - 0.38, VX1 + 0.08, DA - 0.14, DA, zw, zb + 3.5, m_metal, cf)
+            rbox(pre + "Core_Door_JN", VX1 - 0.38, VX1 + 0.08, DB, DB + 0.14, zw, zb + 3.5, m_metal, cf)
+            rbox(pre + "Core_Door_HD", VX1 - 0.38, VX1 + 0.08, DA - 0.14, DB + 0.14, zb + 3.35, zb + 3.5, m_metal, cf)
+            rbox(pre + "Core_Sign", VX1 + 0.08, VX1 + 0.14, DA, DB, zb + 3.6, zb + 4.2, m_amber, cf)
             groups["core"] += len(created) - n0
 
             # ---- cubicles: 3x3 each side of the core ----
