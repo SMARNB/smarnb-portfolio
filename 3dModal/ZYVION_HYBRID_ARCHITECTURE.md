@@ -64,5 +64,29 @@ The stock MCP server on port 9876 starves when Blender idles — **do not use it
 - **Materials:** 15 flat `ZY_*` materials (viewport colors set for Solid mode) — the palette for the GLB/R3F pipeline.
 - **Collections:** `Basement_Level/{Basement_Shell, Zone_A_Gym_Pool, Zone_B_Cafeteria}`, `Building_Plinth`, `Site_Ground`, `Vertical_Core`, hidden `_Legacy_Backup`.
 
+---
+
+## 8. As-Built Log (Phase 1.3 — completed 2026-07-18, branch `feat/zyvion-hq-3d`)
+
+~5,000 objects. Same bridge contract as §7 (POST :5000, single wrapper + `bpy.app.timers`, JSON status to the scratchpad, idempotent kill-by-name / prefix sweeps).
+
+### Pipeline order (MANDATORY — prefix-sweep dependencies)
+`phase1_3_grand_lobby.py` → `phase1_3_lobby_services.py` → `phase1_3_west_wing.py` → `phase1_3_east_wing.py` → `phase1_3_rear_blocks.py` → `phase1_3_wing_floors.py` → `phase1_3_rooftop.py` → `phase1_3_site.py` → `phase1_3_gates_guard.py`, then `phase1_3_render_preview.py` (25 views).
+The lobby sweep clears `Lobby_*`; the wings re-split `Lobby_Wall_W/E`; rear re-splits `Lobby_Wall_N`; `wing_floors` sweeps the `*Stack*` upper levels; `gates_guard` sweeps `Fence_S_/Gate_/GRoom_/Sec_`. Running out of order silently drops openings.
+
+### As-built
+- **Grand Lobby = About page.** Hollow 4-story atrium; glass curtain south façade with a 12×9 m open portal + canopy; U-shaped mezzanine rings at levels 2/3/4 with glass rails and a hero-screen notch. **No inter-floor stairs in the lobby** (user-removed); mezzanines are reached from the wing stair shafts. Raycast targets: `Lobby_Display_About_1..6`, `Lobby_Display_Hero`, `NPC_Lobby_Greeter` (custom props `npc_id`/`npc_type=deterministic`/`npc_role`). Services: "Halo" 3-tier ring chandelier, exposed loop duct + slot diffusers, colour-coded cable trays (amber=power, teal=data, red=security), 3 couches.
+- **West wing L1 = Waiting Room:** cubicles + public PC counter (split around the lobby doorway), sealed glass coffee bar, M/W restrooms, west exit + façade stair. **East wing L1 = HR:** central walk-in corridor splitting Heads' offices (south) from the cubicle section (north), east exit stair. Both wings keep their **front stair shafts running L1→roof**.
+- **Rear blocks:** centre column L1 = Cubical Hall (36 cubicles) opening to the lobby by two 4 m doorways; west rear = recruitment computer lab (5×10 networked seats facing a projector screen) + merged cubicles; east rear = 4 private head-of-department offices. **Stair towers at both rear outer corners** (L1→roof) with ground exits. Rear façade = solid wall with punched windows + curtains.
+- **Wing upper floors (L2–8, both halves) = website pages** via raycastable `Floor_Tag_*` and `scene["zy_floors"]`: W2 Services, W3 Store, W4 Blog, W5 Work, W6 Projects (+`Room_Project_Tracking`), W7 HoD, W8 Directors; E2 Conference Centre, E3–E5 Departments A–C, E6 Operations, E7 Directors, **E8 Founders/CEO** boardroom.
+- **Rooftop:** bulkhead room over each of the 4 staircases, helipad + detailed `Heli_*` helicopter, solar arrays on both wing roofs feeding `Solar_Plant_Room` (inverters + battery banks) with a riser into the building.
+- **Site:** tile base + grout grid over the whole establishment (no bare grey), grassland on the **northern** slab (measured at runtime), turquoise walking-path ring, connected parking near the south fence with mixed `Car_Sedan_*`/`Car_SUV_*`, dual road linking the gates, east-fence gate.
+- **Fence + guard (`phase1_3_gates_guard.py`):** the solid south fence is retired and rebuilt as segments with **real cutouts** — vehicle IN, vehicle OUT, pedestrian — each with piers, caps, header/sign, barred leaves, track, lamps. `Enternace_Area` is retired and rebuilt **hollow** as the true guard/entrance room: street + site doors, huge mullioned window bands, and all security **inside** (walk-through human scanner, bag X-ray with conveyors/trays/monitor, guard desk, queue barriers, benches) plus AC (4 ceiling cassettes, 2 split units, 3 roof condensers).
+- **Scene props:** `zy_lobby`, `zy_west_wing`, `zy_east_wing`, `zy_rear`, `zy_floors`, `zy_roof`, `zy_site`, `zy_guard`. Palette ~30 `ZY_*`.
+
+### Known open items
+- Older box assets (desks, cars, cubicles, couches) still read as low-detail; only the gate/security work has bevels + metallic materials so far.
+- The guard-room interior preview camera is mis-framed (sits on the desk monitors); the room itself is correct.
+
 ### Next step
-Phase 1.3 begins with the **Grand Lobby interior** — it doubles as the portfolio About page (graphics/displays) and hosts the Lobby Greeter NPC. The lobby is currently a SOLID 50×50×24.4 box (`Grand_Lobby_4_Story` at (0, −25), z 9.23–33.63) that must be hollowed (shell + entry from the front entrance stairs) before furnishing.
+Phase 1.4 (roof/exterior polish) and Phase 2 (R3F frontend) — **do not start until the user confirms**.
