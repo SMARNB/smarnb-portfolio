@@ -85,9 +85,70 @@ The lobby sweep clears `Lobby_*`; the wings re-split `Lobby_Wall_W/E`; rear re-s
 - **Fence + guard (`phase1_3_gates_guard.py`):** the solid south fence is retired and rebuilt as segments with **real cutouts** — vehicle IN, vehicle OUT, pedestrian — each with piers, caps, header/sign, barred leaves, track, lamps. `Enternace_Area` is retired and rebuilt **hollow** as the true guard/entrance room: street + site doors, huge mullioned window bands, and all security **inside** (walk-through human scanner, bag X-ray with conveyors/trays/monitor, guard desk, queue barriers, benches) plus AC (4 ceiling cassettes, 2 split units, 3 roof condensers).
 - **Scene props:** `zy_lobby`, `zy_west_wing`, `zy_east_wing`, `zy_rear`, `zy_floors`, `zy_roof`, `zy_site`, `zy_guard`. Palette ~30 `ZY_*`.
 
-### Known open items
-- Older box assets (desks, cars, cubicles, couches) still read as low-detail; only the gate/security work has bevels + metallic materials so far.
-- The guard-room interior preview camera is mis-framed (sits on the desk monitors); the room itself is correct.
+### Polish pass (`phase1_3_polish.py`, runs LAST, idempotent via a `zy_polished` stamp)
+1,369 prop meshes beveled in place with bmesh (survives glTF export — no modifier stack); 200 chairs upgraded from bare cylinders to gas post + 5-star base + castors (kept rotationally symmetric on purpose — floors seat people facing different ways, so an oriented backrest would be wrong half the time); 215 desks/counters given legs + modesty panels; 3 couches given feet; 10 cars given bumpers, head/tail lights and mirrors oriented off each body's rotation; 38 `ZY_*` materials retuned with real roughness/metallic.
 
-### Next step
-Phase 1.4 (roof/exterior polish) and Phase 2 (R3F frontend) — **do not start until the user confirms**.
+### Bug found and fixed while reframing a camera
+The centre-floor lift enclosure originally opened **south** into a ~0.6 m dead end (the gap between the core wall and the floor's south perimeter). Nobody could have used it. The door now sits on the **east** face, opening onto the stair SE corner platform that leads to the lift landing.
+
+---
+
+## 9. Handover — product vision + next session
+
+### 9.1 What this actually is (stated by the user 2026-07-18)
+The site is a **mini EA-Sims-style experience**, not a scrolling page:
+- The visitor **walks around the building** in first/third person and **talks to NPCs** to ask questions.
+- **The lift IS the navigation bar.** The visitor steps into the glass lift, picks a destination, and the lift travels to that floor. Arriving on a floor = navigating to that page.
+- **NPCs are the page content guides.** On arrival, that floor's NPC explains what the page offers.
+- The **main portfolio repository's functionality is mapped onto the building floor by floor and room by room** — each existing feature/page becomes a physical place.
+
+This reframes Phase 2: `CameraController` is a **character controller + lift UI**, not a scroll rig. The lift panel is the primary nav component; scroll-build (§3) is secondary or dropped.
+
+### 9.2 Navigation map (already built into the model)
+Floor ↔ page is carried in-scene by `scene["zy_floors"]` and raycastable `Floor_Tag_*` meshes, so the frontend can read it from the GLB rather than hard-coding:
+
+| Lift stop | West wing | East wing |
+|---|---|---|
+| L1 | Waiting Room (visitor arrival) | HR Department |
+| L2 | **Services** | Conference Center |
+| L3 | **Store** | Departments A |
+| L4 | **Blog** | Departments B |
+| L5 | **Work** | Departments C |
+| L6 | **Projects** (+ `Room_Project_Tracking`) | Operations |
+| L7 | HoD Offices | Directors |
+| L8 | Directors West | **Founders / CEO** |
+
+Also: **Grand Lobby = About page** (`Lobby_Display_About_1..6` + `Lobby_Display_Hero`), **centre column L1** = Cubical Hall, **centre L2–8** = open workspace floors, **basement** = gym/pool + cafeteria, **guard room** = login/signup/guest entry.
+
+### 9.3 NPC roster (23, all raycastable, props survive glTF)
+Props on every NPC: `npc_id`, `npc_type`, `npc_role`, `npc_page`.
+- `NPC_Lobby_Greeter` — deterministic, lobby/About.
+- `NPC_Gate_Auth` — deterministic, guard room → drives login / signup / guest.
+- 14 wing page-floor guides — **generative** for content pages (Services, Store, Blog, Work, Projects, Founders_CEO), **deterministic** for corporate floors.
+- 7 `NPC_Center_L2..L8` — deterministic workspace supervisors.
+Per §4: deterministic → hardcoded React decision tree; generative → `POST /api/chat` → RAG backend.
+
+### 9.4 Execution contract (unchanged, and non-negotiable)
+Everything in §7 still applies. Two failure modes cost real time this session:
+- **The port-5000 listener can die** (socket closed → connection refused). Only the user can re-arm it inside Blender. The port-9876 MCP addon is not a fallback — it accepts TCP but its requests time out.
+- **Timers only fire when Blender's event loop ticks.** If the user isn't hovering the viewport, scripts POST fine but never execute and no status JSON appears. "No status" almost always means idle viewport, not a broken script.
+- Scratchpad path is session-specific — resolve it by listing `…/Temp/claude/C--Users-alira-Documents-portfolio-3d/*/scratchpad` and taking the one with recent files. Do not assume.
+- Saving: `bpy.ops.wm.save_mainfile()` from a timer works, but the status JSON often fails to flush. **Verify saves by the .blend's `LastWriteTime`, not by the JSON.**
+
+### 9.5 Known gaps (honest state)
+- **Surfaces: partly addressed 2026-07-19 (`phase1_3_materials.py`).** All 36 `ZY_*` materials are now **procedural node graphs** — noise / wave / brick driving base-colour variation, roughness variation and bump, via the `Generated` coordinate input (no unwrap or image files needed). **9,782 meshes** also received a box-projected `ZY_UV` layer.
+- **⚠ CRITICAL CAVEAT: glTF does not carry procedural nodes.** Those materials improve **Blender renders only**. The GLB that Phase 2 consumes will still be flat until they are **baked to image textures**. Do not assume the web build inherits this.
+- **`ZY_UV` is box-projected and OVERLAPS.** Correct for tiling, unusable for a lightmap. A bake needs a second, non-overlapping `ZY_BAKE` set (smart-project per merged mesh).
+- **No baked lighting.** Reference-quality browser 3D bakes lighting into textures; ours is real-time flat lighting. Nothing is baked yet.
+- **No emissive/atmosphere pass** — no lit signage, glowing screens, fog, or dusk/night grading.
+- **Scope reality:** the reference is a ~20×20 m diorama with locked cameras; this is a ~150×190 m campus with 8 occupiable floors and ~7,000 objects. Uniform fidelity at that level is months of art work. The realistic play is to **constrain what the camera ever sees, then detail only that** (lobby, entrance approach, one office floor, rooftop) and leave the rest as background massing.
+- **GLB export not started.** ~7,000 separately-material'd objects will export heavy and still look flat. Baking + joining per area into atlased textures is both a quality and a performance win, and should happen **before** Phase 2.
+
+### 9.6 Next steps (in recommended order)
+1. ~~Procedural node materials~~ **DONE 2026-07-19.** Still outstanding from this step: **emissive signage/screens + dusk/night atmosphere** — darkness flatters untextured geometry and lets emissives carry the scene.
+2. **Bake to images — the real unlock, and now the top priority.** In order: (a) **join meshes per zone** (lobby / each floor / site / roof) — ~9,800 objects is both a bake problem and a GLB size problem; (b) smart-project a **non-overlapping `ZY_BAKE` UV set** per merged mesh; (c) **bake diffuse + AO in Cycles** to per-zone atlases; (d) rewire materials to those images. Only after this does the GLB actually look like the Blender renders.
+3. **Prop density in hero areas only.**
+4. **Phase 1.5 export** → `zyvion_hq.glb` into the web project's `/public/models/`.
+5. **Phase 2 (R3F)** — character controller + **lift navigation UI** + NPC raycast/chat overlay, reading the floor↔page map from the GLB.
+
+**Do not start Phase 2 until the user confirms.**
